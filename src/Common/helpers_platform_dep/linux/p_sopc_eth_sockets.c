@@ -26,8 +26,8 @@
 #include <fcntl.h>
 #include <ifaddrs.h>
 #include <limits.h>
-#include <linux/if_ether.h>
-#include <linux/if_packet.h>
+#include <netinet/if_ether.h>
+#include <netpacket/packet.h>
 #include <net/if.h>
 #include <stdbool.h>
 #include <stddef.h>

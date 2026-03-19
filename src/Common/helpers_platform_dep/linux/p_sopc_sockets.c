@@ -20,7 +20,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #ifndef IPPROTO_TCP
-#include <linux/in6.h>
+#include <netinet/in.h>
 #endif
 #include <netinet/tcp.h>
 #include <stdint.h>
@@ -552,7 +552,7 @@ void SOPC_SocketSet_Add(SOPC_Socket sock, SOPC_SocketSet* sockSet)
 {
     if (sock != SOPC_INVALID_SOCKET && sockSet != NULL)
     {
-        FD_SET(sock->sock, &sockSet->set);
+        FD_SET((uint) sock->sock, &sockSet->set);
         if (sock->sock > sockSet->fdmax)
         {
             sockSet->fdmax = sock->sock;
@@ -564,7 +564,7 @@ bool SOPC_SocketSet_IsPresent(SOPC_Socket sock, SOPC_SocketSet* sockSet)
 {
     if (sock != SOPC_INVALID_SOCKET && sockSet != NULL)
     {
-        if (false == FD_ISSET(sock->sock, &sockSet->set))
+        if (false == FD_ISSET((uint) sock->sock, &sockSet->set))
         {
             return false;
         }

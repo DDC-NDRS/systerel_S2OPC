@@ -25,7 +25,7 @@
 #include <unistd.h>
 
 #include <linux/errqueue.h>
-#include <linux/types.h>
+// #include <linux/types.h>
 #include <net/if.h>
 #include <netinet/in.h>
 #include <netinet/ip.h>
@@ -209,62 +209,62 @@ SOPC_ReturnStatus SOPC_TX_UDP_Socket_Error_Queue(SOPC_Socket sock)
         return SOPC_STATUS_INVALID_PARAMETERS;
     }
 
-    uint8_t messageControl[CMSG_SPACE(sizeof(struct sock_extended_err))];
-    unsigned char errBuffer[sizeof(250)];
-    struct sock_extended_err* sockErr;
-    struct cmsghdr* controlMessage;
-    uint64_t timestamp = 0;
+    // uint8_t messageControl[CMSG_SPACE(sizeof(struct sock_extended_err))];
+    // unsigned char errBuffer[sizeof(250)];
+    // struct sock_extended_err* sockErr;
+    // struct cmsghdr* controlMessage;
+    // uint64_t timestamp = 0;
     SOPC_ReturnStatus status = SOPC_STATUS_INVALID_PARAMETERS;
 
-    struct iovec fdIOBuffer = {.iov_base = errBuffer, .iov_len = sizeof(errBuffer)};
-    struct msghdr message = {.msg_iov = &fdIOBuffer,
-                             .msg_iovlen = 1,
-                             .msg_control = messageControl,
-                             .msg_controllen = sizeof(messageControl)};
+    // struct iovec fdIOBuffer = {.iov_base = errBuffer, .iov_len = sizeof(errBuffer)};
+    // struct msghdr message = {.msg_iov = &fdIOBuffer,
+    //                          .msg_iovlen = 1,
+    //                          .msg_control = messageControl,
+    //                          .msg_controllen = sizeof(messageControl)};
 
-    int res = 0;
-    S2OPC_TEMP_FAILURE_RETRY(res, recvmsg(sock->sock, &message, MSG_ERRQUEUE));
+    // int res = 0;
+    // S2OPC_TEMP_FAILURE_RETRY(res, recvmsg(sock->sock, &message, MSG_ERRQUEUE));
 
-    if (res == -1)
-    {
-        SOPC_CONSOLE_PRINTF("Receive message failed from error queue\n");
-        return SOPC_STATUS_NOK;
-    }
+    // if (res == -1)
+    // {
+    //     SOPC_CONSOLE_PRINTF("Receive message failed from error queue\n");
+    //     return SOPC_STATUS_NOK;
+    // }
 
-    controlMessage = CMSG_FIRSTHDR(&message);
-    while (controlMessage != NULL && status != SOPC_STATUS_NOK)
-    {
-        sockErr = (void*) CMSG_DATA(controlMessage);
-        /* Only TXTIME error is handled for TSN activity.
-           if the noticed error is not TXTIME error, then next messge header is
-           traverses and loop breaks with reporting unknown error.
-         */
-        if (sockErr->ee_origin == SO_EE_ORIGIN_TXTIME)
-        {
-            /* Packets are dropped on enqueue() because of qdisc (or)
-               on dequeue() - if the system misses their deadline.
-               Those are reported as errors.
-             */
-            timestamp = ((uint64_t) sockErr->ee_data << 32) + sockErr->ee_info;
-            switch (sockErr->ee_code)
-            {
-            case SO_EE_CODE_TXTIME_INVALID_PARAM:
-            case SO_EE_CODE_TXTIME_MISSED:
-                fprintf(stderr, "Packet with timestamp %" PRIu64 " dropped\n", timestamp);
-                status = SOPC_STATUS_NOK;
-                break;
-            default:
-                status = SOPC_STATUS_NOK;
-                break;
-            }
-        }
-        else
-        {
-            controlMessage = CMSG_NXTHDR(&message, controlMessage);
-            status = SOPC_STATUS_NOK;
-            SOPC_CONSOLE_PRINTF("Unknown error\n");
-        }
-    }
+    // controlMessage = CMSG_FIRSTHDR(&message);
+    // while (controlMessage != NULL && status != SOPC_STATUS_NOK)
+    // {
+    //     sockErr = (void*) CMSG_DATA(controlMessage);
+    //     /* Only TXTIME error is handled for TSN activity.
+    //        if the noticed error is not TXTIME error, then next messge header is
+    //        traverses and loop breaks with reporting unknown error.
+    //      */
+    //     if (sockErr->ee_origin == SO_EE_ORIGIN_TXTIME)
+    //     {
+    //         /* Packets are dropped on enqueue() because of qdisc (or)
+    //            on dequeue() - if the system misses their deadline.
+    //            Those are reported as errors.
+    //          */
+    //         timestamp = ((uint64_t) sockErr->ee_data << 32) + sockErr->ee_info;
+    //         switch (sockErr->ee_code)
+    //         {
+    //         case SO_EE_CODE_TXTIME_INVALID_PARAM:
+    //         case SO_EE_CODE_TXTIME_MISSED:
+    //             fprintf(stderr, "Packet with timestamp %" PRIu64 " dropped\n", timestamp);
+    //             status = SOPC_STATUS_NOK;
+    //             break;
+    //         default:
+    //             status = SOPC_STATUS_NOK;
+    //             break;
+    //         }
+    //     }
+    //     else
+    //     {
+    //         controlMessage = CMSG_NXTHDR(&message, controlMessage);
+    //         status = SOPC_STATUS_NOK;
+    //         SOPC_CONSOLE_PRINTF("Unknown error\n");
+    //     }
+    // }
 
     return status;
 }
