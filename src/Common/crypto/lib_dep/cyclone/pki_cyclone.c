@@ -753,7 +753,7 @@ static void crt_check_trusted(SOPC_CheckTrusted* checkTrusted, const SOPC_Certif
             crt->raw->length == crtTrusted->raw->length &&
             0 == memcmp(crt->crt.tbsCert.subject.raw.value, crtTrusted->crt.tbsCert.subject.raw.value,
                         crt->crt.tbsCert.subject.raw.length) &&
-            0 == memcmp(crt->raw->data, crtTrusted->raw->data, crt->crt.tbsCert.subject.raw.length))
+            0 == memcmp(crt->raw->data, crtTrusted->raw->data, crt->raw->length))
         {
             checkTrusted->isTrustedInChain = true;
         }

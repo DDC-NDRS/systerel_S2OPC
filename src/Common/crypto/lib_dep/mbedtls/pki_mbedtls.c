@@ -208,7 +208,7 @@ static int verify_cert(void* checkTrustedAndCRL, mbedtls_x509_crt* crt, int cert
     {
         if (crt->subject_raw.len == crtTrusted->subject_raw.len && crt->raw.len == crtTrusted->raw.len &&
             0 == memcmp(crt->subject_raw.p, crtTrusted->subject_raw.p, crt->subject_raw.len) &&
-            0 == memcmp(crt->raw.p, crtTrusted->raw.p, crt->subject_raw.len))
+            0 == memcmp(crt->raw.p, crtTrusted->raw.p, crt->raw.len))
         {
             checkTrustedAndCRLinChain->isTrustedInChain = true;
         }
@@ -826,7 +826,7 @@ static void sopc_pki_remove_rejected_cert(SOPC_CertificateList** ppRejectedList,
     {
         if (crt->subject_raw.len == cur->subject_raw.len && crt->raw.len == cur->raw.len &&
             0 == memcmp(crt->subject_raw.p, cur->subject_raw.p, crt->subject_raw.len) &&
-            0 == memcmp(crt->raw.p, cur->raw.p, crt->subject_raw.len))
+            0 == memcmp(crt->raw.p, cur->raw.p, crt->raw.len))
         {
             bFound = true;
         }
