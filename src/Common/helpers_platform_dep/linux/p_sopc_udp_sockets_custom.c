@@ -208,13 +208,14 @@ SOPC_ReturnStatus SOPC_TX_UDP_Socket_Error_Queue(SOPC_Socket sock)
         return SOPC_STATUS_INVALID_PARAMETERS;
     }
 
+#ifdef __GLIBC__
     uint8_t messageControl[CMSG_SPACE(sizeof(struct sock_extended_err))];
     memset(messageControl, 0, sizeof(messageControl));
     unsigned char errBuffer[512];
     struct sock_extended_err* sockErr;
     struct cmsghdr* controlMessage;
     uint64_t timestamp = 0;
-    SOPC_ReturnStatus status = SOPC_STATUS_INVALID_PARAMETERS;
+    SOPC_ReturnStatus status = SOPC_STATUS_OK;
 
     struct iovec fdIOBuffer = {.iov_base = errBuffer, .iov_len = sizeof(errBuffer)};
     struct msghdr message;
@@ -263,7 +264,7 @@ SOPC_ReturnStatus SOPC_TX_UDP_Socket_Error_Queue(SOPC_Socket sock)
             sockErr = (void*) CMSG_DATA(controlMessage);
 
             /* Only TXTIME error is handled for TSN activity.
-            if the noticed error is not TXTIME error, then next messge header is
+            if the noticed error is not TXTIME error, then next message header is
             traverses and loop breaks with reporting unknown error.
             */
             if (sockErr->ee_origin == SO_EE_ORIGIN_TXTIME)
@@ -277,7 +278,7 @@ SOPC_ReturnStatus SOPC_TX_UDP_Socket_Error_Queue(SOPC_Socket sock)
                 {
                 case SO_EE_CODE_TXTIME_INVALID_PARAM:
                 case SO_EE_CODE_TXTIME_MISSED:
-                    fprintf(stderr, "Packet with timestamp %" PRIu64 " dropped\n", timestamp);
+                    SOPC_CONSOLE_PRINTF("Packet with timestamp %" PRIu64 " dropped\n", timestamp);
                     status = SOPC_STATUS_NOK;
                     break;
                 default:
@@ -286,17 +287,18 @@ SOPC_ReturnStatus SOPC_TX_UDP_Socket_Error_Queue(SOPC_Socket sock)
                 }
             }
         }
-#ifdef __GLIBC__
+
         controlMessage = CMSG_NXTHDR(&message, controlMessage);
         status = SOPC_STATUS_NOK;
         SOPC_CONSOLE_PRINTF("Unknown error\n");
-
-#else
-        return SOPC_STATUS_NOT_SUPPORTED;
-#endif
     }
 
     return status;
+
+#else
+    SOPC_CONSOLE_PRINTF("Cannot iterate through error queue as only GNU C library is supported.\n");
+    return SOPC_STATUS_NOT_SUPPORTED;
+#endif
 }
 
 #endif // not __clang_analyzer__
