@@ -504,6 +504,25 @@ build-freertos:
     - if: "$CROSS_COMPILE != null || $ALL_BUILDS != null || $CI_PIPELINE_SOURCE == 'merge_request_event' || $CI_COMMIT_TAG"
       when: always
 
+build-alpine:
+  stage: build-others
+  image: registry.gitlab.com/systerel/s2opc/alpine_build@sha256:6e3352d049476d8d595e70a95843bbca6738c6f414eb0cdf7deb0059442dfd0a # alpine_build:v1.0
+  needs: []
+  script: |-
+    mkdir build
+    cd build
+    cmake S2OPC_NODE_MANAGEMENT=1 WITH_ASAN=1 ..
+    cmake --build .
+  artifacts:
+    name: "bin-alpine-${CI_COMMIT_REF_SLUG}_${CI_COMMIT_SHA}_job${CI_JOB_ID}"
+    paths:
+      - "build_alpine/"
+    when: always
+    expire_in: "1 week"
+  rules:
+    - if: "$CROSS_COMPILE != null || $ALL_BUILDS != null || $CI_PIPELINE_SOURCE == 'merge_request_event' || $CI_COMMIT_TAG"
+      when: always
+
 ###
 # Test jobs
 ###
