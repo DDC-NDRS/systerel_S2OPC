@@ -24,7 +24,10 @@
 #include <time.h>
 #include <unistd.h>
 
+#ifdef __GLIBC__
 #include <linux/errqueue.h>
+#endif
+
 #include <net/if.h>
 #include <netinet/in.h>
 #include <netinet/ip.h>
