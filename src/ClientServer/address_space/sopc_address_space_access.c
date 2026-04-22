@@ -1688,6 +1688,122 @@ SOPC_StatusCode SOPC_AddressSpaceAccess_TranslateBrowsePath(const SOPC_AddressSp
     return stCode;
 }
 
+static SOPC_StatusCode fill_browse_results(const SOPC_AddressSpaceAccess* addSpaceAccess,
+                                           OpcUa_ReferenceNode* ref,
+                                           const OpcUa_BrowseResultMask resultMask,
+                                           OpcUa_NodeClass* pClass,
+                                           SOPC_Array* refsArr)
+{
+    SOPC_StatusCode stCode = SOPC_GoodGenericStatus;
+    OpcUa_ReferenceDescription refDescription;
+    OpcUa_ReferenceDescription_Initialize(&refDescription);
+
+    SOPC_ReturnStatus status;
+    const SOPC_NodeId* targetNid = &ref->TargetId.NodeId;
+
+    SOPC_AddressSpace_Node* targetNode = SOPC_InternalAddressSpaceAccess_GetNode(addSpaceAccess, targetNid);
+    SOPC_AddressSpace* pAddrSpc = addSpaceAccess->addSpaceRef;
+
+    // Note pClass cannot be NULL in called, condition kept for robustness
+    if ((resultMask & OpcUa_BrowseResultMask_NodeClass) && NULL != pClass)
+    {
+        refDescription.NodeClass = *pClass;
+    }
+
+    // NodeId is always returned.
+    if (SOPC_IsGoodStatus(stCode))
+    {
+        status = SOPC_ExpandedNodeId_Copy(&refDescription.NodeId, &ref->TargetId);
+        if (SOPC_STATUS_OK != status)
+        {
+            stCode = OpcUa_BadOutOfMemory;
+        }
+    }
+
+    // IsForward
+    if ((resultMask & OpcUa_BrowseResultMask_IsForward) && SOPC_IsGoodStatus(stCode))
+    {
+        refDescription.IsForward = !ref->IsInverse;
+    }
+
+    // ReferenceTypeId
+    if ((resultMask & OpcUa_BrowseResultMask_ReferenceTypeId) && SOPC_IsGoodStatus(stCode))
+    {
+        status = SOPC_NodeId_Copy(&refDescription.ReferenceTypeId, &ref->ReferenceTypeId);
+        if (SOPC_STATUS_OK != status)
+        {
+            stCode = OpcUa_BadOutOfMemory;
+        }
+    }
+
+    // Read BrowseName (SOPC_QualifiedName)
+    if ((resultMask & OpcUa_BrowseResultMask_BrowseName) && SOPC_IsGoodStatus(stCode))
+    {
+        SOPC_QualifiedName* pRes = SOPC_AddressSpace_Get_BrowseName(pAddrSpc, targetNode);
+
+        status = SOPC_QualifiedName_Copy(&refDescription.BrowseName, pRes);
+        if (SOPC_STATUS_OK != status)
+        {
+            stCode = OpcUa_BadOutOfMemory;
+        }
+    }
+
+    // Read DisplayName (SOPC_LocalizedText)
+    if ((resultMask & OpcUa_BrowseResultMask_DisplayName) && SOPC_IsGoodStatus(stCode))
+    {
+        SOPC_LocalizedText* pRes = SOPC_AddressSpace_Get_DisplayName(pAddrSpc, targetNode);
+
+        status = SOPC_LocalizedText_Copy(&refDescription.DisplayName, pRes);
+        if (SOPC_STATUS_OK != status)
+        {
+            stCode = OpcUa_BadOutOfMemory;
+        }
+    }
+
+    // Set TypeDefinition (SOPC_ExpandedNodeId)
+    if ((resultMask & OpcUa_BrowseResultMask_TypeDefinition) && SOPC_IsGoodStatus(stCode))
+    {
+        int32_t* addSpaceNbRef = SOPC_AddressSpace_Get_NoOfReferences(pAddrSpc, targetNode);
+        OpcUa_ReferenceNode** subRefs = SOPC_AddressSpace_Get_References(pAddrSpc, targetNode);
+
+        bool found = false;
+        for (int32_t i = 0; i < *addSpaceNbRef && SOPC_IsGoodStatus(stCode) && !found; i++)
+        {
+            // Check references criteria
+            ref = &(*subRefs)[i];
+
+            // Search for "hasTypeDefinition"
+            bool res = SOPC_NodeId_Equal(&ref->ReferenceTypeId, &hasTypeDefinitionType);
+            if (res && !ref->IsInverse)
+            {
+                found = true;
+                status = SOPC_ExpandedNodeId_Copy(&refDescription.TypeDefinition, &ref->TargetId);
+                if (SOPC_STATUS_OK != status)
+                {
+                    stCode = OpcUa_BadOutOfMemory;
+                }
+            }
+        }
+        // Note that if TypeDefinition was not found, it remains unchanged (empty).
+    }
+
+    if (SOPC_IsGoodStatus(stCode))
+    {
+        bool res = SOPC_Array_Append(refsArr, refDescription);
+        if (!res)
+        {
+            // Array append fail so we must free memory allocated
+            stCode = OpcUa_BadOutOfMemory;
+        }
+    }
+    if (!SOPC_IsGoodStatus(stCode))
+    {
+        OpcUa_ReferenceDescription_Clear(&refDescription);
+    }
+
+    return stCode;
+}
+
 SOPC_StatusCode SOPC_AddressSpaceAccess_BrowseNode(const SOPC_AddressSpaceAccess* addSpaceAccess,
                                                    const SOPC_NodeId* nodeId,
                                                    const OpcUa_BrowseDirection browseDirection,
@@ -1698,20 +1814,21 @@ SOPC_StatusCode SOPC_AddressSpaceAccess_BrowseNode(const SOPC_AddressSpaceAccess
                                                    OpcUa_ReferenceDescription** references,
                                                    int32_t* noOfReferences)
 {
-    SOPC_UNUSED_ARG(nodeClassMask);
-    SOPC_UNUSED_ARG(resultMask);
-
-    if (NULL == addSpaceAccess || NULL == nodeId || NULL == referenceTypeId || NULL == references ||
-        NULL != *references || NULL == noOfReferences)
+    if (NULL == addSpaceAccess || NULL == nodeId || NULL == references || NULL != *references || NULL == noOfReferences)
     {
         return OpcUa_BadInvalidArgument;
     }
 
+    SOPC_AddressSpace* pAddrSpc = addSpaceAccess->addSpaceRef;
     // Check that referenceTypeId refer to a valid referenceType
-    SOPC_AddressSpace_Node* referenceNode = SOPC_InternalAddressSpaceAccess_GetNode(addSpaceAccess, referenceTypeId);
-    if (NULL == referenceNode || OpcUa_NodeClass_ReferenceType != referenceNode->node_class)
+    if (NULL != referenceTypeId)
     {
-        return OpcUa_BadReferenceTypeIdInvalid;
+        SOPC_AddressSpace_Node* referenceNode =
+            SOPC_InternalAddressSpaceAccess_GetNode(addSpaceAccess, referenceTypeId);
+        if (NULL == referenceNode || OpcUa_NodeClass_ReferenceType != referenceNode->node_class)
+        {
+            return OpcUa_BadReferenceTypeIdInvalid;
+        }
     }
 
     // Get node and check if this one exist
@@ -1732,13 +1849,12 @@ SOPC_StatusCode SOPC_AddressSpaceAccess_BrowseNode(const SOPC_AddressSpaceAccess
     }
 
     SOPC_StatusCode stCode = SOPC_GoodGenericStatus;
-    OpcUa_ReferenceDescription refDescription;
-    OpcUa_ReferenceDescription_Initialize(&refDescription);
     SOPC_ReturnStatus status = SOPC_STATUS_OK;
     OpcUa_ReferenceNode* ref = NULL;
+
     // Get all references attached to the node
-    int32_t* addSpaceNbRef = SOPC_AddressSpace_Get_NoOfReferences(addSpaceAccess->addSpaceRef, node);
-    OpcUa_ReferenceNode** addSpaceRefs = SOPC_AddressSpace_Get_References(addSpaceAccess->addSpaceRef, node);
+    int32_t* addSpaceNbRef = SOPC_AddressSpace_Get_NoOfReferences(pAddrSpc, node);
+    OpcUa_ReferenceNode** addSpaceRefs = SOPC_AddressSpace_Get_References(pAddrSpc, node);
     SOPC_ASSERT(NULL != addSpaceNbRef);
     SOPC_ASSERT(NULL != addSpaceRefs);
     for (int32_t i = 0; i < *addSpaceNbRef && SOPC_IsGoodStatus(stCode); i++)
@@ -1749,9 +1865,14 @@ SOPC_StatusCode SOPC_AddressSpaceAccess_BrowseNode(const SOPC_AddressSpaceAccess
 
         // Check if referenceTypeId is equal or a subtype if allow
         bool res = false;
-        if (includeSubtypes)
+
+        if (NULL == referenceTypeId)
         {
-            res = is_type_or_subtype(addSpaceAccess->addSpaceRef, &ref->ReferenceTypeId, referenceTypeId);
+            res = true;
+        }
+        else if (includeSubtypes)
+        {
+            res = is_type_or_subtype(pAddrSpc, &ref->ReferenceTypeId, referenceTypeId);
         }
         else
         {
@@ -1759,6 +1880,18 @@ SOPC_StatusCode SOPC_AddressSpaceAccess_BrowseNode(const SOPC_AddressSpaceAccess
         }
         if (!res)
         {
+            status = SOPC_STATUS_NOK;
+        }
+
+        // Filter nodeClass
+        SOPC_AddressSpace_Node* targetNode =
+            SOPC_InternalAddressSpaceAccess_GetNode(addSpaceAccess, &ref->TargetId.NodeId);
+        OpcUa_NodeClass* pNodeClass =
+            (NULL == targetNode ? NULL : SOPC_AddressSpace_Get_NodeClass(pAddrSpc, targetNode));
+        if (NULL == pNodeClass ||
+            (nodeClassMask != OpcUa_NodeClass_Unspecified && (nodeClassMask & (*pNodeClass)) == 0))
+        {
+            // nodeClassMask was set but does not match reference class
             status = SOPC_STATUS_NOK;
         }
 
@@ -1785,24 +1918,13 @@ SOPC_StatusCode SOPC_AddressSpaceAccess_BrowseNode(const SOPC_AddressSpaceAccess
         // The reference match all criteria add the reference to result
         if (SOPC_STATUS_OK == status)
         {
-            OpcUa_ReferenceDescription_Initialize(&refDescription);
-
             // Fill the referenceDescription
-            refDescription.IsForward = !ref->IsInverse;
-            status = SOPC_ExpandedNodeId_Copy(&refDescription.NodeId, &ref->TargetId);
-            if (SOPC_STATUS_OK != status)
+            stCode = fill_browse_results(addSpaceAccess, ref, resultMask, pNodeClass, refsArr);
+
+            // Ignore "Nothing to do" errors
+            if (OpcUa_BadNothingToDo == stCode)
             {
-                stCode = OpcUa_BadOutOfMemory;
-            }
-            else
-            {
-                res = SOPC_Array_Append(refsArr, refDescription);
-                if (!res)
-                {
-                    // Array append fail so we must free memory allocated
-                    OpcUa_ReferenceDescription_Clear(&refDescription);
-                    stCode = OpcUa_BadOutOfMemory;
-                }
+                stCode = SOPC_GoodGenericStatus;
             }
         }
     }

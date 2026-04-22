@@ -107,9 +107,9 @@ SOPC_StatusCode SOPC_Method_Func_IncCounter(const SOPC_CallContext* callContextP
     int32_t nbOfReferences = 0;
 
     // Browse TestObject to illustrate browse usage
-    SOPC_StatusCode stCode =
-        SOPC_AddressSpaceAccess_BrowseNode(addSpAccess, objectId, OpcUa_BrowseDirection_Forward, &HasComponent_Type,
-                                           false, 0, 0, &references, &nbOfReferences);
+    SOPC_StatusCode stCode = SOPC_AddressSpaceAccess_BrowseNode(
+        addSpAccess, objectId, OpcUa_BrowseDirection_Forward, &HasComponent_Type, false, OpcUa_NodeClass_Unspecified,
+        OpcUa_BrowseResultMask_None, &references, &nbOfReferences);
 
     if (SOPC_IsGoodStatus(stCode))
     {

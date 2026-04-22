@@ -353,7 +353,8 @@ START_TEST(test_browse_node)
     int32_t nbOfReferences = 0;
 
     SOPC_StatusCode statusCode = SOPC_AddressSpaceAccess_BrowseNode(
-        addSpaceAccess, nodeId, OpcUa_BrowseDirection_Both, &OrganizesType, false, 0, 0, &references, &nbOfReferences);
+        addSpaceAccess, nodeId, OpcUa_BrowseDirection_Both, &OrganizesType, false, OpcUa_NodeClass_Unspecified,
+        OpcUa_BrowseResultMask_None, &references, &nbOfReferences);
     ck_assert_uint_eq(SOPC_GoodGenericStatus, statusCode);
     ck_assert_ptr_nonnull(&references);
 
@@ -368,6 +369,172 @@ START_TEST(test_browse_node)
     SOPC_NodeId_Clear(nodeId);
     SOPC_Free(nodeId);
     SOPC_Free(firstRefNodeId);
+
+    // Test masks 
+    // Step 1: invalid masks
+    nodeIdString = "i=2253";
+    nodeId = SOPC_NodeId_FromCString(nodeIdString);
+    ck_assert_ptr_nonnull(nodeId);
+    const SOPC_NodeId HasComponentType = SOPC_NODEID_NS0_NUMERIC(OpcUaId_HasComponent);
+    references = NULL;
+    nbOfReferences = 0;
+
+    statusCode = SOPC_AddressSpaceAccess_BrowseNode(
+        addSpaceAccess,
+        nodeId,
+        OpcUa_BrowseDirection_Forward,
+        &HasComponentType,
+        false,
+        OpcUa_NodeClass_ObjectType,
+        OpcUa_BrowseResultMask_BrowseName | OpcUa_BrowseResultMask_TypeDefinition,
+        &references, 
+        &nbOfReferences);
+    ck_assert_uint_eq(SOPC_GoodGenericStatus, statusCode);
+    ck_assert_ptr_nonnull(&references);
+    ck_assert_int_eq(nbOfReferences, 0); // No results (No ObjectType)
+
+    SOPC_Clear_Array(&nbOfReferences, (void**) &references, sizeof(*references), OpcUa_ReferenceDescription_Clear);
+    SOPC_Free(references);
+    SOPC_NodeId_Clear(nodeId);
+    SOPC_Free(nodeId);
+
+    // Step 2: valid masks
+    nodeIdString = "i=2253";
+    nodeId = SOPC_NodeId_FromCString(nodeIdString);
+    ck_assert_ptr_nonnull(nodeId);
+    references = NULL;
+    nbOfReferences = 0;
+
+    statusCode = SOPC_AddressSpaceAccess_BrowseNode(
+        addSpaceAccess,
+        nodeId,
+        OpcUa_BrowseDirection_Forward,
+        NULL,
+        false,
+        OpcUa_NodeClass_Variable,
+        OpcUa_BrowseResultMask_BrowseName | OpcUa_BrowseResultMask_NodeClass,
+        &references, 
+        &nbOfReferences);
+    ck_assert_uint_eq(SOPC_GoodGenericStatus, statusCode);
+    ck_assert_ptr_nonnull(&references);
+    ck_assert_int_gt(nbOfReferences, 0);
+    // Check that only BrowseName and NodeClass are set
+    // Check "i=2255" (namespaceArray)
+    int32_t idx;
+    bool nidFound = false;
+    for (idx = 0; idx < nbOfReferences; idx++)
+    {
+        static const SOPC_NodeId nsArrayNid = SOPC_NODEID_NS0_NUMERIC(OpcUaId_Server_NamespaceArray);
+        static const SOPC_NodeId nullNid = SOPC_NODEID_NS0_NUMERIC(0);
+        static const SOPC_String nullString = SOPC_STRING("");
+        static const SOPC_String nsArrayString = SOPC_STRING("NamespaceArray");
+        ref = &references[idx];
+        int32_t nidCmpRes = -1;
+        statusCode = SOPC_NodeId_Compare(&ref->NodeId.NodeId, &nsArrayNid, &nidCmpRes);
+        if (statusCode == SOPC_STATUS_OK && nidCmpRes == 0)
+        {
+            nidFound = true;
+
+            // ReferenceTypeId not set
+            statusCode = SOPC_NodeId_Compare(&ref->ReferenceTypeId, &nullNid, &nidCmpRes);
+            ck_assert_uint_eq(SOPC_STATUS_OK, statusCode);
+            ck_assert_int_eq(0, nidCmpRes);
+
+            // BrowseName is set
+            statusCode = SOPC_String_Compare(&ref->BrowseName.Name, &nsArrayString, false, &nidCmpRes);
+            ck_assert_uint_eq(SOPC_STATUS_OK, statusCode);
+            ck_assert_int_eq(0, nidCmpRes);
+
+            // DisplayName is not set
+            statusCode = SOPC_String_Compare(&ref->DisplayName.defaultText, &nullString, false, &nidCmpRes);
+            ck_assert_uint_eq(SOPC_STATUS_OK, statusCode);
+            ck_assert_int_eq(0, nidCmpRes);
+
+
+            // TypeDefinition is not set
+            statusCode = SOPC_NodeId_Compare(&ref->TypeDefinition.NodeId, &nullNid, &nidCmpRes);
+            ck_assert_uint_eq(SOPC_STATUS_OK, statusCode);
+            ck_assert_int_eq(0, nidCmpRes);
+        }
+
+        // NodeClass is set and only variables are returned
+        ck_assert_uint_eq(ref->NodeClass, OpcUa_NodeClass_Variable);
+    }
+    ck_assert(nidFound);
+    SOPC_Clear_Array(&nbOfReferences, (void**) &references, sizeof(*references), OpcUa_ReferenceDescription_Clear);
+    SOPC_Free(references);
+    SOPC_NodeId_Clear(nodeId);
+    SOPC_Free(nodeId);
+
+    // Step 3: valid masks (same as step2 but invert mask)
+    nodeIdString = "i=2253";
+    nodeId = SOPC_NodeId_FromCString(nodeIdString);
+    ck_assert_ptr_nonnull(nodeId);
+    references = NULL;
+    nbOfReferences = 0;
+
+    statusCode = SOPC_AddressSpaceAccess_BrowseNode(
+        addSpaceAccess,
+        nodeId,
+        OpcUa_BrowseDirection_Forward,
+        NULL,
+        false,
+        OpcUa_NodeClass_Variable,
+        OpcUa_BrowseResultMask_ReferenceTypeId | OpcUa_BrowseResultMask_IsForward | 
+        OpcUa_BrowseResultMask_DisplayName,
+        &references, 
+        &nbOfReferences);
+    ck_assert_uint_eq(SOPC_GoodGenericStatus, statusCode);
+    ck_assert_ptr_nonnull(&references);
+    ck_assert_int_gt(nbOfReferences, 0);
+    // Check that only BrowseName and NodeClass are set
+    // Check "i=2255" (namespaceArray)
+    nidFound = false;
+    for (idx = 0; idx < nbOfReferences; idx++)
+    {
+        static const SOPC_NodeId nsArrayNid = SOPC_NODEID_NS0_NUMERIC(OpcUaId_Server_NamespaceArray);
+        static const SOPC_NodeId nullNid = SOPC_NODEID_NS0_NUMERIC(0);
+        static const SOPC_String nullString = SOPC_STRING("");
+        static const SOPC_String nsArrayString = SOPC_STRING("NamespaceArray");
+        static const SOPC_NodeId hasPropNid = SOPC_NODEID_NS0_NUMERIC(OpcUaId_HasProperty);
+        ref = &references[idx];
+        int32_t nidCmpRes = -1;
+        statusCode = SOPC_NodeId_Compare(&ref->NodeId.NodeId, &nsArrayNid, &nidCmpRes);
+        if (statusCode == SOPC_STATUS_OK && nidCmpRes == 0)
+        {
+            nidFound = true;
+
+            // ReferenceTypeId not set
+            statusCode = SOPC_NodeId_Compare(&ref->ReferenceTypeId, &hasPropNid, &nidCmpRes);
+            ck_assert_uint_eq(SOPC_STATUS_OK, statusCode);
+            ck_assert_int_eq(0, nidCmpRes);
+
+            // BrowseName is set
+            statusCode = SOPC_String_Compare(&ref->BrowseName.Name, &nullString, false, &nidCmpRes);
+            ck_assert_uint_eq(SOPC_STATUS_OK, statusCode);
+            ck_assert_int_eq(0, nidCmpRes);
+
+            // DisplayName is set
+            statusCode = SOPC_String_Compare(&ref->DisplayName.defaultText, &nsArrayString, false, &nidCmpRes);
+            ck_assert_uint_eq(SOPC_STATUS_OK, statusCode);
+            ck_assert_int_eq(0, nidCmpRes);
+
+            // NodeClass is not set
+            ck_assert_uint_eq(ref->NodeClass, OpcUa_NodeClass_Unspecified);
+
+            // TypeDefinition is not set (Variable)
+            statusCode = SOPC_NodeId_Compare(&ref->TypeDefinition.NodeId, &nullNid, &nidCmpRes);
+            ck_assert_uint_eq(SOPC_STATUS_OK, statusCode);
+            ck_assert_int_eq(0, nidCmpRes);
+        }
+    }
+    ck_assert(nidFound);
+    SOPC_Clear_Array(&nbOfReferences, (void**) &references, sizeof(*references), OpcUa_ReferenceDescription_Clear);
+    SOPC_Free(references);
+    SOPC_NodeId_Clear(nodeId);
+    SOPC_Free(nodeId);
+
+    // Clear AddressSpace
     SOPC_AddressSpace_Delete(addressSpace);
     SOPC_AddressSpaceAccess_Delete(&addSpaceAccess);
 }
@@ -401,7 +568,8 @@ START_TEST(test_delete_child_nodes)
     // Try to browse the child node -> ok
     SOPC_NodeId* childNodeId = SOPC_NodeId_FromCString(childOfNodeToDelete);
     statusCode = SOPC_AddressSpaceAccess_BrowseNode(addSpaceAccess, childNodeId, OpcUa_BrowseDirection_Both,
-                                                    &referencesType, true, 0, 0, &references, &nbOfReferences);
+                                                    &referencesType, true, OpcUa_NodeClass_Unspecified,
+                                                    OpcUa_BrowseResultMask_None, &references, &nbOfReferences);
     ck_assert_uint_eq(SOPC_GoodGenericStatus, statusCode);
     ck_assert_ptr_nonnull(references);
     ck_assert_int_eq(nbOfReferences, 1); // We used TargetDeleteReference so we deleted the reference to its parent, it
