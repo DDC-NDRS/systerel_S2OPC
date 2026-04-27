@@ -417,7 +417,8 @@ build-rpi:
     DOCKER_DIGEST: "sha256:070b1ca58667ee5908902ba3eb03e5fa05993d3a86d2c8ddeb6f7f41ed62609c"
     BUILD_DIR: build_toolchain
     # Note: building of PyS2OPC C generated file fails due to "conditional branch out of range" if not compiled with O0.
-    # In order to have S2OPC built with optimisations, it is also possible to build PyS2OPC alone in a second step.
+    # In order to have S2OPC built with optimizations, it is also possible to build PyS2OPC alone in a second step.
+    POSITION_INDEPENDENT_CODE: 1 # Needed in rpi use case
     CMAKE_BUILD_TYPE: Debug
     WITH_PYS2OPC: 1
     # Note: it might be renamed to "...-linux_armv7l.whl" if needed for installation

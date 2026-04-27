@@ -141,6 +141,7 @@ else
     append_cmake_option ENABLE_SAMPLES
     append_cmake_option USE_STATIC_EXT_LIBS
     append_cmake_option POSITION_INDEPENDENT_EXECUTABLE
+    append_cmake_option POSITION_INDEPENDENT_CODE
     append_cmake_option SECURITY_HARDENING
     append_cmake_option PYS2OPC_WHEEL_NAME
     append_cmake_option WITH_GCC_STATIC_ANALYSIS

@@ -130,8 +130,10 @@ target_include_directories(s2opc_common
   PRIVATE ${S2OPC_COMMON_PRIVATE_INCLUDES})
 
 # Needed if we want to use the objects in a shared library
-set_target_properties(s2opc_common PROPERTIES POSITION_INDEPENDENT_CODE ON)
-set_target_properties(s2opc_common PROPERTIES INTERFACE_POSITION_INDEPENDENT_CODE ON)
+set_target_properties(s2opc_common PROPERTIES POSITION_INDEPENDENT_CODE ${POSITION_INDEPENDENT_CODE})
+if (POSITION_INDEPENDENT_CODE)
+  set_target_properties(s2opc_common PROPERTIES INTERFACE_POSITION_INDEPENDENT_CODE ${INTERFACE_POSITION_INDEPENDENT_CODE})
+endif()
 
 ### Installation and export of S2OPC common library ###
 foreach(dir ${S2OPC_COMMON_PUBLIC_INCLUDES})

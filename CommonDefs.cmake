@@ -195,6 +195,17 @@ if (POSITION_INDEPENDENT_EXECUTABLE)
   endif()
 endif()
 
+# If requested set PIC compiler flag
+option(POSITION_INDEPENDENT_CODE "Build position independent code (-fPIC)" OFF)
+if (BUILD_SHARED_LIBS)
+  # Enforce Position Independent Code when building share library
+  set(POSITION_INDEPENDENT_CODE ON)
+endif()
+if (POSITION_INDEPENDENT_CODE)
+  set(INTERFACE_POSITION_INDEPENDENT_CODE ON)
+endif()
+
+
 # Set Clang compiler flags
 list(APPEND S2OPC_COMPILER_FLAGS $<${IS_CLANG}:-std=c99 -pedantic -fstack-protector -Wall -Wextra -Wunreachable-code -fexceptions>)
 # Add security hardening compilation options
