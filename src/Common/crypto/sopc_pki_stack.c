@@ -478,6 +478,11 @@ static SOPC_ReturnStatus load_certificate_or_crl_list(const char* basePath,
     }
     /* Get the size and iterate for each item */
     size_t nbFiles = SOPC_Array_Size(pFilePaths);
+
+    bool hasFileToLoad = false;
+    bool atLeastOneLoaded = false;
+    bool allFilesLoaded = true;
+
     for (size_t idx = 0; idx < nbFiles && SOPC_STATUS_OK == status; idx++)
     {
         pFilePath = SOPC_Array_Get(pFilePaths, char*, idx);
@@ -487,20 +492,48 @@ static SOPC_ReturnStatus load_certificate_or_crl_list(const char* basePath,
         }
         else
         {
+            hasFileToLoad = true;
             SOPC_Logger_TraceDebug(SOPC_LOG_MODULE_COMMON, "> PKI loading file <%s>", pFilePath);
 
             if (bIscrl)
             {
-                /* Load CRL */
                 status = SOPC_KeyManager_CRL_CreateOrAddFromFile(pFilePath, &pCrl);
             }
             else
             {
-                /* Load CERT */
                 status = SOPC_KeyManager_Certificate_CreateOrAddFromFile(pFilePath, &pCerts);
+            }
+
+            if (SOPC_STATUS_OK == status)
+            {
+                atLeastOneLoaded = true;
+            }
+            else
+            {
+                allFilesLoaded = false;
+
+                SOPC_Logger_TraceWarning(SOPC_LOG_MODULE_COMMON, "> PKI creation warning: ignored invalid %s <%s>.",
+                                         bIscrl ? "CRL" : "certificate", pFilePath);
             }
         }
     }
+
+#ifdef S2OPC_START_APP_PKI_WITH_ONE_VALID_CERT
+    SOPC_UNUSED_ARG(allFilesLoaded);
+    if (hasFileToLoad && !atLeastOneLoaded)
+    {
+        status = SOPC_STATUS_NOK;
+    }
+    else
+    {
+        status = SOPC_STATUS_OK;
+    }
+#else
+    SOPC_UNUSED_ARG(hasFileToLoad);
+    SOPC_UNUSED_ARG(atLeastOneLoaded);
+    status = allFilesLoaded ? SOPC_STATUS_OK : SOPC_STATUS_NOK;
+#endif
+
     /* Clear in case of error */
     if (SOPC_STATUS_OK != status)
     {

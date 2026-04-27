@@ -643,8 +643,10 @@ SOPC_ReturnStatus SOPC_KeyManager_Certificate_CreateOrAddFromDER(const uint8_t* 
     if (SOPC_STATUS_OK != status)
     {
         SOPC_KeyManager_Certificate_Free(pCertNew);
+#ifndef S2OPC_START_APP_PKI_WITH_ONE_VALID_CERT
         SOPC_KeyManager_Certificate_Free(*ppCert);
         *ppCert = NULL;
+#endif
     }
     else /* Finally add the cert to the list in ppCert */
     {
@@ -733,7 +735,12 @@ SOPC_ReturnStatus SOPC_KeyManager_Certificate_CreateOrAddFromFile(const char* sz
 
     if (SOPC_STATUS_OK != status)
     {
+#ifndef S2OPC_START_APP_PKI_WITH_ONE_VALID_CERT
         SOPC_Logger_TraceError(SOPC_LOG_MODULE_COMMON, "> KeyManager: certificate file \"%s\" parse failed.\n", szPath);
+#else
+        SOPC_Logger_TraceWarning(SOPC_LOG_MODULE_COMMON,
+                                 "> KeyManager: certificate file \"%s\" parse failed, ignoring it.\n", szPath);
+#endif
     }
 
     SOPC_Buffer_Delete(pBuffer);

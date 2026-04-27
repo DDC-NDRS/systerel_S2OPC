@@ -98,6 +98,8 @@ if(NOT DEFINED S2OPC_CRYPTO_LIB)
     message(FATAL_ERROR "'S2OPC_CRYPTO_LIB' is not defined!")
 endif()
 
+option(S2OPC_START_APP_PKI_WITH_ONE_VALID_CERT "Start the client/server if at least one certificate is valid in its PKI." OFF)
+
 option(S2OPC_CLIENTSERVER_ONLY "Only build the common library and client server libraries, tests, and samples (effectively excludes pubsub)." OFF)
 option(S2OPC_PUBSUB_ONLY "Only build the common library and the pubsub library, tests, and samples (effectively excludes clientserver)." OFF)
 if(S2OPC_CLIENTSERVER_ONLY AND NOT WITH_PYS2OPC)
@@ -496,6 +498,8 @@ list(APPEND S2OPC_DEFINITIONS $<$<BOOL:${S2OPC_HAS_AUDITING}>:S2OPC_HAS_AUDITING
 # Add S2OPC_CRYPTO_CYCLONE to compilation definition if option activated
 list(APPEND S2OPC_DEFINITIONS $<$<BOOL:${S2OPC_CRYPTO_CYCLONE}>:S2OPC_CRYPTO_CYCLONE>)
 list(APPEND S2OPC_DEFINITIONS $<$<BOOL:${S2OPC_CYCLONE_CI_TEST_ONLY_RSA}>:S2OPC_CYCLONE_CI_TEST_ONLY_RSA>)
+# Add S2OPC_START_APP_PKI_WITH_ONE_VALID_CERT to compilation definition if option activated
+list(APPEND S2OPC_DEFINITIONS $<$<BOOL:${S2OPC_START_APP_PKI_WITH_ONE_VALID_CERT}>:S2OPC_START_APP_PKI_WITH_ONE_VALID_CERT>)
 
 # Check Auditing/Events dependancy
 if (${S2OPC_HAS_AUDITING})

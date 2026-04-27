@@ -616,9 +616,18 @@ SOPC_ReturnStatus SOPC_KeyManager_Certificate_CreateOrAddFromFile(const char* sz
         if (0 != err)
         {
             status = SOPC_STATUS_NOK;
+
+#ifndef S2OPC_START_APP_PKI_WITH_ONE_VALID_CERT
             SOPC_Logger_TraceError(SOPC_LOG_MODULE_COMMON,
                                    "KeyManager: certificate file \"%s\" parse failed with error code: -0x%X", szPath,
                                    (unsigned int) -err);
+#else
+
+            SOPC_Logger_TraceWarning(
+                SOPC_LOG_MODULE_COMMON,
+                "KeyManager: certificate file \"%s\" parse failed with error code: -0x%X, ignoring it", szPath,
+                (unsigned int) -err);
+#endif /* S2OPC_START_APP_PKI_WITH_ONE_VALID_CERT */
         }
     }
 
@@ -629,14 +638,19 @@ SOPC_ReturnStatus SOPC_KeyManager_Certificate_CreateOrAddFromFile(const char* sz
 
     if (SOPC_STATUS_OK != status)
     {
+#ifndef S2OPC_START_APP_PKI_WITH_ONE_VALID_CERT
         SOPC_KeyManager_Certificate_Free(pCert);
         *ppCert = NULL;
-    }
-
-    return status;
 #else
+        // Do not free the certificate list in permissive mode.
+        // Already parsed (valid) certificates are kept even if an error occurs.
+#endif /* S2OPC_START_APP_PKI_WITH_ONE_VALID_CERT */
+    }
+    return status;
+
+#else /* MBEDTLS_FS_IO */
     return SOPC_STATUS_NOK;
-#endif
+#endif /* MBEDTLS_FS_IO */
 }
 
 void SOPC_KeyManager_Certificate_Free(SOPC_CertificateList* pCert)
