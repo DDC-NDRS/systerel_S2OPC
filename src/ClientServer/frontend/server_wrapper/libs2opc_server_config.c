@@ -99,6 +99,18 @@ bool SOPC_ServerInternal_IsStarted(void)
     return res;
 }
 
+bool SOPC_ServerInternal_IsStopping(void)
+{
+    bool res = false;
+    if (SOPC_Atomic_Int_Get(&sopc_server_helper_config.initialized))
+    {
+        SOPC_Mutex_Lock(&sopc_server_helper_config.stateMutex);
+        res = SOPC_SERVER_STATE_STOPPING == sopc_server_helper_config.state;
+        SOPC_Mutex_Unlock(&sopc_server_helper_config.stateMutex);
+    }
+    return res;
+}
+
 bool SOPC_ServerInternal_IsStopped(void)
 {
     bool res = false;

@@ -58,12 +58,11 @@
 typedef enum
 {
     SOPC_SERVER_STATE_INITIALIZING = 0,
-    SOPC_SERVER_STATE_CONFIGURING = 1,
-    SOPC_SERVER_STATE_CONFIGURED = 2,
-    SOPC_SERVER_STATE_STARTED = 3,
-    SOPC_SERVER_STATE_SHUTDOWN_PHASE = 4,
-    SOPC_SERVER_STATE_STOPPING = 5,
-    SOPC_SERVER_STATE_STOPPED = 6,
+    SOPC_SERVER_STATE_CONFIGURING,
+    SOPC_SERVER_STATE_CONFIGURED,
+    SOPC_SERVER_STATE_STARTED,
+    SOPC_SERVER_STATE_STOPPING,
+    SOPC_SERVER_STATE_STOPPED,
 } SOPC_HelperServer_State;
 
 // The server helper dedicated configuration in addition to configuration ::SOPC_S2OPC_Config
@@ -178,6 +177,9 @@ bool SOPC_ServerInternal_IsConfiguring(void);
 
 // Returns true if the server is in started state, false otherwise
 bool SOPC_ServerInternal_IsStarted(void);
+
+// Returns true if the server is in stopping state, false otherwise
+bool SOPC_ServerInternal_IsStopping(void);
 
 // Returns true if the server is in stopped state, false otherwise
 bool SOPC_ServerInternal_IsStopped(void);

@@ -91,7 +91,7 @@ static SOPC_ReturnStatus SOPC_ServerInternal_InternalLocalServiceAsync(SOPC_Loca
     SOPC_ReturnStatus status = SOPC_STATUS_OK;
     bool sendResult = false;
     SOPC_HelperConfigInternal_Ctx* ctx = NULL;
-    if (!SOPC_ServerInternal_IsStarted())
+    if (!(SOPC_ServerInternal_IsStarted() || SOPC_ServerInternal_IsStopping()))
     {
         status = SOPC_STATUS_INVALID_STATE;
     }
@@ -367,6 +367,7 @@ static SOPC_ReturnStatus SOPC_HelperInternal_SendWriteRequestWithCopyInCtx(SOPC_
                                                              errorMsg);
             if (!res)
             {
+                status = SOPC_STATUS_NOK;
                 SOPC_EncodeableObject_Delete(&OpcUa_WriteRequest_EncodeableType, (void**) &writeRequestCopyCtx);
             }
         }
@@ -508,7 +509,7 @@ static void SOPC_HelperInternal_ShutdownPhaseServer(void)
 
         status = SOPC_HelperInternal_SendWriteRequestWithCopyInCtx(
             &SOPC_HelperInternal_RuntimeVariableSetResponseCb, writeRequest,
-            "Updating runtime variables of server build information nodes failed");
+            "Updating runtime variables of server status nodes failed");
 
         // Evaluation of seconds till shutdown
         SOPC_TimeReference currentTime = SOPC_TimeReference_GetCurrent();
@@ -522,6 +523,14 @@ static void SOPC_HelperInternal_ShutdownPhaseServer(void)
             targetTimeReached = true;
         }
     } while (SOPC_STATUS_OK == status && !targetTimeReached);
+    if (SOPC_STATUS_OK != status)
+    {
+        // Log a warning message in the case of an internal write error
+        SOPC_Logger_TraceWarning(
+            SOPC_LOG_MODULE_CLIENTSERVER,
+            "Failed to call internal write to update the runtime variables of server status nodes. Status = %d",
+            status);
+    }
 }
 
 // Request to close all endpoints of the server
