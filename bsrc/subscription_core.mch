@@ -782,6 +782,8 @@ OPERATIONS
                 a_subscription_state (p_subscription) := e_subscriptionState_keepAlive ||
                 a_MessageSent := a_MessageSent \/ {p_subscription} ||
                 a_LifetimeCounter (p_subscription) := a_lifetimeExpCount (p_subscription) || /* reset lifetime counter */
+                /* reset keepAlive counter */
+                a_KeepAliveCounter (p_subscription) := a_keepAliveExpCount (p_subscription) ||
                 StatusCode_service := e_sc_ok ||
                 async_resp_msg := FALSE ||
                 notification_message :(notification_message : t_notif_msg_i & notification_message : t_notif_msg) ||

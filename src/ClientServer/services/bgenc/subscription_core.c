@@ -21,7 +21,7 @@
 
  File Name            : subscription_core.c
 
- Date                 : 09/03/2026 17:46:33
+ Date                 : 28/04/2026 09:10:12
 
  C Translator Version : tradc Java V1.2 (06/02/2022)
 
@@ -1018,6 +1018,7 @@ void subscription_core__receive_publish_request(
          subscription_core_1__set_subscription_state(subscription_core__p_subscription,
             constants__e_subscriptionState_keepAlive);
          subscription_core_1__reset_subscription_LifetimeCounter(subscription_core__p_subscription);
+         subscription_core_1__reset_subscription_KeepAliveCounter(subscription_core__p_subscription);
          *subscription_core__StatusCode_service = constants_statuscodes_bs__e_sc_ok;
          msg_subscription_publish_bs__get_notification_message_no_items(subscription_core__p_resp_msg,
             &subscription_core__l_notifMsg);

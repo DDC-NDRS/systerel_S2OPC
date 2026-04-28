@@ -1410,7 +1410,7 @@ OPERATIONS
 
             /* reset lifetime counter */
             reset_subscription_LifetimeCounter (p_subscription);
-
+            reset_subscription_KeepAliveCounter (p_subscription);
             d_send_keepalive_msg (p_subscription, p_resp_msg, StatusCode_service)
         ELSE
             StatusCode_service := e_sc_bad_invalid_state
