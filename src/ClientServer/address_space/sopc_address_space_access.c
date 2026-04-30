@@ -1690,6 +1690,7 @@ SOPC_StatusCode SOPC_AddressSpaceAccess_TranslateBrowsePath(const SOPC_AddressSp
 
 static SOPC_StatusCode fill_browse_results(const SOPC_AddressSpaceAccess* addSpaceAccess,
                                            OpcUa_ReferenceNode* ref,
+                                           SOPC_AddressSpace_Node* targetNode,
                                            const OpcUa_BrowseResultMask resultMask,
                                            OpcUa_NodeClass* pClass,
                                            SOPC_Array* refsArr)
@@ -1699,12 +1700,9 @@ static SOPC_StatusCode fill_browse_results(const SOPC_AddressSpaceAccess* addSpa
     OpcUa_ReferenceDescription_Initialize(&refDescription);
 
     SOPC_ReturnStatus status;
-    const SOPC_NodeId* targetNid = &ref->TargetId.NodeId;
 
-    SOPC_AddressSpace_Node* targetNode = SOPC_InternalAddressSpaceAccess_GetNode(addSpaceAccess, targetNid);
     SOPC_AddressSpace* pAddrSpc = addSpaceAccess->addSpaceRef;
 
-    // Note pClass cannot be NULL in called, condition kept for robustness
     if ((resultMask & OpcUa_BrowseResultMask_NodeClass) && NULL != pClass)
     {
         refDescription.NodeClass = *pClass;
@@ -1737,7 +1735,7 @@ static SOPC_StatusCode fill_browse_results(const SOPC_AddressSpaceAccess* addSpa
     }
 
     // Read BrowseName (SOPC_QualifiedName)
-    if ((resultMask & OpcUa_BrowseResultMask_BrowseName) && SOPC_IsGoodStatus(stCode))
+    if ((resultMask & OpcUa_BrowseResultMask_BrowseName) && NULL != targetNode && SOPC_IsGoodStatus(stCode))
     {
         SOPC_QualifiedName* pRes = SOPC_AddressSpace_Get_BrowseName(pAddrSpc, targetNode);
 
@@ -1749,7 +1747,7 @@ static SOPC_StatusCode fill_browse_results(const SOPC_AddressSpaceAccess* addSpa
     }
 
     // Read DisplayName (SOPC_LocalizedText)
-    if ((resultMask & OpcUa_BrowseResultMask_DisplayName) && SOPC_IsGoodStatus(stCode))
+    if ((resultMask & OpcUa_BrowseResultMask_DisplayName) && NULL != targetNode && SOPC_IsGoodStatus(stCode))
     {
         SOPC_LocalizedText* pRes = SOPC_AddressSpace_Get_DisplayName(pAddrSpc, targetNode);
 
@@ -1761,7 +1759,7 @@ static SOPC_StatusCode fill_browse_results(const SOPC_AddressSpaceAccess* addSpa
     }
 
     // Set TypeDefinition (SOPC_ExpandedNodeId)
-    if ((resultMask & OpcUa_BrowseResultMask_TypeDefinition) && SOPC_IsGoodStatus(stCode))
+    if ((resultMask & OpcUa_BrowseResultMask_TypeDefinition) && NULL != targetNode && SOPC_IsGoodStatus(stCode))
     {
         int32_t* addSpaceNbRef = SOPC_AddressSpace_Get_NoOfReferences(pAddrSpc, targetNode);
         OpcUa_ReferenceNode** subRefs = SOPC_AddressSpace_Get_References(pAddrSpc, targetNode);
@@ -1884,12 +1882,18 @@ SOPC_StatusCode SOPC_AddressSpaceAccess_BrowseNode(const SOPC_AddressSpaceAccess
         }
 
         // Filter nodeClass
-        SOPC_AddressSpace_Node* targetNode =
-            SOPC_InternalAddressSpaceAccess_GetNode(addSpaceAccess, &ref->TargetId.NodeId);
-        OpcUa_NodeClass* pNodeClass =
-            (NULL == targetNode ? NULL : SOPC_AddressSpace_Get_NodeClass(pAddrSpc, targetNode));
-        if (NULL == pNodeClass ||
-            (nodeClassMask != OpcUa_NodeClass_Unspecified && (nodeClassMask & (*pNodeClass)) == 0))
+        SOPC_AddressSpace_Node* targetNode = NULL;
+        OpcUa_NodeClass* pNodeClass = NULL;
+        if (0 == ref->TargetId.ServerIndex)
+        {
+            targetNode = SOPC_InternalAddressSpaceAccess_GetNode(addSpaceAccess, &ref->TargetId.NodeId);
+        }
+        if (NULL != targetNode)
+        {
+            pNodeClass = SOPC_AddressSpace_Get_NodeClass(pAddrSpc, targetNode);
+        }
+        if ((NULL != pNodeClass) && (nodeClassMask != OpcUa_NodeClass_Unspecified) &&
+            (nodeClassMask & (*pNodeClass)) == 0)
         {
             // nodeClassMask was set but does not match reference class
             status = SOPC_STATUS_NOK;
@@ -1919,7 +1923,7 @@ SOPC_StatusCode SOPC_AddressSpaceAccess_BrowseNode(const SOPC_AddressSpaceAccess
         if (SOPC_STATUS_OK == status)
         {
             // Fill the referenceDescription
-            stCode = fill_browse_results(addSpaceAccess, ref, resultMask, pNodeClass, refsArr);
+            stCode = fill_browse_results(addSpaceAccess, ref, targetNode, resultMask, pNodeClass, refsArr);
 
             // Ignore "Nothing to do" errors
             if (OpcUa_BadNothingToDo == stCode)

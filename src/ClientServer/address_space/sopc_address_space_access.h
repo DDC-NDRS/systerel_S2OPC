@@ -407,11 +407,14 @@ SOPC_StatusCode SOPC_AddressSpaceAccess_TranslateBrowsePath(const SOPC_AddressSp
  * @param nodeClassMask         Specifies the expected nodeClasses for the targetNodes.
  *                              Only return Reference of this class type. If OpcUa_NodeClass_Unspecified is provided,
  *                              then no filter is applied and all references are returned, whatever their class.
+ *                              Remote Nodes with unknown class are never filtered out by this filter.
  * @param resultMask            Specifies the field in the referenceDescription structure that should be returned.
  *                              Note that:
  *                               - fields in references related to unset bits in \p resultMask will not
  *                                 be set and remain in their default value (e.g IsForward = false).
  *                               - 'NodeId' field in references is not maskable and will always be returned.
+ *                               - (Limitation): The returned 'DisplayName' for remote Nodes may be empty if this
+ *                                 value is not present in the AddressSpace at call time.
  * @param[out] references       The array of references that meet the criteria specified above.
  *                              The pointer shall not be NULL.
  *                              Returned values are allocated and it is responsibility of the caller to free this
