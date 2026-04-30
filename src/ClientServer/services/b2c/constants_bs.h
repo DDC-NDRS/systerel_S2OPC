@@ -134,6 +134,8 @@ typedef OpcUa_NotificationMessage* constants_bs__t_notif_msg_i;
 typedef void* constants_bs__t_notificationData;
 typedef SOPC_SLinkedList* constants_bs__t_notificationQueue_i;
 typedef double constants_bs__t_opcua_duration_i;
+typedef SOPC_SLinkedListIterator constants_bs__t_prioritySubQueueIterator_i;
+typedef SOPC_SLinkedList* constants_bs__t_prioritySubQueue_i;
 typedef SOPC_SLinkedList* constants_bs__t_publishReqQueue_i;
 typedef OpcUa_ReadRawModifiedDetails* constants_bs__t_readRawModifiedDetails_i;
 typedef uint32_t constants_bs__t_request_context_i;
@@ -261,6 +263,8 @@ extern const constants_bs__t_NodeId_i constants_bs__c_Server_ServerCapabilities_
 #define constants_bs__c_notificationQueue_indet 0
 #define constants_bs__c_opcua_duration_indet -1
 #define constants_bs__c_opcua_duration_zero 0
+#define constants_bs__c_prioritySubQueueIterator_indet 0
+#define constants_bs__c_prioritySubQueue_indet 0
 #define constants_bs__c_publishReqQueue_indet 0
 #define constants_bs__c_readRawModifiedDetails_indet NULL
 #define constants_bs__c_registerServer2_expiration_time SOPC_REGISTERED_SERVER_EXPIRATION_DELAY_SECS

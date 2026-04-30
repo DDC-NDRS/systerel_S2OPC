@@ -707,7 +707,7 @@ OPERATIONS
     async_close_subscription (p_subscription) =
     PRE
         p_subscription : t_subscription_i &
-        p_subscription : s_subscription
+        p_subscription : t_subscription
     THEN
         skip
     END
@@ -1757,6 +1757,20 @@ OPERATIONS
         :(p_continue     : BOOL &
           p_subscription : t_subscription_i
          )
+    END
+    ;
+
+    /* Move the given subscription at the end of the queue for next iterations
+     * IMPORTANT: it SHALL not be called during iteration !!! */
+    reconfigure_session_priority_subscriptions_queue_last_sub (p_session, p_sub) =
+    PRE
+        p_session  : t_session_i &
+        p_session  : t_session   &
+        p_sub : t_subscription_i &
+        p_sub : t_subscription &
+        p_sub : s_subscription
+    THEN
+        skip /* Reordering iterator is not represented */
     END
 
 END

@@ -21,7 +21,7 @@
 
  File Name            : constants.h
 
- Date                 : 24/06/2026 15:32:09
+ Date                 : 08/07/2026 11:24:59
 
  C Translator Version : tradc Java V1.2 (06/02/2022)
 
@@ -119,6 +119,8 @@
 #define constants__t_notificationData constants_bs__t_notificationData
 #define constants__t_notificationQueue_i constants_bs__t_notificationQueue_i
 #define constants__t_opcua_duration_i constants_bs__t_opcua_duration_i
+#define constants__t_prioritySubQueueIterator_i constants_bs__t_prioritySubQueueIterator_i
+#define constants__t_prioritySubQueue_i constants_bs__t_prioritySubQueue_i
 #define constants__t_publishReqQueue_i constants_bs__t_publishReqQueue_i
 #define constants__t_readRawModifiedDetails_i constants_bs__t_readRawModifiedDetails_i
 #define constants__t_request_context_i constants_bs__t_request_context_i
@@ -435,6 +437,8 @@ typedef enum {
 #define constants__t_notificationData_max constants_bs__t_notificationData_max
 #define constants__t_notificationQueue_i_max constants_bs__t_notificationQueue_i_max
 #define constants__t_opcua_duration_i_max constants_bs__t_opcua_duration_i_max
+#define constants__t_prioritySubQueueIterator_i_max constants_bs__t_prioritySubQueueIterator_i_max
+#define constants__t_prioritySubQueue_i_max constants_bs__t_prioritySubQueue_i_max
 #define constants__t_publishReqQueue_i_max constants_bs__t_publishReqQueue_i_max
 #define constants__t_readRawModifiedDetails_i_max constants_bs__t_readRawModifiedDetails_i_max
 #define constants__t_request_context_i_max constants_bs__t_request_context_i_max
@@ -554,6 +558,8 @@ typedef enum {
 #define constants__c_notificationQueue_indet constants_bs__c_notificationQueue_indet
 #define constants__c_opcua_duration_indet constants_bs__c_opcua_duration_indet
 #define constants__c_opcua_duration_zero constants_bs__c_opcua_duration_zero
+#define constants__c_prioritySubQueueIterator_indet constants_bs__c_prioritySubQueueIterator_indet
+#define constants__c_prioritySubQueue_indet constants_bs__c_prioritySubQueue_indet
 #define constants__c_publishReqQueue_indet constants_bs__c_publishReqQueue_indet
 #define constants__c_readRawModifiedDetails_indet constants_bs__c_readRawModifiedDetails_indet
 #define constants__c_registerServer2_expiration_time constants_bs__c_registerServer2_expiration_time

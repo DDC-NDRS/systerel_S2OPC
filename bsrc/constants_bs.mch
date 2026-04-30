@@ -87,6 +87,8 @@ SETS
     t_notifRepublishQueueIterator_i;
     t_monitoredItemQueue_i;
     t_monitoredItemQueueIterator_i;
+    t_prioritySubQueue_i;
+    t_prioritySubQueueIterator_i;
     t_monitoringFilter_i;
     t_monitoringFilterCtx_i;
     t_filterResult_i;
@@ -213,6 +215,8 @@ CONCRETE_CONSTANTS
     c_notifRepublishQueueIterator_indet,
     c_monitoredItemQueue_indet,
     c_monitoredItemQueueIterator_indet,
+    c_prioritySubQueue_indet,
+    c_prioritySubQueueIterator_indet,
     c_monitoringFilter_indet,
     c_monitoringFilterCtx_indet,
     c_filterResult_indet,
@@ -314,6 +318,8 @@ ABSTRACT_CONSTANTS
     t_publishReqQueue,
     t_monitoredItemQueue,
     t_monitoredItemQueueIterator,
+    t_prioritySubQueue,
+    t_prioritySubQueueIterator,
     t_monitoringFilter,
     t_monitoringFilterCtx,
     t_filterResult,
@@ -701,6 +707,14 @@ PROPERTIES
     t_monitoredItemQueueIterator <: t_monitoredItemQueueIterator_i &
     c_monitoredItemQueueIterator_indet : t_monitoredItemQueueIterator_i &
     c_monitoredItemQueueIterator_indet /: t_monitoredItemQueueIterator &
+
+    t_prioritySubQueue <: t_prioritySubQueue_i &
+    c_prioritySubQueue_indet : t_prioritySubQueue_i &
+    c_prioritySubQueue_indet /: t_prioritySubQueue &
+
+    t_prioritySubQueueIterator <: t_prioritySubQueueIterator_i &
+    c_prioritySubQueueIterator_indet : t_prioritySubQueueIterator_i &
+    c_prioritySubQueueIterator_indet /: t_prioritySubQueueIterator &
 
     t_monitoringFilter <: t_monitoringFilter_i &
     c_monitoringFilter_indet : t_monitoringFilter_i &

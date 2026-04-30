@@ -21,7 +21,7 @@
 
  File Name            : subscription_mgr.h
 
- Date                 : 02/03/2026 17:28:01
+ Date                 : 30/04/2026 16:13:46
 
  C Translator Version : tradc Java V1.2 (06/02/2022)
 
@@ -87,6 +87,7 @@ extern void subscription_mgr__fill_delete_subscriptions_response(
    const constants__t_session_i subscription_mgr__p_session,
    const t_entier4 subscription_mgr__p_nb_reqs);
 extern void subscription_mgr__fill_publish_response_msg(
+   const constants__t_session_i subscription_mgr__p_session,
    const constants__t_msg_i subscription_mgr__p_resp_msg,
    const constants__t_subscription_i subscription_mgr__p_subscription,
    const t_bool subscription_mgr__p_moreNotifs);

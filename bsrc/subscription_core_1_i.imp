@@ -32,6 +32,13 @@ SEES
     constants_statuscodes_bs,
     subscription_core_bs
 
+IMPORTS
+    subscription_priority_sub_queue_bs,
+    subscription_priority_sub_queue_it_bs
+
+PROMOTES
+    continue_iter_subscription_priority_queue
+
 CONCRETE_VARIABLES
     s_subscription_i,
     a_subscription_state_i,
@@ -49,7 +56,7 @@ CONCRETE_VARIABLES
     a_session_subscription_idx_i,
     a_session_priority_nb_subs_i,
     a_session_priority_min_sub_idx_i,
-    a_session_priority_next_sub_idx_i,
+    a_session_priority_subscriptions_queue_i,
     a_PublishingEnabled_i,
     a_MoreNotifications_i,
     a_LifetimeCounter_i,
@@ -122,11 +129,11 @@ INVARIANT
               =>
               a_session_priority_min_sub_idx(session) = a_session_priority_min_sub_idx_i(session) |> t_sub_idx) &
 
-    /* Record of the next index of subscription in the given priority to try => used for round robin policy */
-    a_session_priority_next_sub_idx_i : t_session_i --> (t_prio_idx_i --> t_sub_idx_i) &
+    /* Record of the round robin queue of subscriptions for a given priority */
+    a_session_priority_subscriptions_queue_i : t_session_i --> (t_prio_idx_i --> t_prioritySubQueue_i) &
     !session.(session : t_session
               =>
-              a_session_priority_next_sub_idx(session) = a_session_priority_next_sub_idx_i(session) |> t_sub_idx) &
+              a_session_priority_subscriptions_queue(session) = a_session_priority_subscriptions_queue_i(session) |> t_prioritySubQueue) &
 
     a_publishInterval_i       : t_subscription_i --> t_opcua_duration_i                        &
     dom(a_publishInterval)    = s_subscription                                                 &
@@ -199,7 +206,7 @@ INITIALISATION
     a_session_subscription_idx_i := t_session_i * {t_subscription_i * {0}};
     a_session_priority_nb_subs_i := t_session_i * {t_prio_idx_i * {0}};
     a_session_priority_min_sub_idx_i  := t_session_i * {t_prio_idx_i * {0}};
-    a_session_priority_next_sub_idx_i := t_session_i * {t_prio_idx_i * {0}};
+    a_session_priority_subscriptions_queue_i := t_session_i * {t_prio_idx_i * {c_prioritySubQueue_indet}};
 
     a_PublishingEnabled_i        := t_subscription_i * {FALSE};
     a_MoreNotifications_i        := t_subscription_i * {FALSE};
@@ -317,33 +324,24 @@ OPERATIONS
     END
     ;
 
-    p_subscription <-- get_session_seq_subscription (p_session, p_idx_sub) =
-    BEGIN
-        p_subscription := a_session_seq_subscription_i(p_session)(p_idx_sub)
+    p_prio_sub_it <-- init_session_priority_subscriptions_iterator (p_session, p_prio_idx) =
+    VAR
+        l_prio_sub_q
+    IN
+        l_prio_sub_q := a_session_priority_subscriptions_queue_i (p_session)(p_prio_idx);
+        p_prio_sub_it <-- init_prio_subscriptions_queue_iterator (l_prio_sub_q)
     END
     ;
 
-    p_nb_subs <-- get_session_priority_nb_subs (p_session, p_prio_idx) =
-    BEGIN
-        p_nb_subs := a_session_priority_nb_subs_i(p_session)(p_prio_idx)
-    END
-    ;
-
-    p_min_idx_sub <-- get_session_priority_min_sub_idx (p_session, p_prio_idx) =
-    BEGIN
-        p_min_idx_sub := a_session_priority_min_sub_idx_i(p_session)(p_prio_idx)
-    END
-    ;
-
-    p_next_idx_sub <-- get_session_priority_next_sub_idx (p_session, p_prio_idx) =
-    BEGIN
-        p_next_idx_sub := a_session_priority_next_sub_idx_i(p_session)(p_prio_idx)
-    END
-    ;
-
-    set_session_priority_next_sub_idx (p_session, p_prio_idx, p_next_idx_sub) =
-    BEGIN
-        a_session_priority_next_sub_idx_i(p_session)(p_prio_idx) := p_next_idx_sub
+    /* IMPORTANT: it shall not be called during iteration on subscriptions */
+    reconfigure_session_priority_subscriptions_queue_last_sub (p_session, p_sub) =
+    VAR
+        l_prio_idx,
+        l_prio_sub_q
+    IN
+        l_prio_idx := a_session_priority_idx_i(p_session)(a_subscription_priority_i(p_sub));
+        l_prio_sub_q := a_session_priority_subscriptions_queue_i (p_session)(l_prio_idx);
+        reconfigure_priority_subscriptions_queue_last_sub (l_prio_sub_q, p_sub)
     END
     ;
 
@@ -364,23 +362,45 @@ OPERATIONS
         p_timerId) =
     VAR
         l_prio_idx,
+        l_sub_added_to_prio_q,
+        l_prio_subs_queue,
         l_nb_prio,
         l_idx,
         l_int_continue,
         l_sub_idx_it,
         l_prio,
         l_sub_idx_max,
-        l_reset_next_sub_idx,
         l_sub_idx,
         l_sub
     IN
-        l_reset_next_sub_idx := FALSE;
         l_sub_idx_max := a_session_nb_subscriptions_i(p_session) + 1;
+        l_prio_idx := a_session_priority_idx_i(p_session)(p_priority);
+        l_prio_subs_queue := c_prioritySubQueue_indet;
         IF l_sub_idx_max > k_n_subscriptionPerSession_max
         THEN
             StatusCode_service := e_sc_bad_too_many_subscriptions
         ELSE
-            StatusCode_service := e_sc_ok;
+            l_sub_added_to_prio_q := FALSE;
+            IF l_prio_idx = 0
+            THEN
+                /* First subscription in this priority, allocate a new priority subscriptions queue for round robin */
+                l_sub_added_to_prio_q, l_prio_subs_queue <-- allocate_new_prio_queue (p_subscription)
+                /* DONE LATER: assigns the priority subscriptions queue as soon as the index is defined */
+            ELSE
+                /* Priority queue already exists */
+                l_prio_subs_queue := a_session_priority_subscriptions_queue_i(p_session)(l_prio_idx);
+                l_sub_added_to_prio_q <-- add_subscription_to_prio_queue (l_prio_subs_queue, p_subscription)
+            END
+            ;
+            IF l_sub_added_to_prio_q = TRUE
+            THEN
+                StatusCode_service := e_sc_ok
+            ELSE
+                StatusCode_service := e_sc_bad_out_of_memory
+            END
+        END
+        ;
+        IF StatusCode_service = e_sc_ok THEN
 
             s_subscription_i(p_subscription) := TRUE;
             a_subscription_state_i(p_subscription) := p_state;
@@ -401,7 +421,6 @@ OPERATIONS
             a_publishTimer_i(p_subscription) := p_timerId;
             local_log_subscription_transition (p_subscription, c_subscriptionState_indet, p_state, 3);
 
-            l_prio_idx := a_session_priority_idx_i(p_session)(p_priority);
             IF l_prio_idx = 0 THEN
                 // the added subscription has a priority that does not exist,
                 // so it shall be inserted in the sequence of priorities
@@ -417,6 +436,7 @@ OPERATIONS
                         // priorities higher than the subscription priority are shifted of +1 index
                         a_session_seq_priority_i(p_session)(l_prio_idx) := l_prio;
                         a_session_priority_idx_i(p_session)(l_prio) := l_prio_idx;
+                        a_session_priority_subscriptions_queue_i(p_session)(l_prio_idx) := a_session_priority_subscriptions_queue_i(p_session)(l_prio_idx-1);
                         a_session_priority_nb_subs_i (p_session)(l_prio_idx) := a_session_priority_nb_subs_i (p_session)(l_prio_idx-1);
                         l_prio_idx := l_prio_idx - 1
                     ELSE
@@ -424,15 +444,12 @@ OPERATIONS
                         a_session_seq_priority_i(p_session)(l_prio_idx) := p_priority;
                         a_session_priority_idx_i(p_session)(p_priority) := l_prio_idx;
                         a_session_priority_nb_subs_i (p_session)(l_prio_idx) := 0;
+                        a_session_priority_subscriptions_queue_i(p_session)(l_prio_idx) := l_prio_subs_queue;
                         IF (l_prio_idx > l_nb_prio) // <=> l_prio_idx = l_nb_prio + 1
                         THEN
                             // Last priority and subscription idx added, initialize the min and next sub idx to max
                             // (in other cases the index values for this new priority are set in the following loop)
-                            a_session_priority_min_sub_idx_i (p_session)(l_prio_idx) := l_sub_idx_max;
-                            a_session_priority_next_sub_idx_i (p_session)(l_prio_idx) := l_sub_idx_max
-                        ELSE
-                            // Next sub index is not valid anymore for l_prio_idx and shall be reset after being shifted
-                            l_reset_next_sub_idx := TRUE
+                            a_session_priority_min_sub_idx_i (p_session)(l_prio_idx) := l_sub_idx_max
                         END
                         ;
                         l_int_continue := 0
@@ -455,7 +472,6 @@ OPERATIONS
                 l_prio := a_session_seq_priority_i(p_session)(l_idx);
                 l_sub_idx := a_session_priority_min_sub_idx_i(p_session)(l_idx - 1);
                 a_session_priority_min_sub_idx_i (p_session)(l_idx) := l_sub_idx + 1;
-                a_session_priority_next_sub_idx_i(p_session)(l_idx) := a_session_priority_next_sub_idx_i(p_session)(l_idx-1) + 1;
 
                 l_idx := l_idx - 1
             INVARIANT
@@ -466,13 +482,6 @@ OPERATIONS
             END;
             // Update nb subs in priority
             a_session_priority_nb_subs_i(p_session)(l_prio_idx) := a_session_priority_nb_subs_i(p_session)(l_prio_idx) + 1;
-            // We never change min sub idx: either priority existed => same or we created one but we reuse the min sub idx
-            // The next sub idx need to be fixed if we created a new priority
-            IF l_reset_next_sub_idx = TRUE
-            THEN
-                a_session_priority_next_sub_idx_i(p_session)(l_prio_idx) := a_session_priority_min_sub_idx_i(p_session)(l_prio_idx)
-            END
-            ;
 
             // in the subscription sequence, shift every subscription after the current subscription
             // (starting from the end)
@@ -510,11 +519,9 @@ OPERATIONS
         l_sub_prio_idx,
         l_prio_idx_it,
         l_nb_prio,
-        l_min_sub_idx,
         l_nb_sub_prio,
-        l_max_sub_idx,
-        l_sub_idx_next,
         l_sub_idx_del,
+        l_prio_subs_queue,
         l_sub_idx,
         l_sub
     IN
@@ -544,11 +551,9 @@ OPERATIONS
         l_nb_subs  := a_session_nb_subscriptions_i(l_session);
         l_sub_prio_idx     := a_session_priority_idx_i(l_session)(l_priority);
         l_nb_prio      := a_session_nb_priorities_i(l_session);
-        l_min_sub_idx  := a_session_priority_min_sub_idx_i(l_session)(l_sub_prio_idx);
         l_nb_sub_prio  := a_session_priority_nb_subs_i(l_session)(l_sub_prio_idx);
-        l_max_sub_idx  := l_min_sub_idx + l_nb_sub_prio - 1;
-        l_sub_idx_next := a_session_priority_next_sub_idx_i(l_session)(l_sub_prio_idx);
         l_sub_idx_del  := a_session_subscription_idx_i(l_session)(p_subscription);
+        l_prio_subs_queue := a_session_priority_subscriptions_queue_i(l_session)(l_sub_prio_idx);
 
         l_prio_idx_it := l_sub_prio_idx;
         WHILE l_prio_idx_it < l_nb_prio
@@ -556,14 +561,13 @@ OPERATIONS
             l_prio := a_session_seq_priority_i(l_session)(l_prio_idx_it + 1);
             // sub index data on subscriptions with a priority higher than the current priority are shifted of -1 index
             a_session_priority_min_sub_idx_i (l_session)(l_prio_idx_it + 1) := a_session_priority_min_sub_idx_i (l_session)(l_prio_idx_it + 1) - 1;
-            a_session_priority_next_sub_idx_i(l_session)(l_prio_idx_it + 1) := a_session_priority_next_sub_idx_i(l_session)(l_prio_idx_it + 1) - 1;
             IF l_nb_sub_prio = 1
             THEN
                 // prio index on higher priority than the one removed are shifted of -1 index
                 a_session_seq_priority_i(l_session)(l_prio_idx_it) := l_prio;
                 a_session_priority_idx_i(l_session)(l_prio) := l_prio_idx_it;
                 a_session_priority_min_sub_idx_i (l_session)(l_prio_idx_it) := a_session_priority_min_sub_idx_i (l_session)(l_prio_idx_it + 1);
-                a_session_priority_next_sub_idx_i(l_session)(l_prio_idx_it) := a_session_priority_next_sub_idx_i(l_session)(l_prio_idx_it + 1);
+                a_session_priority_subscriptions_queue_i(l_session)(l_prio_idx_it) := a_session_priority_subscriptions_queue_i(l_session)(l_prio_idx_it + 1);
                 a_session_priority_nb_subs_i(l_session)(l_prio_idx_it) := a_session_priority_nb_subs_i(l_session)(l_prio_idx_it + 1)
             END;
             l_prio_idx_it := l_prio_idx_it + 1
@@ -581,18 +585,15 @@ OPERATIONS
             // => previous last prio index data is invalidated (prio indexes were shifted in previous loop)
             a_session_priority_idx_i         (l_session)(l_priority) := 0;
             a_session_priority_min_sub_idx_i (l_session)(l_nb_prio) := 0;
-            a_session_priority_next_sub_idx_i (l_session)(l_nb_prio) := 0;
+            a_session_priority_subscriptions_queue_i(l_session)(l_nb_prio) := c_prioritySubQueue_indet;
             a_session_priority_nb_subs_i (l_session)(l_nb_prio) := 0;
             a_session_seq_priority_i (l_session)(l_nb_prio) := c_priority_indet;
-            a_session_nb_priorities_i        (l_session) := l_nb_prio - 1
+            a_session_nb_priorities_i        (l_session) := l_nb_prio - 1;
+            clear_and_deallocate_prio_queue (l_prio_subs_queue)
         ELSE
             // subscription priority remains for other subscription(s)
             a_session_priority_nb_subs_i(l_session)(l_sub_prio_idx) := l_nb_sub_prio - 1;
-            // sub next index in prio shall be shifted if deleted sub index preceded the next index or the next index was the last one
-            IF l_sub_idx_del < l_sub_idx_next or l_sub_idx_next = l_max_sub_idx
-            THEN
-                a_session_priority_next_sub_idx_i(l_session)(l_sub_prio_idx) := l_sub_idx_next - 1
-            END
+            remove_subscription_from_queue (l_prio_subs_queue, p_subscription)
         END
         ;
 

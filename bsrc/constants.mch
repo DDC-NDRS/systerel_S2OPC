@@ -185,6 +185,8 @@ SETS
     t_notifRepublishQueueIterator_i; /* (SOPC_SLinkedListIterator*) */
     t_monitoredItemQueue_i;  /* (SOPC_SLinkedList*) */
     t_monitoredItemQueueIterator_i; /* (SOPC_SLinkedListIterator*) */
+    t_prioritySubQueue_i;  /* (SOPC_SLinkedList*) */
+    t_prioritySubQueueIterator_i; /* (SOPC_SLinkedListIterator) */
 
     /* Subscription (monitored item) */
     t_monitoringMode_i = {
@@ -465,6 +467,8 @@ CONCRETE_CONSTANTS
     c_notifRepublishQueueIterator_indet,
     c_monitoredItemQueue_indet,
     c_monitoredItemQueueIterator_indet,
+    c_prioritySubQueue_indet,
+    c_prioritySubQueueIterator_indet,
     c_monitoringFilter_indet,
     c_monitoringFilterCtx_indet,
     c_filterResult_indet,
@@ -610,6 +614,8 @@ ABSTRACT_CONSTANTS
     t_notifRepublishQueueIterator,
     t_monitoredItemQueue,
     t_monitoredItemQueueIterator,
+    t_prioritySubQueue,
+    t_prioritySubQueueIterator,
     t_monitoringMode,
     t_monitoringFilter,
     t_monitoringFilterCtx,
@@ -1192,6 +1198,14 @@ PROPERTIES
     t_monitoredItemQueueIterator <: t_monitoredItemQueueIterator_i &
     c_monitoredItemQueueIterator_indet : t_monitoredItemQueueIterator_i &
     c_monitoredItemQueueIterator_indet /: t_monitoredItemQueueIterator &
+
+    t_prioritySubQueue <: t_prioritySubQueue_i &
+    c_prioritySubQueue_indet : t_prioritySubQueue_i &
+    c_prioritySubQueue_indet /: t_prioritySubQueue &
+
+    t_prioritySubQueueIterator <: t_prioritySubQueueIterator_i &
+    c_prioritySubQueueIterator_indet : t_prioritySubQueueIterator_i &
+    c_prioritySubQueueIterator_indet /: t_prioritySubQueueIterator &
 
     t_monitoringMode = t_monitoringMode_i - {c_monitoringMode_indet} &
 

@@ -21,7 +21,7 @@
 
  File Name            : subscription_core.h
 
- Date                 : 09/06/2026 14:37:47
+ Date                 : 08/07/2026 11:25:12
 
  C Translator Version : tradc Java V1.2 (06/02/2022)
 
@@ -69,12 +69,9 @@
    CONCRETE_VARIABLES Clause
   ----------------------------*/
 extern t_bool subscription_core__continue_iter_prio;
-extern t_entier4 subscription_core__idx_iter_sub;
-extern t_entier4 subscription_core__min_idx_iter_sub;
-extern t_entier4 subscription_core__nb_subs_iter_sub;
 extern t_entier4 subscription_core__next_idx_iter_prio;
-extern t_entier4 subscription_core__next_idx_iter_sub;
 extern t_entier4 subscription_core__prio_idx_iter_prio;
+extern constants__t_prioritySubQueueIterator_i subscription_core__prio_iter_sub;
 extern constants__t_session_i subscription_core__session_iter_prio;
 
 /*------------------------
@@ -109,6 +106,7 @@ extern void subscription_core__INITIALISATION(void);
 #define subscription_core__is_valid_subscription_on_session subscription_core_1__is_valid_subscription_on_session
 #define subscription_core__log_subscription_request_received subscription_core_1__log_subscription_request_received
 #define subscription_core__log_subscription_request_received_invalid_on_session subscription_core_1__log_subscription_request_received_invalid_on_session
+#define subscription_core__reconfigure_session_priority_subscriptions_queue_last_sub subscription_core_1__reconfigure_session_priority_subscriptions_queue_last_sub
 #define subscription_core__reset_subscription_LifetimeCounter subscription_core_1__reset_subscription_LifetimeCounter
 #define subscription_core__set_msg_publish_resp_notificationMsg msg_subscription_publish_bs__set_msg_publish_resp_notificationMsg
 #define subscription_core__set_msg_publish_resp_subscription msg_subscription_publish_bs__set_msg_publish_resp_subscription

@@ -40,7 +40,15 @@ DEFINITIONS
     a_session_seq_subscription,
     a_session_priority_nb_subs,
     a_session_priority_min_sub_idx,
-    a_session_priority_next_sub_idx,
+    a_session_priority_subscriptions_queue,
+    a_prio_queue_defined_subscriptions,
+    /* Priority subscriptions queue iterator variables */
+    a_priority_subscriptions_queue_iterator,
+    prio_sub_queue_it,
+    prio_sub_iterator_it,
+    nb_subscriptions_it,
+    s_prio_sub_to_iterate_it,
+    s_prio_sub_iterated_it,
 
     a_subscription_state,
     a_MoreNotifications,
@@ -70,7 +78,25 @@ DEFINITIONS
     a_session_seq_subscription : t_session --> iseq(s_subscription) &
     a_session_priority_nb_subs : t_session --> (t_prio_idx +-> t_sub_idx) &
     a_session_priority_min_sub_idx : t_session --> (t_prio_idx +-> t_sub_idx) &
-    a_session_priority_next_sub_idx : t_session --> (t_prio_idx +-> t_sub_idx) &
+    /* Record of the round robin queue of subscriptions for a given priority */
+    a_session_priority_subscriptions_queue : t_session --> (t_prio_idx +-> t_prioritySubQueue) &
+    /* Every defined priority with subscription has a priority subscriptions queue */
+    !session.(session : t_session
+              =>
+              dom(a_session_priority_subscriptions_queue(session)) = dom(a_session_seq_priority(session))) &
+
+    a_prio_queue_defined_subscriptions : t_prioritySubQueue <-> t_subscription &
+    /* Priority subscriptions queue iterator variables */
+    a_priority_subscriptions_queue_iterator : t_prioritySubQueue >->> t_prioritySubQueueIterator  &
+    prio_sub_queue_it : t_prioritySubQueue_i &
+    prio_sub_iterator_it : t_prioritySubQueueIterator_i &
+    nb_subscriptions_it : NAT &
+    s_prio_sub_to_iterate_it <: t_subscription_i &
+    s_prio_sub_to_iterate_it <: t_subscription &
+    s_prio_sub_iterated_it <: t_subscription_i &
+    s_prio_sub_iterated_it <: t_subscription &
+    s_prio_sub_to_iterate_it /\ s_prio_sub_iterated_it = {} &
+    card(s_prio_sub_to_iterate_it \/ s_prio_sub_iterated_it) = nb_subscriptions_it &
 
     /* Subscription State Machine : state shall be defined (part 4 table 82) */
     a_subscription_state : s_subscription --> t_subscriptionState &
@@ -122,7 +148,14 @@ INITIALISATION
     a_session_seq_subscription := t_session * {{}} ||
     a_session_priority_nb_subs := t_session * {{}} ||
     a_session_priority_min_sub_idx := t_session * {{}} ||
-    a_session_priority_next_sub_idx := t_session * {{}} ||
+    a_session_priority_subscriptions_queue := t_session * {{}} ||
+    a_prio_queue_defined_subscriptions := {} ||
+    a_priority_subscriptions_queue_iterator :(a_priority_subscriptions_queue_iterator : t_prioritySubQueue >->> t_prioritySubQueueIterator ) ||
+    prio_sub_queue_it := c_prioritySubQueue_indet ||
+    prio_sub_iterator_it := c_prioritySubQueueIterator_indet ||
+    nb_subscriptions_it := 0 ||
+    s_prio_sub_to_iterate_it :(s_prio_sub_to_iterate_it = {}) ||
+    s_prio_sub_iterated_it :(s_prio_sub_iterated_it = {}) ||
 
     a_subscription_state := {}       ||
 
@@ -191,66 +224,80 @@ OPERATIONS
     END
     ;
 
-    p_subscription <-- get_session_seq_subscription (p_session, p_idx_sub) =
-    PRE
-        p_session : t_session_i &
-        p_session : t_session   &
-        p_idx_sub : t_sub_idx_i &
-        p_idx_sub : t_sub_idx   &
-        p_idx_sub : dom(a_session_seq_subscription(p_session))
-    THEN
-        p_subscription
-        :(p_subscription : t_subscription_i &
-          p_subscription = a_session_seq_subscription(p_session)(p_idx_sub))
-    END
-    ;
-
-    p_nb_subs <-- get_session_priority_nb_subs (p_session, p_prio_idx) =
+    p_prio_sub_it <-- init_session_priority_subscriptions_iterator (p_session, p_prio_idx) =
     PRE
         p_session  : t_session_i &
         p_session  : t_session   &
         p_prio_idx : t_prio_idx_i &
-        p_prio_idx : t_prio_idx
+        p_prio_idx : t_prio_idx &
+        /* Note: it should be guaranteed by the priority index  domain equality with a_session_seq_priority
+                 and priority iterator based on a_session_seq_priority */
+        p_prio_idx : dom(a_session_priority_subscriptions_queue(p_session))
     THEN
-        p_nb_subs :(p_nb_subs : t_sub_idx_i &
-                    p_nb_subs = a_session_priority_nb_subs(p_session)(p_prio_idx))
+        prio_sub_queue_it,
+        prio_sub_iterator_it,
+        nb_subscriptions_it,
+        s_prio_sub_to_iterate_it,
+        s_prio_sub_iterated_it,
+        p_prio_sub_it :(
+          prio_sub_queue_it : t_prioritySubQueue_i &
+          prio_sub_iterator_it : t_prioritySubQueueIterator_i &
+          s_prio_sub_to_iterate_it <: t_subscription &
+          s_prio_sub_iterated_it <: t_subscription &
+          p_prio_sub_it : t_prioritySubQueueIterator_i &
+          /* Note: every allocated queue contains always at least 1 element */
+          prio_sub_queue_it = a_session_priority_subscriptions_queue (p_session)(p_prio_idx) &
+          prio_sub_iterator_it = a_priority_subscriptions_queue_iterator(prio_sub_queue_it) &
+          p_prio_sub_it = prio_sub_iterator_it &
+          nb_subscriptions_it > 0 &
+          s_prio_sub_to_iterate_it /= {} &
+          card(s_prio_sub_to_iterate_it) = nb_subscriptions_it &
+          s_prio_sub_iterated_it = {}
+        )
     END
     ;
 
-    p_min_idx_sub <-- get_session_priority_min_sub_idx (p_session, p_prio_idx) =
+    p_continue, p_subscription, p_iterator_updated <-- continue_iter_subscription_priority_queue (p_iterator) =
+    PRE
+        p_iterator : t_prioritySubQueueIterator_i &
+        p_iterator : t_prioritySubQueueIterator &
+        prio_sub_queue_it = a_priority_subscriptions_queue_iterator~(p_iterator) &
+        s_prio_sub_to_iterate_it /= {}
+    THEN
+        ANY l_subscription WHERE
+            l_subscription : t_subscription_i &
+            l_subscription : s_prio_sub_to_iterate_it
+        THEN
+            p_subscription := l_subscription ||
+            s_prio_sub_to_iterate_it := s_prio_sub_to_iterate_it - {p_subscription} ||
+            s_prio_sub_iterated_it := s_prio_sub_to_iterate_it \/ {p_subscription} ||
+            p_continue,
+            prio_sub_iterator_it,
+            p_iterator_updated :(
+                p_continue : BOOL &
+                prio_sub_iterator_it : t_prioritySubQueueIterator_i &
+                p_iterator_updated : t_prioritySubQueueIterator_i &
+                p_continue = bool(s_prio_sub_to_iterate_it /= {l_subscription}) &
+                (p_continue = TRUE =>
+                        prio_sub_iterator_it = a_priority_subscriptions_queue_iterator(prio_sub_queue_it)) &
+                (p_continue = FALSE => prio_sub_iterator_it = c_prioritySubQueueIterator_indet) &
+                p_iterator_updated = prio_sub_iterator_it
+            )
+        END
+    END
+    ;
+
+    /* Move the given subscription at the end of the queue for next iterations
+     * IMPORTANT: it SHALL not be called during iteration !!! */
+    reconfigure_session_priority_subscriptions_queue_last_sub (p_session, p_sub) =
     PRE
         p_session  : t_session_i &
         p_session  : t_session   &
-        p_prio_idx : t_prio_idx_i &
-        p_prio_idx : t_prio_idx
+        p_sub : t_subscription_i &
+        p_sub : t_subscription &
+        p_sub : s_subscription
     THEN
-        p_min_idx_sub :(p_min_idx_sub : t_sub_idx_i &
-                        p_min_idx_sub = a_session_priority_min_sub_idx(p_session)(p_prio_idx))
-    END
-    ;
-
-    p_next_idx_sub <-- get_session_priority_next_sub_idx (p_session, p_prio_idx) =
-    PRE
-        p_session  : t_session_i &
-        p_session  : t_session   &
-        p_prio_idx : t_prio_idx_i &
-        p_prio_idx : t_prio_idx
-    THEN
-        p_next_idx_sub :(p_next_idx_sub : t_sub_idx_i &
-                         p_next_idx_sub = a_session_priority_next_sub_idx(p_session)(p_prio_idx))
-    END
-    ;
-
-    set_session_priority_next_sub_idx (p_session, p_prio_idx, p_next_idx_sub) =
-    PRE
-        p_session      : t_session_i &
-        p_session      : t_session   &
-        p_prio_idx     : t_prio_idx_i &
-        p_prio_idx     : t_prio_idx  &
-        p_next_idx_sub : t_sub_idx_i &
-        p_next_idx_sub : t_sub_idx
-    THEN
-        a_session_priority_next_sub_idx(p_session)(p_prio_idx) := p_next_idx_sub
+        skip /* Reordering iterator is not represented */
     END
     ;
 
@@ -318,9 +365,37 @@ OPERATIONS
             a_SeqNum (p_subscription) := p_seqNumInit                              ||
             a_notifRepublishQueue (p_subscription) := p_republishQueue    ||
             a_monitoredItemQueue (p_subscription) := p_monitoredItemQueue ||
-            a_publishTimer (p_subscription) := p_timerId
+            a_publishTimer (p_subscription) := p_timerId ||
+            /* Note: refactor this part when a_session_seq_priority is actually updated here too ! */
+            /* a_session_seq_priority(p_session)~ obtains index of priority from the priority */
+            a_session_priority_subscriptions_queue,
+            a_prio_queue_defined_subscriptions,
+            a_session_seq_priority
+            :(a_session_seq_priority : t_session --> iseq(t_priority) &
+              /* No changes in other session priorities */
+              {p_session} <<| a_session_seq_priority = {p_session} <<| a_session_seq_priority$0 &
+              /* Potential priority addition in this session priorities */
+              ran(a_session_seq_priority(p_session)) = ran(a_session_seq_priority$0(p_session)) \/ {p_priority} &
+              a_session_priority_subscriptions_queue : t_session --> (t_prio_idx +-> t_prioritySubQueue) &
+              a_prio_queue_defined_subscriptions : t_prioritySubQueue <-> t_subscription &
+              /* other sessions priority queues not impacted */
+              {p_session} <<| a_session_priority_subscriptions_queue = {p_session} <<| a_session_priority_subscriptions_queue$0 &
+              /* queues of session other priorities not impacted
+                (note: prio indexes might have changed thus we refer to content for a given priority here) */
+              !priority.(priority : ran(a_session_seq_priority(p_session)) & priority /= p_priority =>
+                a_session_priority_subscriptions_queue(p_session)[{a_session_seq_priority(p_session)~(priority)}] =
+                    a_session_priority_subscriptions_queue$0(p_session)[{a_session_seq_priority$0(p_session)~(priority)}]
+              )
+              &
+              /* queue of session with same priority always defined after successful add_subscription
+                (note: also already covered by domains equality invariant) */
+              (a_session_seq_priority(p_session)~(p_priority)) : dom(a_session_priority_subscriptions_queue(p_session)) &
+              /* queue of session subscription's priority now contains the new subscription */
+              a_prio_queue_defined_subscriptions = a_prio_queue_defined_subscriptions$0 \/
+                {a_session_priority_subscriptions_queue(p_session)(a_session_seq_priority(p_session)~(p_priority)) |-> p_subscription}
+             )
         ELSE
-            StatusCode_service := e_sc_bad_too_many_subscriptions
+            StatusCode_service :: {e_sc_bad_too_many_subscriptions, e_sc_bad_out_of_memory}
         END
     END
     ;
@@ -350,8 +425,52 @@ OPERATIONS
 
         a_monitoredItemQueue := {p_subscription} <<| a_monitoredItemQueue ||
 
-        a_publishTimer := {p_subscription} <<| a_publishTimer
+        a_publishTimer := {p_subscription} <<| a_publishTimer ||
 
+        a_subscription_priority := {p_subscription} <<| a_subscription_priority ||
+
+        /* Note: refactor this part when a_session_seq_priority is actually updated here too ! */
+        /* a_session_seq_priority(p_session)~ obtains index of priority from the priority */
+        a_session_seq_priority,
+        a_session_priority_subscriptions_queue
+        :(a_session_seq_priority : t_session --> iseq(t_priority) &
+          /* No changes in other session priorities */
+          {a_subscription_session(p_subscription)} <<| a_session_seq_priority =
+            {a_subscription_session(p_subscription)} <<| a_session_seq_priority$0 &
+            a_session_priority_subscriptions_queue : t_session --> (t_prio_idx +-> t_prioritySubQueue) &
+          /* Other sessions priority queues not impacted */
+          {a_subscription_session(p_subscription)} <<| a_session_priority_subscriptions_queue =
+             {a_subscription_session(p_subscription)} <<| a_session_priority_subscriptions_queue$0 &
+          /* subscription is  not the last of this session priority */
+          (a_session_priority_nb_subs
+             (a_subscription_session(p_subscription))
+             (a_session_seq_priority(a_subscription_session(p_subscription))~(a_subscription_priority(p_subscription))) /= 1 =>
+              /* No change for priorities of the session */
+              a_session_seq_priority(a_subscription_session(p_subscription)) =
+                a_session_seq_priority$0(a_subscription_session(p_subscription)) &
+              /* No change for session priority queues */
+              a_session_priority_subscriptions_queue = a_session_priority_subscriptions_queue$0
+          ) &
+          /* subscription is the last of this session priority */
+          (a_session_priority_nb_subs
+             (a_subscription_session(p_subscription))
+             (a_session_seq_priority(a_subscription_session(p_subscription))~(a_subscription_priority(p_subscription))) = 1 =>
+             /* Only subscription priority deleted from session priorities */
+             a_session_seq_priority(a_subscription_session(p_subscription)) =
+                a_session_seq_priority$0(a_subscription_session(p_subscription)) |>> {a_subscription_priority(p_subscription)} &
+             /* queues of session other priorities not impacted
+                (note: prio indexes have changed thus we refer to content for a priority here) */
+             !priority.(priority : ran(a_session_seq_priority(a_subscription_session(p_subscription))) &
+                     priority /= a_subscription_priority(p_subscription) =>
+                       a_session_priority_subscriptions_queue(a_subscription_session(p_subscription))
+                         [{a_session_seq_priority(a_subscription_session(p_subscription))~(priority)}] =
+                       a_session_priority_subscriptions_queue$0(a_subscription_session(p_subscription))
+                         [{a_session_seq_priority$0(a_subscription_session(p_subscription))~(priority)}])
+             /* queue of session subscription priority is deleted (but priority index does not exist anymore to express it) */
+         )
+      ) ||
+      /* subscription is removed from queue of session subscription's priority */
+      a_prio_queue_defined_subscriptions := a_prio_queue_defined_subscriptions  |>> {p_subscription}
     END
     ;
 

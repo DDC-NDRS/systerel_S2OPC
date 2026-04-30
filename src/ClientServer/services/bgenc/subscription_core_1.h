@@ -21,7 +21,7 @@
 
  File Name            : subscription_core_1.h
 
- Date                 : 09/06/2026 14:37:47
+ Date                 : 08/07/2026 11:25:12
 
  C Translator Version : tradc Java V1.2 (06/02/2022)
 
@@ -34,6 +34,12 @@
    Added by the Translator
   --------------------------*/
 #include "b2c.h"
+
+/*-----------------
+   IMPORTS Clause
+  -----------------*/
+#include "subscription_priority_sub_queue_bs.h"
+#include "subscription_priority_sub_queue_it_bs.h"
 
 /*--------------
    SEES Clause
@@ -68,7 +74,7 @@ extern t_entier4 subscription_core_1__a_session_nb_subscriptions_i[constants__t_
 extern t_entier4 subscription_core_1__a_session_priority_idx_i[constants__t_session_i_max+1][constants__t_priority_i_max+1];
 extern t_entier4 subscription_core_1__a_session_priority_min_sub_idx_i[constants__t_session_i_max+1][constants__t_prio_idx_i_max+1];
 extern t_entier4 subscription_core_1__a_session_priority_nb_subs_i[constants__t_session_i_max+1][constants__t_prio_idx_i_max+1];
-extern t_entier4 subscription_core_1__a_session_priority_next_sub_idx_i[constants__t_session_i_max+1][constants__t_prio_idx_i_max+1];
+extern constants__t_prioritySubQueue_i subscription_core_1__a_session_priority_subscriptions_queue_i[constants__t_session_i_max+1][constants__t_prio_idx_i_max+1];
 extern t_entier4 subscription_core_1__a_session_seq_priority_i[constants__t_session_i_max+1][constants__t_prio_idx_i_max+1];
 extern constants__t_subscription_i subscription_core_1__a_session_seq_subscription_i[constants__t_session_i_max+1][constants__t_sub_idx_i_max+1];
 extern t_entier4 subscription_core_1__a_session_subscription_idx_i[constants__t_session_i_max+1][constants__t_subscription_i_max+1];
@@ -81,6 +87,11 @@ extern t_bool subscription_core_1__s_subscription_i[constants__t_subscription_i_
    INITIALISATION Clause
   ------------------------*/
 extern void subscription_core_1__INITIALISATION(void);
+
+/*-------------------------------
+   PROMOTES and EXTENDS Clauses
+  -------------------------------*/
+#define subscription_core_1__continue_iter_subscription_priority_queue subscription_priority_sub_queue_it_bs__continue_iter_subscription_priority_queue
 
 /*--------------------------
    LOCAL_OPERATIONS Clause
@@ -125,26 +136,10 @@ extern void subscription_core_1__get_card_session_seq_priority(
 extern void subscription_core_1__get_card_session_seq_subscription(
    const constants__t_session_i subscription_core_1__p_session,
    t_entier4 * const subscription_core_1__p_sub_idx);
-extern void subscription_core_1__get_session_priority_min_sub_idx(
-   const constants__t_session_i subscription_core_1__p_session,
-   const t_entier4 subscription_core_1__p_prio_idx,
-   t_entier4 * const subscription_core_1__p_min_idx_sub);
-extern void subscription_core_1__get_session_priority_nb_subs(
-   const constants__t_session_i subscription_core_1__p_session,
-   const t_entier4 subscription_core_1__p_prio_idx,
-   t_entier4 * const subscription_core_1__p_nb_subs);
-extern void subscription_core_1__get_session_priority_next_sub_idx(
-   const constants__t_session_i subscription_core_1__p_session,
-   const t_entier4 subscription_core_1__p_prio_idx,
-   t_entier4 * const subscription_core_1__p_next_idx_sub);
 extern void subscription_core_1__get_session_publishRequestQueue(
    const constants__t_session_i subscription_core_1__p_session,
    t_bool * const subscription_core_1__p_bres,
    constants__t_publishReqQueue_i * const subscription_core_1__p_publishReqQueue);
-extern void subscription_core_1__get_session_seq_subscription(
-   const constants__t_session_i subscription_core_1__p_session,
-   const t_entier4 subscription_core_1__p_idx_sub,
-   constants__t_subscription_i * const subscription_core_1__p_subscription);
 extern void subscription_core_1__get_subscription_KeepAliveCounter(
    const constants__t_subscription_i subscription_core_1__p_subscription,
    t_entier4 * const subscription_core_1__p_keepAliveCounter);
@@ -187,6 +182,10 @@ extern void subscription_core_1__get_subscription_timer_id(
 extern void subscription_core_1__getall_session(
    const constants__t_subscription_i subscription_core_1__p_subscription,
    constants__t_session_i * const subscription_core_1__p_session);
+extern void subscription_core_1__init_session_priority_subscriptions_iterator(
+   const constants__t_session_i subscription_core_1__p_session,
+   const t_entier4 subscription_core_1__p_prio_idx,
+   constants__t_prioritySubQueueIterator_i * const subscription_core_1__p_prio_sub_it);
 extern void subscription_core_1__is_valid_subscription(
    const constants__t_subscription_i subscription_core_1__p_subscription,
    t_bool * const subscription_core_1__is_valid);
@@ -204,16 +203,15 @@ extern void subscription_core_1__log_subscription_transition(
    const constants__t_subscriptionState_i subscription_core_1__p_old_state,
    const constants__t_subscriptionState_i subscription_core_1__p_new_state,
    const t_entier4 subscription_core_1__p_transition);
+extern void subscription_core_1__reconfigure_session_priority_subscriptions_queue_last_sub(
+   const constants__t_session_i subscription_core_1__p_session,
+   const constants__t_subscription_i subscription_core_1__p_sub);
 extern void subscription_core_1__reset_session_publishRequestQueue(
    const constants__t_session_i subscription_core_1__p_session);
 extern void subscription_core_1__reset_subscription_KeepAliveCounter(
    const constants__t_subscription_i subscription_core_1__p_subscription);
 extern void subscription_core_1__reset_subscription_LifetimeCounter(
    const constants__t_subscription_i subscription_core_1__p_subscription);
-extern void subscription_core_1__set_session_priority_next_sub_idx(
-   const constants__t_session_i subscription_core_1__p_session,
-   const t_entier4 subscription_core_1__p_prio_idx,
-   const t_entier4 subscription_core_1__p_next_idx_sub);
 extern void subscription_core_1__set_session_publishRequestQueue(
    const constants__t_session_i subscription_core_1__p_session,
    const constants__t_publishReqQueue_i subscription_core_1__p_publishReqQueue);

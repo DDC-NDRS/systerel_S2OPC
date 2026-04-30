@@ -21,7 +21,7 @@
 
  File Name            : subscription_core.c
 
- Date                 : 09/06/2026 12:57:23
+ Date                 : 08/07/2026 11:25:12
 
  C Translator Version : tradc Java V1.2 (06/02/2022)
 
@@ -36,12 +36,9 @@
    CONCRETE_VARIABLES Clause
   ----------------------------*/
 t_bool subscription_core__continue_iter_prio;
-t_entier4 subscription_core__idx_iter_sub;
-t_entier4 subscription_core__min_idx_iter_sub;
-t_entier4 subscription_core__nb_subs_iter_sub;
 t_entier4 subscription_core__next_idx_iter_prio;
-t_entier4 subscription_core__next_idx_iter_sub;
 t_entier4 subscription_core__prio_idx_iter_prio;
+constants__t_prioritySubQueueIterator_i subscription_core__prio_iter_sub;
 constants__t_session_i subscription_core__session_iter_prio;
 
 /*------------------------
@@ -52,10 +49,7 @@ void subscription_core__INITIALISATION(void) {
    subscription_core__continue_iter_prio = false;
    subscription_core__session_iter_prio = constants__c_session_indet;
    subscription_core__prio_idx_iter_prio = 0;
-   subscription_core__nb_subs_iter_sub = 1;
-   subscription_core__min_idx_iter_sub = 1;
-   subscription_core__next_idx_iter_sub = 1;
-   subscription_core__idx_iter_sub = 1;
+   subscription_core__prio_iter_sub = constants__c_prioritySubQueueIterator_indet;
 }
 
 /*--------------------
@@ -666,38 +660,22 @@ void subscription_core__local_continue_iter_session_seq_priority(
 void subscription_core__local_init_iter_subscription_priority(
    const t_entier4 subscription_core__p_prio_idx) {
    subscription_core__prio_idx_iter_prio = subscription_core__p_prio_idx;
-   subscription_core_1__get_session_priority_nb_subs(subscription_core__session_iter_prio,
+   subscription_core_1__init_session_priority_subscriptions_iterator(subscription_core__session_iter_prio,
       subscription_core__p_prio_idx,
-      &subscription_core__nb_subs_iter_sub);
-   subscription_core_1__get_session_priority_min_sub_idx(subscription_core__session_iter_prio,
-      subscription_core__p_prio_idx,
-      &subscription_core__min_idx_iter_sub);
-   subscription_core_1__get_session_priority_next_sub_idx(subscription_core__session_iter_prio,
-      subscription_core__p_prio_idx,
-      &subscription_core__next_idx_iter_sub);
-   subscription_core__idx_iter_sub = subscription_core__next_idx_iter_sub;
+      &subscription_core__prio_iter_sub);
 }
 
 void subscription_core__local_continue_iter_subscription_priority(
    t_bool * const subscription_core__p_continue,
    constants__t_subscription_i * const subscription_core__p_subscription) {
-   subscription_core_1__get_session_seq_subscription(subscription_core__session_iter_prio,
-      subscription_core__idx_iter_sub,
-      subscription_core__p_subscription);
-   subscription_core__idx_iter_sub = subscription_core__min_idx_iter_sub +
-      (((subscription_core__idx_iter_sub -
-      subscription_core__min_idx_iter_sub) +
-      1) %
-      subscription_core__nb_subs_iter_sub);
-   *subscription_core__p_continue = (subscription_core__idx_iter_sub != subscription_core__next_idx_iter_sub);
-   if (*subscription_core__p_continue == false) {
-      subscription_core_1__set_session_priority_next_sub_idx(subscription_core__session_iter_prio,
-         subscription_core__prio_idx_iter_prio,
-         subscription_core__min_idx_iter_sub +
-         (((subscription_core__next_idx_iter_sub -
-         subscription_core__min_idx_iter_sub) +
-         1) %
-         subscription_core__nb_subs_iter_sub));
+   {
+      constants__t_prioritySubQueueIterator_i subscription_core__l_updated_prio_iter_sub;
+      
+      subscription_core_1__continue_iter_subscription_priority_queue(subscription_core__prio_iter_sub,
+         subscription_core__p_continue,
+         subscription_core__p_subscription,
+         &subscription_core__l_updated_prio_iter_sub);
+      subscription_core__prio_iter_sub = subscription_core__l_updated_prio_iter_sub;
    }
 }
 

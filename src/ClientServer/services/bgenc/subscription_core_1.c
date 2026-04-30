@@ -21,7 +21,7 @@
 
  File Name            : subscription_core_1.c
 
- Date                 : 09/06/2026 14:37:47
+ Date                 : 08/07/2026 11:25:12
 
  C Translator Version : tradc Java V1.2 (06/02/2022)
 
@@ -54,7 +54,7 @@ t_entier4 subscription_core_1__a_session_nb_subscriptions_i[constants__t_session
 t_entier4 subscription_core_1__a_session_priority_idx_i[constants__t_session_i_max+1][constants__t_priority_i_max+1];
 t_entier4 subscription_core_1__a_session_priority_min_sub_idx_i[constants__t_session_i_max+1][constants__t_prio_idx_i_max+1];
 t_entier4 subscription_core_1__a_session_priority_nb_subs_i[constants__t_session_i_max+1][constants__t_prio_idx_i_max+1];
-t_entier4 subscription_core_1__a_session_priority_next_sub_idx_i[constants__t_session_i_max+1][constants__t_prio_idx_i_max+1];
+constants__t_prioritySubQueue_i subscription_core_1__a_session_priority_subscriptions_queue_i[constants__t_session_i_max+1][constants__t_prio_idx_i_max+1];
 t_entier4 subscription_core_1__a_session_seq_priority_i[constants__t_session_i_max+1][constants__t_prio_idx_i_max+1];
 constants__t_subscription_i subscription_core_1__a_session_seq_subscription_i[constants__t_session_i_max+1][constants__t_sub_idx_i_max+1];
 t_entier4 subscription_core_1__a_session_subscription_idx_i[constants__t_session_i_max+1][constants__t_subscription_i_max+1];
@@ -179,7 +179,7 @@ void subscription_core_1__INITIALISATION(void) {
       t_entier4 i, j;
       for (i = constants__t_session_i_max; 0 <= i; i = i - 1) {
          for (j = constants__t_prio_idx_i_max; 0 <= j; j = j - 1) {
-            subscription_core_1__a_session_priority_next_sub_idx_i[i][j] = 0;
+            subscription_core_1__a_session_priority_subscriptions_queue_i[i][j] = constants__c_prioritySubQueue_indet;
          }
       }
    }
@@ -339,39 +339,31 @@ void subscription_core_1__get_card_session_seq_subscription(
    *subscription_core_1__p_sub_idx = subscription_core_1__a_session_nb_subscriptions_i[subscription_core_1__p_session];
 }
 
-void subscription_core_1__get_session_seq_subscription(
-   const constants__t_session_i subscription_core_1__p_session,
-   const t_entier4 subscription_core_1__p_idx_sub,
-   constants__t_subscription_i * const subscription_core_1__p_subscription) {
-   *subscription_core_1__p_subscription = subscription_core_1__a_session_seq_subscription_i[subscription_core_1__p_session][subscription_core_1__p_idx_sub];
-}
-
-void subscription_core_1__get_session_priority_nb_subs(
+void subscription_core_1__init_session_priority_subscriptions_iterator(
    const constants__t_session_i subscription_core_1__p_session,
    const t_entier4 subscription_core_1__p_prio_idx,
-   t_entier4 * const subscription_core_1__p_nb_subs) {
-   *subscription_core_1__p_nb_subs = subscription_core_1__a_session_priority_nb_subs_i[subscription_core_1__p_session][subscription_core_1__p_prio_idx];
+   constants__t_prioritySubQueueIterator_i * const subscription_core_1__p_prio_sub_it) {
+   {
+      constants__t_prioritySubQueue_i subscription_core_1__l_prio_sub_q;
+      
+      subscription_core_1__l_prio_sub_q = subscription_core_1__a_session_priority_subscriptions_queue_i[subscription_core_1__p_session][subscription_core_1__p_prio_idx];
+      subscription_priority_sub_queue_it_bs__init_prio_subscriptions_queue_iterator(subscription_core_1__l_prio_sub_q,
+         subscription_core_1__p_prio_sub_it);
+   }
 }
 
-void subscription_core_1__get_session_priority_min_sub_idx(
+void subscription_core_1__reconfigure_session_priority_subscriptions_queue_last_sub(
    const constants__t_session_i subscription_core_1__p_session,
-   const t_entier4 subscription_core_1__p_prio_idx,
-   t_entier4 * const subscription_core_1__p_min_idx_sub) {
-   *subscription_core_1__p_min_idx_sub = subscription_core_1__a_session_priority_min_sub_idx_i[subscription_core_1__p_session][subscription_core_1__p_prio_idx];
-}
-
-void subscription_core_1__get_session_priority_next_sub_idx(
-   const constants__t_session_i subscription_core_1__p_session,
-   const t_entier4 subscription_core_1__p_prio_idx,
-   t_entier4 * const subscription_core_1__p_next_idx_sub) {
-   *subscription_core_1__p_next_idx_sub = subscription_core_1__a_session_priority_next_sub_idx_i[subscription_core_1__p_session][subscription_core_1__p_prio_idx];
-}
-
-void subscription_core_1__set_session_priority_next_sub_idx(
-   const constants__t_session_i subscription_core_1__p_session,
-   const t_entier4 subscription_core_1__p_prio_idx,
-   const t_entier4 subscription_core_1__p_next_idx_sub) {
-   subscription_core_1__a_session_priority_next_sub_idx_i[subscription_core_1__p_session][subscription_core_1__p_prio_idx] = subscription_core_1__p_next_idx_sub;
+   const constants__t_subscription_i subscription_core_1__p_sub) {
+   {
+      t_entier4 subscription_core_1__l_prio_idx;
+      constants__t_prioritySubQueue_i subscription_core_1__l_prio_sub_q;
+      
+      subscription_core_1__l_prio_idx = subscription_core_1__a_session_priority_idx_i[subscription_core_1__p_session][subscription_core_1__a_subscription_priority_i[subscription_core_1__p_sub]];
+      subscription_core_1__l_prio_sub_q = subscription_core_1__a_session_priority_subscriptions_queue_i[subscription_core_1__p_session][subscription_core_1__l_prio_idx];
+      subscription_priority_sub_queue_bs__reconfigure_priority_subscriptions_queue_last_sub(subscription_core_1__l_prio_sub_q,
+         subscription_core_1__p_sub);
+   }
 }
 
 void subscription_core_1__add_subscription(
@@ -392,24 +384,45 @@ void subscription_core_1__add_subscription(
    constants_statuscodes_bs__t_StatusCode_i * const subscription_core_1__StatusCode_service) {
    {
       t_entier4 subscription_core_1__l_prio_idx;
+      t_bool subscription_core_1__l_sub_added_to_prio_q;
+      constants__t_prioritySubQueue_i subscription_core_1__l_prio_subs_queue;
       t_entier4 subscription_core_1__l_nb_prio;
       t_entier4 subscription_core_1__l_idx;
       t_entier4 subscription_core_1__l_int_continue;
       t_entier4 subscription_core_1__l_sub_idx_it;
       t_entier4 subscription_core_1__l_prio;
       t_entier4 subscription_core_1__l_sub_idx_max;
-      t_bool subscription_core_1__l_reset_next_sub_idx;
       t_entier4 subscription_core_1__l_sub_idx;
       constants__t_subscription_i subscription_core_1__l_sub;
       
-      subscription_core_1__l_reset_next_sub_idx = false;
       subscription_core_1__l_sub_idx_max = subscription_core_1__a_session_nb_subscriptions_i[subscription_core_1__p_session] +
          1;
+      subscription_core_1__l_prio_idx = subscription_core_1__a_session_priority_idx_i[subscription_core_1__p_session][subscription_core_1__p_priority];
+      subscription_core_1__l_prio_subs_queue = constants__c_prioritySubQueue_indet;
       if (subscription_core_1__l_sub_idx_max > constants__k_n_subscriptionPerSession_max) {
          *subscription_core_1__StatusCode_service = constants_statuscodes_bs__e_sc_bad_too_many_subscriptions;
       }
       else {
-         *subscription_core_1__StatusCode_service = constants_statuscodes_bs__e_sc_ok;
+         subscription_core_1__l_sub_added_to_prio_q = false;
+         if (subscription_core_1__l_prio_idx == 0) {
+            subscription_priority_sub_queue_bs__allocate_new_prio_queue(subscription_core_1__p_subscription,
+               &subscription_core_1__l_sub_added_to_prio_q,
+               &subscription_core_1__l_prio_subs_queue);
+         }
+         else {
+            subscription_core_1__l_prio_subs_queue = subscription_core_1__a_session_priority_subscriptions_queue_i[subscription_core_1__p_session][subscription_core_1__l_prio_idx];
+            subscription_priority_sub_queue_bs__add_subscription_to_prio_queue(subscription_core_1__l_prio_subs_queue,
+               subscription_core_1__p_subscription,
+               &subscription_core_1__l_sub_added_to_prio_q);
+         }
+         if (subscription_core_1__l_sub_added_to_prio_q == true) {
+            *subscription_core_1__StatusCode_service = constants_statuscodes_bs__e_sc_ok;
+         }
+         else {
+            *subscription_core_1__StatusCode_service = constants_statuscodes_bs__e_sc_bad_out_of_memory;
+         }
+      }
+      if (*subscription_core_1__StatusCode_service == constants_statuscodes_bs__e_sc_ok) {
          subscription_core_1__s_subscription_i[subscription_core_1__p_subscription] = true;
          subscription_core_1__a_subscription_state_i[subscription_core_1__p_subscription] = subscription_core_1__p_state;
          subscription_core_1__a_subscription_session_i[subscription_core_1__p_subscription] = subscription_core_1__p_session;
@@ -430,7 +443,6 @@ void subscription_core_1__add_subscription(
             constants__c_subscriptionState_indet,
             subscription_core_1__p_state,
             3);
-         subscription_core_1__l_prio_idx = subscription_core_1__a_session_priority_idx_i[subscription_core_1__p_session][subscription_core_1__p_priority];
          if (subscription_core_1__l_prio_idx == 0) {
             subscription_core_1__l_nb_prio = subscription_core_1__a_session_nb_priorities_i[subscription_core_1__p_session];
             subscription_core_1__l_prio_idx = subscription_core_1__l_nb_prio +
@@ -444,6 +456,8 @@ void subscription_core_1__add_subscription(
                   (subscription_core_1__p_priority < subscription_core_1__l_prio)) {
                   subscription_core_1__a_session_seq_priority_i[subscription_core_1__p_session][subscription_core_1__l_prio_idx] = subscription_core_1__l_prio;
                   subscription_core_1__a_session_priority_idx_i[subscription_core_1__p_session][subscription_core_1__l_prio] = subscription_core_1__l_prio_idx;
+                  subscription_core_1__a_session_priority_subscriptions_queue_i[subscription_core_1__p_session][subscription_core_1__l_prio_idx] = subscription_core_1__a_session_priority_subscriptions_queue_i[subscription_core_1__p_session][subscription_core_1__l_prio_idx -
+                     1];
                   subscription_core_1__a_session_priority_nb_subs_i[subscription_core_1__p_session][subscription_core_1__l_prio_idx] = subscription_core_1__a_session_priority_nb_subs_i[subscription_core_1__p_session][subscription_core_1__l_prio_idx -
                      1];
                   subscription_core_1__l_prio_idx = subscription_core_1__l_prio_idx -
@@ -453,12 +467,9 @@ void subscription_core_1__add_subscription(
                   subscription_core_1__a_session_seq_priority_i[subscription_core_1__p_session][subscription_core_1__l_prio_idx] = subscription_core_1__p_priority;
                   subscription_core_1__a_session_priority_idx_i[subscription_core_1__p_session][subscription_core_1__p_priority] = subscription_core_1__l_prio_idx;
                   subscription_core_1__a_session_priority_nb_subs_i[subscription_core_1__p_session][subscription_core_1__l_prio_idx] = 0;
+                  subscription_core_1__a_session_priority_subscriptions_queue_i[subscription_core_1__p_session][subscription_core_1__l_prio_idx] = subscription_core_1__l_prio_subs_queue;
                   if (subscription_core_1__l_prio_idx > subscription_core_1__l_nb_prio) {
                      subscription_core_1__a_session_priority_min_sub_idx_i[subscription_core_1__p_session][subscription_core_1__l_prio_idx] = subscription_core_1__l_sub_idx_max;
-                     subscription_core_1__a_session_priority_next_sub_idx_i[subscription_core_1__p_session][subscription_core_1__l_prio_idx] = subscription_core_1__l_sub_idx_max;
-                  }
-                  else {
-                     subscription_core_1__l_reset_next_sub_idx = true;
                   }
                   subscription_core_1__l_int_continue = 0;
                }
@@ -474,17 +485,11 @@ void subscription_core_1__add_subscription(
                1];
             subscription_core_1__a_session_priority_min_sub_idx_i[subscription_core_1__p_session][subscription_core_1__l_idx] = subscription_core_1__l_sub_idx +
                1;
-            subscription_core_1__a_session_priority_next_sub_idx_i[subscription_core_1__p_session][subscription_core_1__l_idx] = subscription_core_1__a_session_priority_next_sub_idx_i[subscription_core_1__p_session][subscription_core_1__l_idx -
-               1] +
-               1;
             subscription_core_1__l_idx = subscription_core_1__l_idx -
                1;
          }
          subscription_core_1__a_session_priority_nb_subs_i[subscription_core_1__p_session][subscription_core_1__l_prio_idx] = subscription_core_1__a_session_priority_nb_subs_i[subscription_core_1__p_session][subscription_core_1__l_prio_idx] +
             1;
-         if (subscription_core_1__l_reset_next_sub_idx == true) {
-            subscription_core_1__a_session_priority_next_sub_idx_i[subscription_core_1__p_session][subscription_core_1__l_prio_idx] = subscription_core_1__a_session_priority_min_sub_idx_i[subscription_core_1__p_session][subscription_core_1__l_prio_idx];
-         }
          subscription_core_1__l_sub_idx_it = subscription_core_1__l_sub_idx_max;
          while (subscription_core_1__l_sub_idx < subscription_core_1__l_sub_idx_it) {
             subscription_core_1__l_sub = subscription_core_1__a_session_seq_subscription_i[subscription_core_1__p_session][subscription_core_1__l_sub_idx_it -
@@ -512,11 +517,9 @@ void subscription_core_1__delete_subscription(
       t_entier4 subscription_core_1__l_sub_prio_idx;
       t_entier4 subscription_core_1__l_prio_idx_it;
       t_entier4 subscription_core_1__l_nb_prio;
-      t_entier4 subscription_core_1__l_min_sub_idx;
       t_entier4 subscription_core_1__l_nb_sub_prio;
-      t_entier4 subscription_core_1__l_max_sub_idx;
-      t_entier4 subscription_core_1__l_sub_idx_next;
       t_entier4 subscription_core_1__l_sub_idx_del;
+      constants__t_prioritySubQueue_i subscription_core_1__l_prio_subs_queue;
       t_entier4 subscription_core_1__l_sub_idx;
       constants__t_subscription_i subscription_core_1__l_sub;
       
@@ -546,13 +549,9 @@ void subscription_core_1__delete_subscription(
       subscription_core_1__l_nb_subs = subscription_core_1__a_session_nb_subscriptions_i[subscription_core_1__l_session];
       subscription_core_1__l_sub_prio_idx = subscription_core_1__a_session_priority_idx_i[subscription_core_1__l_session][subscription_core_1__l_priority];
       subscription_core_1__l_nb_prio = subscription_core_1__a_session_nb_priorities_i[subscription_core_1__l_session];
-      subscription_core_1__l_min_sub_idx = subscription_core_1__a_session_priority_min_sub_idx_i[subscription_core_1__l_session][subscription_core_1__l_sub_prio_idx];
       subscription_core_1__l_nb_sub_prio = subscription_core_1__a_session_priority_nb_subs_i[subscription_core_1__l_session][subscription_core_1__l_sub_prio_idx];
-      subscription_core_1__l_max_sub_idx = (subscription_core_1__l_min_sub_idx +
-         subscription_core_1__l_nb_sub_prio) -
-         1;
-      subscription_core_1__l_sub_idx_next = subscription_core_1__a_session_priority_next_sub_idx_i[subscription_core_1__l_session][subscription_core_1__l_sub_prio_idx];
       subscription_core_1__l_sub_idx_del = subscription_core_1__a_session_subscription_idx_i[subscription_core_1__l_session][subscription_core_1__p_subscription];
+      subscription_core_1__l_prio_subs_queue = subscription_core_1__a_session_priority_subscriptions_queue_i[subscription_core_1__l_session][subscription_core_1__l_sub_prio_idx];
       subscription_core_1__l_prio_idx_it = subscription_core_1__l_sub_prio_idx;
       while (subscription_core_1__l_prio_idx_it < subscription_core_1__l_nb_prio) {
          subscription_core_1__l_prio = subscription_core_1__a_session_seq_priority_i[subscription_core_1__l_session][subscription_core_1__l_prio_idx_it +
@@ -561,16 +560,12 @@ void subscription_core_1__delete_subscription(
             1] = subscription_core_1__a_session_priority_min_sub_idx_i[subscription_core_1__l_session][subscription_core_1__l_prio_idx_it +
             1] -
             1;
-         subscription_core_1__a_session_priority_next_sub_idx_i[subscription_core_1__l_session][subscription_core_1__l_prio_idx_it +
-            1] = subscription_core_1__a_session_priority_next_sub_idx_i[subscription_core_1__l_session][subscription_core_1__l_prio_idx_it +
-            1] -
-            1;
          if (subscription_core_1__l_nb_sub_prio == 1) {
             subscription_core_1__a_session_seq_priority_i[subscription_core_1__l_session][subscription_core_1__l_prio_idx_it] = subscription_core_1__l_prio;
             subscription_core_1__a_session_priority_idx_i[subscription_core_1__l_session][subscription_core_1__l_prio] = subscription_core_1__l_prio_idx_it;
             subscription_core_1__a_session_priority_min_sub_idx_i[subscription_core_1__l_session][subscription_core_1__l_prio_idx_it] = subscription_core_1__a_session_priority_min_sub_idx_i[subscription_core_1__l_session][subscription_core_1__l_prio_idx_it +
                1];
-            subscription_core_1__a_session_priority_next_sub_idx_i[subscription_core_1__l_session][subscription_core_1__l_prio_idx_it] = subscription_core_1__a_session_priority_next_sub_idx_i[subscription_core_1__l_session][subscription_core_1__l_prio_idx_it +
+            subscription_core_1__a_session_priority_subscriptions_queue_i[subscription_core_1__l_session][subscription_core_1__l_prio_idx_it] = subscription_core_1__a_session_priority_subscriptions_queue_i[subscription_core_1__l_session][subscription_core_1__l_prio_idx_it +
                1];
             subscription_core_1__a_session_priority_nb_subs_i[subscription_core_1__l_session][subscription_core_1__l_prio_idx_it] = subscription_core_1__a_session_priority_nb_subs_i[subscription_core_1__l_session][subscription_core_1__l_prio_idx_it +
                1];
@@ -581,20 +576,18 @@ void subscription_core_1__delete_subscription(
       if (subscription_core_1__l_nb_sub_prio == 1) {
          subscription_core_1__a_session_priority_idx_i[subscription_core_1__l_session][subscription_core_1__l_priority] = 0;
          subscription_core_1__a_session_priority_min_sub_idx_i[subscription_core_1__l_session][subscription_core_1__l_nb_prio] = 0;
-         subscription_core_1__a_session_priority_next_sub_idx_i[subscription_core_1__l_session][subscription_core_1__l_nb_prio] = 0;
+         subscription_core_1__a_session_priority_subscriptions_queue_i[subscription_core_1__l_session][subscription_core_1__l_nb_prio] = constants__c_prioritySubQueue_indet;
          subscription_core_1__a_session_priority_nb_subs_i[subscription_core_1__l_session][subscription_core_1__l_nb_prio] = 0;
          subscription_core_1__a_session_seq_priority_i[subscription_core_1__l_session][subscription_core_1__l_nb_prio] = constants__c_priority_indet;
          subscription_core_1__a_session_nb_priorities_i[subscription_core_1__l_session] = subscription_core_1__l_nb_prio -
             1;
+         subscription_priority_sub_queue_bs__clear_and_deallocate_prio_queue(subscription_core_1__l_prio_subs_queue);
       }
       else {
          subscription_core_1__a_session_priority_nb_subs_i[subscription_core_1__l_session][subscription_core_1__l_sub_prio_idx] = subscription_core_1__l_nb_sub_prio -
             1;
-         if ((subscription_core_1__l_sub_idx_del < subscription_core_1__l_sub_idx_next) ||
-            (subscription_core_1__l_sub_idx_next == subscription_core_1__l_max_sub_idx)) {
-            subscription_core_1__a_session_priority_next_sub_idx_i[subscription_core_1__l_session][subscription_core_1__l_sub_prio_idx] = subscription_core_1__l_sub_idx_next -
-               1;
-         }
+         subscription_priority_sub_queue_bs__remove_subscription_from_queue(subscription_core_1__l_prio_subs_queue,
+            subscription_core_1__p_subscription);
       }
       subscription_core_1__l_sub_idx = subscription_core_1__l_sub_idx_del;
       while (subscription_core_1__l_sub_idx < subscription_core_1__l_nb_subs) {

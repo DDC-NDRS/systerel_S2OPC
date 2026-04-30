@@ -19,16 +19,16 @@
 
 /******************************************************************************
 
- File Name            : service_read_it.h
+ File Name            : subscription_priority_sub_queue_it_bs.h
 
- Date                 : 08/07/2026 11:25:07
+ Date                 : 05/05/2026 13:58:19
 
  C Translator Version : tradc Java V1.2 (06/02/2022)
 
 ******************************************************************************/
 
-#ifndef _service_read_it_h
-#define _service_read_it_h
+#ifndef _subscription_priority_sub_queue_it_bs_h
+#define _subscription_priority_sub_queue_it_bs_h
 
 /*--------------------------
    Added by the Translator
@@ -40,24 +40,21 @@
   --------------*/
 #include "constants.h"
 
-/*----------------------------
-   CONCRETE_VARIABLES Clause
-  ----------------------------*/
-extern t_entier4 service_read_it__rreqs_i;
-
 /*------------------------
    INITIALISATION Clause
   ------------------------*/
-extern void service_read_it__INITIALISATION(void);
+extern void subscription_priority_sub_queue_it_bs__INITIALISATION(void);
 
 /*--------------------
    OPERATIONS Clause
   --------------------*/
-extern void service_read_it__continue_iter_read_request(
-   t_bool * const service_read_it__continue,
-   constants__t_ReadValue_i * const service_read_it__rvi);
-extern void service_read_it__init_iter_read_request(
-   const t_entier4 service_read_it__nb_req,
-   t_bool * const service_read_it__continue);
+extern void subscription_priority_sub_queue_it_bs__continue_iter_subscription_priority_queue(
+   const constants__t_prioritySubQueueIterator_i subscription_priority_sub_queue_it_bs__p_iterator,
+   t_bool * const subscription_priority_sub_queue_it_bs__p_continue,
+   constants__t_subscription_i * const subscription_priority_sub_queue_it_bs__p_subscription,
+   constants__t_prioritySubQueueIterator_i * const subscription_priority_sub_queue_it_bs__p_iterator_updated);
+extern void subscription_priority_sub_queue_it_bs__init_prio_subscriptions_queue_iterator(
+   const constants__t_prioritySubQueue_i subscription_priority_sub_queue_it_bs__p_queue,
+   constants__t_prioritySubQueueIterator_i * const subscription_priority_sub_queue_it_bs__iterator);
 
 #endif
