@@ -638,13 +638,13 @@ static uint64_t SOPC_PubScheduler_Nb_Message(SOPC_PubSubConfiguration* config)
 }
 
 /** Update the security group from the SKS if needed and prepare it for signing and encryption process */
-static void SecurityGroup_Update(SOPC_PubSub_SecurityType* security, const SOPC_WriterGroup* group)
+static SOPC_PubSub_SecurityStatus SecurityGroup_Update(SOPC_PubSub_SecurityType* security,
+                                                       const SOPC_WriterGroup* group)
 {
     if (NULL == security || NULL == group)
     {
-        return;
+        return SOPC_PUBSUB_STATUS_SECURITY_INVALID_PARAMETERS;
     }
-
     uint32_t prevTokenId = 0;
     // Keep track of previous securityTokenId to check if sequence number need to be reset
     if (NULL != security->groupKeys)
@@ -681,6 +681,7 @@ static void SecurityGroup_Update(SOPC_PubSub_SecurityType* security, const SOPC_
         else
         {
             SOPC_Logger_TraceError(SOPC_LOG_MODULE_PUBSUB, "Publisher failed to generate NONCE");
+            secuStatus = SOPC_PUBSUB_STATUS_SECURITY_NOK;
         }
     }
     else
@@ -702,6 +703,7 @@ static void SecurityGroup_Update(SOPC_PubSub_SecurityType* security, const SOPC_
             cb(group, pubId, SOPC_WriterGroup_Get_SecurityGroupId(group));
         }
     }
+    return secuStatus;
 }
 
 static void MessageCtx_Send_Publish_Message(MessageCtx* context)
@@ -723,6 +725,7 @@ static void MessageCtx_Send_Publish_Message(MessageCtx* context)
 
     SOPC_WriterGroup* group = context->group;
     SOPC_ASSERT(NULL != message && NULL != group);
+    SOPC_PubSub_SecurityStatus secuStatus = SOPC_PUBSUB_STATUS_SECURITY_OK;
 
     size_t nDsm = (size_t) SOPC_Dataset_LL_NetworkMessage_Nb_DataSetMsg(message);
     SOPC_ASSERT((size_t) SOPC_WriterGroup_Nb_DataSetWriter(group) == nDsm);
@@ -839,75 +842,79 @@ static void MessageCtx_Send_Publish_Message(MessageCtx* context)
     {
         if (NULL != security)
         {
-            SecurityGroup_Update(security, group);
+            secuStatus = SecurityGroup_Update(security, group);
         }
 
-        // Encode with the configured message format
-        SOPC_Buffer* buffer = NULL;
-        SOPC_NetworkMessage_Error_Code errorCode = SOPC_NetworkMessage_Error_Code_None;
-        if (SOPC_MessageEncodeJSON == SOPC_WriterGroup_Get_Encoding(group))
+        if (SOPC_PUBSUB_STATUS_SECURITY_OK == secuStatus)
         {
-            errorCode = SOPC_JSON_NetworkMessage_Encode(message, security, &buffer);
-            if (NULL == buffer)
+            // Encode with the configured message format
+            SOPC_Buffer* buffer = NULL;
+            SOPC_NetworkMessage_Error_Code errorCode = SOPC_NetworkMessage_Error_Code_None;
+            if (SOPC_MessageEncodeJSON == SOPC_WriterGroup_Get_Encoding(group))
             {
-                SOPC_Logger_TraceError(SOPC_LOG_MODULE_PUBSUB,
-                                       "Failed to encode PUB message, SOPC_NetworkMessage_Error_Code is : 0x%08X",
-                                       (unsigned) errorCode);
-            }
-        }
-        else
-        {
-            if (isPreencoded)
-            {
-                buffer = SOPC_UADP_NetworkMessage_Get_PreencodedBuffer(message, security);
+                errorCode = SOPC_JSON_NetworkMessage_Encode(message, security, &buffer);
                 if (NULL == buffer)
-                {
-                    SOPC_Logger_TraceError(SOPC_LOG_MODULE_PUBSUB,
-                                           "Failed to retrieve updated preencode buffer at message %p",
-                                           (const void*) message);
-                }
-            }
-            else
-            {
-                SOPC_Buffer* buffer_payload = NULL;
-                errorCode = SOPC_UADP_NetworkMessage_Encode_Buffers(message, security, &buffer, &buffer_payload);
-                if (SOPC_NetworkMessage_Error_Code_None != errorCode || buffer == NULL || buffer_payload == NULL)
                 {
                     SOPC_Logger_TraceError(SOPC_LOG_MODULE_PUBSUB,
                                            "Failed to encode PUB message, SOPC_NetworkMessage_Error_Code is : 0x%08X",
                                            (unsigned) errorCode);
                 }
-                else
+            }
+            else
+            {
+                if (isPreencoded)
                 {
-                    errorCode = SOPC_UADP_NetworkMessage_BuildFinalMessage(security, buffer, &buffer_payload);
-                    if (SOPC_NetworkMessage_Error_Code_None != errorCode)
+                    buffer = SOPC_UADP_NetworkMessage_Get_PreencodedBuffer(message, security);
+                    if (NULL == buffer)
                     {
                         SOPC_Logger_TraceError(SOPC_LOG_MODULE_PUBSUB,
-                                               "Failed to sign and encrypt and merge encoded buffers "
-                                               "SOPC_NetworkMessage_Error_Code is : 0x%08X",
-                                               (unsigned) errorCode);
+                                               "Failed to retrieve updated preencode buffer at message %p",
+                                               (const void*) message);
+                    }
+                }
+                else
+                {
+                    SOPC_Buffer* buffer_payload = NULL;
+                    errorCode = SOPC_UADP_NetworkMessage_Encode_Buffers(message, security, &buffer, &buffer_payload);
+                    if (SOPC_NetworkMessage_Error_Code_None != errorCode || buffer == NULL || buffer_payload == NULL)
+                    {
+                        SOPC_Logger_TraceError(
+                            SOPC_LOG_MODULE_PUBSUB,
+                            "Failed to encode PUB message, SOPC_NetworkMessage_Error_Code is : 0x%08X",
+                            (unsigned) errorCode);
+                    }
+                    else
+                    {
+                        errorCode = SOPC_UADP_NetworkMessage_BuildFinalMessage(security, buffer, &buffer_payload);
+                        if (SOPC_NetworkMessage_Error_Code_None != errorCode)
+                        {
+                            SOPC_Logger_TraceError(SOPC_LOG_MODULE_PUBSUB,
+                                                   "Failed to sign and encrypt and merge encoded buffers "
+                                                   "SOPC_NetworkMessage_Error_Code is : 0x%08X",
+                                                   (unsigned) errorCode);
+                        }
                     }
                 }
             }
-        }
 
-        // If no error occurred, send the message
-        if (SOPC_NetworkMessage_Error_Code_None == errorCode && NULL != buffer)
-        {
-            context->transport->mqttTopic = context->mqttTopic;
-            context->transport->pFctSend(context->transport, buffer);
-        }
+            // If no error occurred, send the message
+            if (SOPC_NetworkMessage_Error_Code_None == errorCode && NULL != buffer)
+            {
+                context->transport->mqttTopic = context->mqttTopic;
+                context->transport->pFctSend(context->transport, buffer);
+            }
 
-        // Clear security nonce if needed
-        if (NULL != security)
-        {
-            SOPC_Free(security->msgNonceRandom);
-            security->msgNonceRandom = NULL;
-        }
-        // Clear buffer if needed
-        if (!isPreencoded)
-        {
-            SOPC_Buffer_Delete(buffer);
+            // Clear security nonce if needed
+            if (NULL != security)
+            {
+                SOPC_Free(security->msgNonceRandom);
+                security->msgNonceRandom = NULL;
+            }
+            // Clear buffer if needed
+            if (!isPreencoded)
+            {
+                SOPC_Buffer_Delete(buffer);
+            }
         }
     }
 }
@@ -918,7 +925,7 @@ static void Send_KeepAlive_Message(MessageCtx* context)
     SOPC_PubSub_SecurityType* security = context->security;
     SOPC_Dataset_LL_NetworkMessage* message = context->messageKeepAlive;
     SOPC_WriterGroup* group = context->group;
-
+    SOPC_PubSub_SecurityStatus secuStatus = SOPC_PUBSUB_STATUS_SECURITY_OK;
     size_t nDsm = (size_t) SOPC_Dataset_LL_NetworkMessage_Nb_DataSetMsg(message);
     SOPC_ASSERT((size_t) SOPC_WriterGroup_Nb_DataSetWriter(group) == nDsm);
 
@@ -933,37 +940,39 @@ static void Send_KeepAlive_Message(MessageCtx* context)
 
     if (NULL != security)
     {
-        SecurityGroup_Update(security, group);
+        secuStatus = SecurityGroup_Update(security, group);
     }
     SOPC_Buffer* buffer = NULL;
     SOPC_Buffer* buffer_payload = NULL;
-
-    SOPC_NetworkMessage_Error_Code errorCode =
-        SOPC_UADP_NetworkMessage_Encode_Buffers(message, security, &buffer, &buffer_payload);
-    if (SOPC_NetworkMessage_Error_Code_None != errorCode || buffer == NULL || buffer_payload == NULL)
+    if (SOPC_PUBSUB_STATUS_SECURITY_OK == secuStatus)
     {
-        SOPC_Logger_TraceError(SOPC_LOG_MODULE_PUBSUB,
-                               "Failed to encode PUB message, SOPC_NetworkMessage_Error_Code is : 0x%08X",
-                               (unsigned) errorCode);
-    }
-    else
-    {
-        errorCode = SOPC_UADP_NetworkMessage_BuildFinalMessage(security, buffer, &buffer_payload);
-        SOPC_ASSERT(buffer_payload == NULL);
-        if (SOPC_NetworkMessage_Error_Code_None != errorCode || NULL == buffer)
+        SOPC_NetworkMessage_Error_Code errorCode =
+            SOPC_UADP_NetworkMessage_Encode_Buffers(message, security, &buffer, &buffer_payload);
+        if (SOPC_NetworkMessage_Error_Code_None != errorCode || buffer == NULL || buffer_payload == NULL)
         {
-            SOPC_Logger_TraceError(
-                SOPC_LOG_MODULE_PUBSUB,
-                "Failed to sign and encrypt and merge encoded buffers SOPC_NetworkMessage_Error_Code is : %08X",
-                (unsigned) errorCode);
+            SOPC_Logger_TraceError(SOPC_LOG_MODULE_PUBSUB,
+                                   "Failed to encode PUB message, SOPC_NetworkMessage_Error_Code is : 0x%08X",
+                                   (unsigned) errorCode);
         }
-    }
+        else
+        {
+            errorCode = SOPC_UADP_NetworkMessage_BuildFinalMessage(security, buffer, &buffer_payload);
+            SOPC_ASSERT(buffer_payload == NULL);
+            if (SOPC_NetworkMessage_Error_Code_None != errorCode || NULL == buffer)
+            {
+                SOPC_Logger_TraceError(
+                    SOPC_LOG_MODULE_PUBSUB,
+                    "Failed to sign and encrypt and merge encoded buffers SOPC_NetworkMessage_Error_Code is : %08X",
+                    (unsigned) errorCode);
+            }
+        }
 
-    // If no error occurred, send the message
-    if (SOPC_NetworkMessage_Error_Code_None == errorCode && NULL != buffer)
-    {
-        context->transport->mqttTopic = context->mqttTopic;
-        context->transport->pFctSend(context->transport, buffer);
+        // If no error occurred, send the message
+        if (SOPC_NetworkMessage_Error_Code_None == errorCode && NULL != buffer)
+        {
+            context->transport->mqttTopic = context->mqttTopic;
+            context->transport->pFctSend(context->transport, buffer);
+        }
     }
 
     // Clear security nonce if needed
