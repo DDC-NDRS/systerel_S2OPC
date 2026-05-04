@@ -30,6 +30,7 @@
 #include "sopc_assert.h"
 #include "sopc_crypto_profiles.h"
 #include "sopc_crypto_provider.h"
+#include "sopc_helper_string.h"
 #include "sopc_macros.h"
 #include "sopc_mem_alloc.h"
 #include "sopc_secret_buffer.h"
@@ -232,7 +233,9 @@ static inline SOPC_ReturnStatus HMAC_hashtype_verify(const SOPC_CryptoProvider* 
 
     if (SOPC_STATUS_OK == status)
     {
-        status = memcmp(pSignature, pCalcSig, lenSig) != 0 ? SOPC_STATUS_NOK : SOPC_STATUS_OK;
+        status = SOPC_memcmp_constantTime((const void*) pSignature, (const void*) pCalcSig, (size_t) lenSig) != 0
+                     ? SOPC_STATUS_NOK
+                     : SOPC_STATUS_OK;
     }
 
     SOPC_Free(pCalcSig);
