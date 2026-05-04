@@ -173,4 +173,23 @@ char* SOPC_strdup(const char* s);
  */
 SOPC_ReturnStatus SOPC_StrConcat(const char* left, const char* right, char** str);
 
+/**
+ * \brief Constant-time comparison of two memory buffers.
+ * This function always reads exactly len bytes from both buffers and does not
+ * stop at the first difference. The execution time is independent of the
+ * contents of the buffers, but depends on len.
+ * This function is based on mbedtls_ct_memcmp from the Mbed TLS library.
+ *
+ * \param a   Pointer to the first memory buffer to compare. Must point to at least \p len readable bytes.
+ * \param b   Pointer to the second memory buffer to compare. Must point to at least \p len readable bytes.
+ * \param len Number of bytes to compare.
+ *
+ * \return 0 if the first len bytes of a and b are equal, non-zero otherwise.
+ *
+ * \note a and b shall be valid pointers to at least len readable bytes, unless len is 0.
+ *
+ * \warning len shall not be secret if its value could leak sensitive information.
+ */
+int SOPC_memcmp_constantTime(const void* a, const void* b, size_t len);
+
 #endif /* SOPC_HELPER_STRING_H_ */

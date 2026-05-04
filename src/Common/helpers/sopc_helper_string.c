@@ -23,6 +23,8 @@
 #include <errno.h>
 #include <float.h>
 #include <limits.h>
+#include <stddef.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h> /* strtoul */
 #include <string.h>
@@ -457,4 +459,38 @@ SOPC_ReturnStatus SOPC_StrConcat(const char* left, const char* right, char** str
 
     *str = pOut;
     return status;
+}
+
+int SOPC_memcmp_constantTime(const void* a, const void* b, size_t len)
+{
+    volatile const uint8_t* A = (volatile const uint8_t*) a;
+    volatile const uint8_t* B = (volatile const uint8_t*) b;
+    uint32_t diff = 0;
+
+    for (size_t i = 0; i < len; ++i)
+    {
+        uint8_t x = A[i];
+        uint8_t y = B[i];
+
+        // if A[i] = B[i], diff = 0
+        diff |= (uint32_t)(x ^ y);
+    }
+
+#if (INT_MAX < INT32_MAX)
+    /* We don't support int smaller than 32-bits, but if someone tried to build
+     * with this configuration, there is a risk that, for differing data, the
+     * only bits set in diff are in the top 16-bits, and would be lost by a
+     * simple cast from uint32 to int.
+     * This would have significant security implications, so protect against it. */
+#error "SOPC_memcmp_constantTime() requires minimum 32-bit ints"
+#else
+    /* The bit-twiddling ensures that when we cast uint32_t to int, we are casting
+     * a value that is in the range 0..INT_MAX - a value larger than this would
+     * result in implementation defined behaviour.
+     *
+     * This ensures that the value returned by the function is non-zero iff
+     * diff is non-zero.
+     */
+    return (int) ((diff & 0xffff) | (diff >> 16));
+#endif
 }
