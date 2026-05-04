@@ -26,6 +26,7 @@
 #include "sopc_assert.h"
 #include "sopc_crypto_provider.h"
 #include "sopc_encoder.h"
+#include "sopc_helper_string.h"
 #include "sopc_logger.h"
 #include "sopc_macros.h"
 #include "sopc_mem_alloc.h"
@@ -774,9 +775,10 @@ static SOPC_ReturnStatus internal_compare_user_decrypted_password_nonce(const SO
     if (SOPC_STATUS_OK == status)
     {
         pwdLength = totalLength - lenNonce;
-        int cmp = memcmp(serverNonce->Data,
-                         &decryptedBuffer->data[ENCRYPTED_USER_IDENTITY_TOKEN_LENGTH_FIELD_SIZE + pwdLength],
-                         (size_t) lenNonce);
+        int cmp = SOPC_memcmp_constantTime(
+            (const void*) serverNonce->Data,
+            (const void*) &decryptedBuffer->data[ENCRYPTED_USER_IDENTITY_TOKEN_LENGTH_FIELD_SIZE + pwdLength],
+            (size_t) lenNonce);
         if (cmp != 0)
         {
             SOPC_Logger_TraceWarning(SOPC_LOG_MODULE_CLIENTSERVER,
