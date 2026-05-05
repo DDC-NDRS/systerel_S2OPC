@@ -338,7 +338,12 @@ SOPC_Buffer* SOPC_PubFixedBuffer_Get_UpdatedBuffer(SOPC_PubFixedBuffer_Buffer_Ct
                         nonceRandomLength + 4 <= UINT8_MAX && // check before cast to uint8
                         SOPC_STATUS_OK == status);
             status = SOPC_PubSub_Security_Write_Nonce(security, updatedBuffer, (uint8_t) nonceRandomLength);
-            SOPC_ASSERT(SOPC_STATUS_OK == status);
+            if (SOPC_STATUS_OK != status)
+            {
+                SOPC_Logger_TraceWarning(SOPC_LOG_MODULE_PUBSUB,
+                                         "Failed to write Nonce message updating publisher buffer with fixed size");
+                updatedBuffer = NULL;
+            }
         }
     }
     for (size_t i = 0; i < preencode->dataSetFields_len && SOPC_STATUS_OK == status; i++)
