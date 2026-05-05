@@ -2037,7 +2037,8 @@ static void LockedStaMac_ProcessMsg_PublishResponse(SOPC_StaMac_Machine* pSM,
         (subscriptionCtx*) SOPC_SLinkedList_FindFromId(pSM->pListSubscriptions, pPubResp->SubscriptionId);
     pNotifMsg = &pPubResp->NotificationMessage;
     /* TODO: manage available sequence numbers (AvailableSequenceNumbers) once we manage re-connection / republish */
-    if (NULL != subCtx)
+    if (NULL != subCtx &&
+        0 < pNotifMsg->NoOfNotificationData) // Only acknowledge messages with notification (not keep alive)
     {
         subCtx->bAckSubscr = true;
         SOPC_SLinkedList_Append(subCtx->pListAckSeqNum, 0, (uintptr_t) pNotifMsg->SequenceNumber);
