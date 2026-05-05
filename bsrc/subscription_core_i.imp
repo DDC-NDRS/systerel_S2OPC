@@ -84,6 +84,7 @@ DEFINITIONS
     THEN
         /* Manage sequence number */
         l_seq_num <-- get_subscription_SeqNum (p_subscription);
+        /* Use the current next SN for the message and increment for next notification (see mantis #10265) */
         set_notification_message_sequence_number (l_notifMsg, l_seq_num);
         l_next_seq_num <-- get_next_subscription_sequence_number (l_seq_num);
         set_subscription_SeqNum (p_subscription, l_next_seq_num);

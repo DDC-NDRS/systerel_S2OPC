@@ -57,6 +57,7 @@ DEFINITIONS
     a_KeepAliveCounter,
     a_MessageSent,
     a_PublishingEnabled,
+    /* SeqNum stores the NEXT notification SN */
     a_SeqNum,
     a_publishRequestQueue,
     a_notifRepublishQueue,
