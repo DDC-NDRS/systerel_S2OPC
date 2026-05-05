@@ -21,7 +21,7 @@
 
  File Name            : session_core.c
 
- Date                 : 03/03/2026 16:49:01
+ Date                 : 05/05/2026 16:00:26
 
  C Translator Version : tradc Java V1.2 (06/02/2022)
 
@@ -936,6 +936,10 @@ void session_core__server_close_sessions(
       constants__t_session_i session_core__l_session;
       t_bool session_core__l_is_client_session;
       t_bool session_core__l_valid_session;
+      constants__t_ApplicationDescription_i session_core__l_client_app_desc;
+      constants__t_CertThumbprint_i session_core__l_client_cert_tb;
+      constants__t_SessionName_i session_core__l_session_name;
+      constants__t_user_i session_core__l_user;
       
       session_core_it__init_iter_session(&session_core__l_continue);
       if (session_core__l_continue == true) {
@@ -949,10 +953,24 @@ void session_core__server_close_sessions(
             if (((session_core__l_valid_session == true) &&
                (session_core__l_session != session_core__exceptSession)) &&
                (session_core__l_is_client_session == false)) {
+               session_core_1__get_server_session_client_app_desc(session_core__l_session,
+                  &session_core__l_client_app_desc);
+               session_core_1__get_server_session_client_cert_tb(session_core__l_session,
+                  &session_core__l_client_cert_tb);
+               session_core_1__get_server_session_name(session_core__l_session,
+                  &session_core__l_session_name);
+               session_core_1__get_session_user_server(session_core__l_session,
+                  &session_core__l_user);
+               app_cb_call_context_bs__set_app_call_context_session(session_core__l_session,
+                  session_core__l_client_app_desc,
+                  session_core__l_client_cert_tb,
+                  session_core__l_session_name,
+                  session_core__l_user);
                session_audit_bs__server_notify_session_closed(session_core__l_session,
                   constants_statuscodes_bs__e_sc_bad_session_closed);
                session_core_1__set_session_state_closed(session_core__l_session,
                   constants_statuscodes_bs__e_sc_bad_session_closed);
+               app_cb_call_context_bs__clear_app_call_context();
             }
          }
       }

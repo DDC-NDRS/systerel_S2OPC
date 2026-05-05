@@ -69,6 +69,7 @@ OPERATIONS
     END
     ;
 
+    /* It shall always be followed by direct or indirect call to clear_app_call_context */
     server_notify_session_create(p_channel_config, req_msg, resp_msg, session, oper_ret_code) =
     PRE
         p_channel_config : t_channel_config_idx_i &
@@ -89,6 +90,7 @@ OPERATIONS
         skip
     END;
 
+    /* It shall always be followed by direct or indirect call to clear_app_call_context */
     server_notify_session_activate(p_channel_config, req_msg, session, oper_ret_code) =
     PRE
         p_channel_config : t_channel_config_idx_i &
@@ -105,7 +107,10 @@ OPERATIONS
         skip
     END;
 
-    // Note: only used for session event notification callback and not for audit for now
+    /* It shall always be followed by direct or indirect call to clear_app_call_context
+
+       Note: only used for session event notification callback and not for audit for now
+    */
     server_notify_session_inactive (session, oper_ret_code) =
     PRE
         session : t_session_i &
@@ -117,6 +122,7 @@ OPERATIONS
     END
     ;
 
+    /* It shall always be followed by direct or indirect call to clear_app_call_context */
     server_notify_session_closed(session, oper_ret_code) =
     PRE
         session : t_session_i &

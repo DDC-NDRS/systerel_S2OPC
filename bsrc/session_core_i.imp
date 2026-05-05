@@ -1337,7 +1337,11 @@ OPERATIONS
         l_continue,
         l_session,
         l_is_client_session,
-        l_valid_session
+        l_valid_session,
+        l_client_app_desc,
+        l_client_cert_tb,
+        l_session_name,
+        l_user
     IN
         l_continue <-- init_iter_session;
         IF  l_continue = TRUE THEN /* only for proving */
@@ -1347,9 +1351,15 @@ OPERATIONS
                 l_valid_session <-- is_valid_session(l_session);
                 IF l_valid_session = TRUE & l_session /= exceptSession & l_is_client_session = FALSE
                 THEN
+                    l_client_app_desc <-- get_server_session_client_app_desc (l_session);
+                    l_client_cert_tb <-- get_server_session_client_cert_tb (l_session);
+                    l_session_name <-- get_server_session_name (l_session);
+                    l_user <-- get_session_user_server (l_session);
+                    set_app_call_context_session (l_session, l_client_app_desc, l_client_cert_tb, l_session_name, l_user);
                     /* may generate audit event */
                     server_notify_session_closed(l_session, e_sc_bad_session_closed);
-                    set_session_state_closed (l_session, e_sc_bad_session_closed)
+                    set_session_state_closed (l_session, e_sc_bad_session_closed);
+                    clear_app_call_context
                 END
             INVARIANT
                 sessions_to_iterate <: t_session &
