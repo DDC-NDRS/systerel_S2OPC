@@ -244,7 +244,8 @@ static void onLibEvt(SOPC_EventHandler* handler, int32_t event, uint32_t eltId, 
             {
                 SOPC_Logger_TraceError(SOPC_LOG_MODULE_CLIENTSERVER,
                                        "Error writing AlarmCondition %s variable %s with status 0x%08" PRIX32,
-                                       conditionIdStr, lsCtx->varPathArr[i], writeResp->Results[i]);
+                                       (conditionIdStr != NULL ? conditionIdStr : "<NULL>"), lsCtx->varPathArr[i],
+                                       writeResp->Results[i]);
             }
         }
         SOPC_Free(conditionIdStr);
@@ -515,7 +516,7 @@ static void SOPC_InternalWrite_InitAlarmCondition_Node_Values(SOPC_AlarmConditio
                 SOPC_Logger_TraceError(
                     SOPC_LOG_MODULE_CLIENTSERVER,
                     "Initialization of AlarmCondition %s SetWriteValue on variable %s failed with status %d",
-                    conditionIdStr, prevVarPathArr[i], status);
+                    (conditionIdStr != NULL ? conditionIdStr : "<NULL>"), prevVarPathArr[i], status);
                 SOPC_Free(conditionIdStr);
             }
             varPathArr[index] = prevVarPathArr[i];
@@ -587,14 +588,15 @@ static void onTranslateBPresp(SOPC_InternalLocalService_Ctx* lsCtx, OpcUa_Transl
                 SOPC_Logger_TraceWarning(SOPC_LOG_MODULE_CLIENTSERVER,
                                          "TBPtoNodeId of AlarmCondition %s variable %s returned several target, only "
                                          "the first result %s was kept.",
-                                         conditionIdStr, lsCtx->varPathArr[i], varIdStr);
+                                         (conditionIdStr != NULL ? conditionIdStr : "<NULL>"), lsCtx->varPathArr[i],
+                                         varIdStr);
                 SOPC_Free(varIdStr);
             }
             else
             {
                 SOPC_Logger_TraceDebug(SOPC_LOG_MODULE_CLIENTSERVER,
-                                       "TBPtoNodeId of AlarmCondition %s variable %s found.", conditionIdStr,
-                                       lsCtx->varPathArr[i]);
+                                       "TBPtoNodeId of AlarmCondition %s variable %s found.",
+                                       (conditionIdStr != NULL ? conditionIdStr : "<NULL>"), lsCtx->varPathArr[i]);
             }
             SOPC_Free(conditionIdStr);
         }
@@ -606,7 +608,8 @@ static void onTranslateBPresp(SOPC_InternalLocalService_Ctx* lsCtx, OpcUa_Transl
                 SOPC_LOG_MODULE_CLIENTSERVER,
                 "TBPtoNodeId of AlarmCondition %s variable %s returned an external node serverIdx=%" PRIu32
                 " nodeId=%s as result.  It will not be functional.",
-                conditionIdStr, lsCtx->varPathArr[i], resp->Results[i].Targets[0].TargetId.ServerIndex, varIdStr);
+                (conditionIdStr != NULL ? conditionIdStr : "<NULL>"), lsCtx->varPathArr[i],
+                resp->Results[i].Targets[0].TargetId.ServerIndex, varIdStr);
             SOPC_Free(varIdStr);
             SOPC_Free(conditionIdStr);
         }
@@ -628,14 +631,15 @@ static void onTranslateBPresp(SOPC_InternalLocalService_Ctx* lsCtx, OpcUa_Transl
                 SOPC_Logger_TraceWarning(SOPC_LOG_MODULE_CLIENTSERVER,
                                          "TBPtoNodeId of AlarmCondition %s method %s returned several target, only "
                                          "the first result %s was kept.",
-                                         conditionIdStr, SOPC_String_GetRawCString(&acMethodsNames[methodIdx].Name),
-                                         varIdStr);
+                                         (conditionIdStr != NULL ? conditionIdStr : "<NULL>"),
+                                         SOPC_String_GetRawCString(&acMethodsNames[methodIdx].Name), varIdStr);
                 SOPC_Free(varIdStr);
             }
             else
             {
                 SOPC_Logger_TraceDebug(SOPC_LOG_MODULE_CLIENTSERVER,
-                                       "TBPtoNodeId of AlarmCondition %s method %s found.", conditionIdStr,
+                                       "TBPtoNodeId of AlarmCondition %s method %s found.",
+                                       (conditionIdStr != NULL ? conditionIdStr : "<NULL>"),
                                        SOPC_String_GetRawCString(&acMethodsNames[methodIdx].Name));
             }
             SOPC_Free(conditionIdStr);
@@ -648,7 +652,8 @@ static void onTranslateBPresp(SOPC_InternalLocalService_Ctx* lsCtx, OpcUa_Transl
                 SOPC_LOG_MODULE_CLIENTSERVER,
                 "TBPtoNodeId of AlarmCondition %s method %s returned an external node serverIdx=%" PRIu32
                 " nodeId=%s as result. It will not be functional.",
-                conditionIdStr, SOPC_String_GetRawCString(&acMethodsNames[methodIdx].Name),
+                (conditionIdStr != NULL ? conditionIdStr : "<NULL>"),
+                SOPC_String_GetRawCString(&acMethodsNames[methodIdx].Name),
                 resp->Results[i].Targets[0].TargetId.ServerIndex, varIdStr);
             SOPC_Free(varIdStr);
             SOPC_Free(conditionIdStr);
@@ -1151,7 +1156,7 @@ static SOPC_ReturnStatus SOPC_InternalAlarmConditionNoLock_CommonSetVariableFrom
             SOPC_Logger_TraceWarning(SOPC_LOG_MODULE_CLIENTSERVER,
                                      "Update of AlarmCondition %s LocalizedText variable %s failed with status %d. It "
                                      "will be replaced by new value only.",
-                                     conditionIdStr, varPath, status);
+                                     (conditionIdStr != NULL ? conditionIdStr : "<NULL>"), varPath, status);
             SOPC_Free(conditionIdStr);
             status = SOPC_STATUS_OK;
         }
@@ -1179,9 +1184,9 @@ static SOPC_ReturnStatus SOPC_InternalAlarmConditionNoLock_CommonSetVariableFrom
             if (SOPC_STATUS_OK != nodeStatus)
             {
                 char* conditionIdStr = SOPC_InternalConditionIdToString(pAlarmCondition);
-                SOPC_Logger_TraceError(SOPC_LOG_MODULE_CLIENTSERVER,
-                                       "Update of AlarmCondition %s variable %s failed with status %d", conditionIdStr,
-                                       varSourceTsPath, nodeStatus);
+                SOPC_Logger_TraceError(
+                    SOPC_LOG_MODULE_CLIENTSERVER, "Update of AlarmCondition %s variable %s failed with status %d",
+                    (conditionIdStr != NULL ? conditionIdStr : "<NULL>"), varSourceTsPath, nodeStatus);
                 SOPC_Free(conditionIdStr);
             }
         }
@@ -1189,8 +1194,8 @@ static SOPC_ReturnStatus SOPC_InternalAlarmConditionNoLock_CommonSetVariableFrom
         {
             char* conditionIdStr = SOPC_InternalConditionIdToString(pAlarmCondition);
             SOPC_Logger_TraceError(SOPC_LOG_MODULE_CLIENTSERVER,
-                                   "Update of AlarmCondition %s variable %s failed with status %d", conditionIdStr,
-                                   varPath, nodeStatus);
+                                   "Update of AlarmCondition %s variable %s failed with status %d",
+                                   (conditionIdStr != NULL ? conditionIdStr : "<NULL>"), varPath, nodeStatus);
             SOPC_Free(conditionIdStr);
         }
     }
@@ -1266,7 +1271,7 @@ static void SOPC_InternalAlarmConditionNoLock_UpdateEventIdLists_Error(const SOP
     char* eventIdStr = SOPC_InternalByteStringToString(eventId);
     SOPC_Logger_TraceError(SOPC_LOG_MODULE_CLIENTSERVER,
                            "AlarmCondition %s update latest EventId %s in %s context failed with status %d",
-                           conditionIdStr, eventIdStr, contextStr, status);
+                           (conditionIdStr != NULL ? conditionIdStr : "<NULL>"), eventIdStr, contextStr, status);
     SOPC_Free(conditionIdStr);
     SOPC_Free(eventIdStr);
 }
@@ -1330,7 +1335,7 @@ SOPC_ReturnStatus SOPC_InternalAlarmConditionNoLock_TriggerEvent(SOPC_AlarmCondi
                 char* conditionIdStr = SOPC_InternalConditionIdToString(pAlarmCondition);
                 SOPC_Logger_TraceError(SOPC_LOG_MODULE_CLIENTSERVER,
                                        "AlarmCondition %s EventId node  value update failed with status %d",
-                                       conditionIdStr, status);
+                                       (conditionIdStr != NULL ? conditionIdStr : "<NULL>"), status);
                 SOPC_Free(conditionIdStr);
             }
             status = SOPC_STATUS_OK;
@@ -1343,8 +1348,8 @@ SOPC_ReturnStatus SOPC_InternalAlarmConditionNoLock_TriggerEvent(SOPC_AlarmCondi
         {
             char* conditionIdStr = SOPC_InternalConditionIdToString(pAlarmCondition);
             SOPC_Logger_TraceError(SOPC_LOG_MODULE_CLIENTSERVER,
-                                   "AlarmCondition %s new event generation failed with status %d", conditionIdStr,
-                                   status);
+                                   "AlarmCondition %s new event generation failed with status %d",
+                                   (conditionIdStr != NULL ? conditionIdStr : "<NULL>"), status);
             SOPC_Free(conditionIdStr);
         }
     }
@@ -1358,8 +1363,8 @@ SOPC_ReturnStatus SOPC_InternalAlarmConditionNoLock_TriggerEvent(SOPC_AlarmCondi
             char* conditionIdStr = SOPC_InternalConditionIdToString(pAlarmCondition);
             SOPC_Logger_TraceError(
                 SOPC_LOG_MODULE_CLIENTSERVER,
-                "AlarmCondition %s event %s copy allocation for ConditionRefresh failed with status %d", conditionIdStr,
-                eventIdStr, status);
+                "AlarmCondition %s event %s copy allocation for ConditionRefresh failed with status %d",
+                (conditionIdStr != NULL ? conditionIdStr : "<NULL>"), eventIdStr, status);
             SOPC_Free(eventIdStr);
             SOPC_Free(conditionIdStr);
         }
@@ -1387,7 +1392,7 @@ SOPC_ReturnStatus SOPC_InternalAlarmConditionNoLock_TriggerEvent(SOPC_AlarmCondi
             char* conditionIdStr = SOPC_InternalConditionIdToString(pAlarmCondition);
             SOPC_Logger_TraceError(SOPC_LOG_MODULE_CLIENTSERVER,
                                    "AlarmCondition %s event %s copy storage for ConditionRefresh failed with status %d",
-                                   conditionIdStr, eventIdStr, status);
+                                   (conditionIdStr != NULL ? conditionIdStr : "<NULL>"), eventIdStr, status);
             SOPC_Free(eventIdStr);
             SOPC_Free(conditionIdStr);
         }
@@ -1410,13 +1415,14 @@ SOPC_ReturnStatus SOPC_InternalAlarmConditionWithLock_TriggerEvent(SOPC_AlarmCon
         if (status != SOPC_STATUS_OK)
         {
             SOPC_Logger_TraceError(SOPC_LOG_MODULE_CLIENTSERVER,
-                                   "AlarmCondition %s event triggering failed with status %d", conditionIdStr, status);
+                                   "AlarmCondition %s event triggering failed with status %d",
+                                   (conditionIdStr != NULL ? conditionIdStr : "<NULL>"), status);
         }
         else
         {
             char* eventIdStr = SOPC_InternalGetEventIdString(pAlarmCondition->data);
             SOPC_Logger_TraceDebug(SOPC_LOG_MODULE_CLIENTSERVER, "AlarmCondition %s event triggered with eventId=%s",
-                                   conditionIdStr, eventIdStr);
+                                   (conditionIdStr != NULL ? conditionIdStr : "<NULL>"), eventIdStr);
             SOPC_Free(eventIdStr);
         }
         SOPC_Free(conditionIdStr);
@@ -1593,16 +1599,16 @@ SOPC_ReturnStatus SOPC_InternalAlarmCondition_SetBoolState(
         if (invalidTransition)
         {
             // Only trace at info level as failure is due to current state
-            SOPC_Logger_TraceInfo(SOPC_LOG_MODULE_CLIENTSERVER,
-                                  "AlarmCondition %s state %s change to %s failed with status %d", conditionIdStr,
-                                  stateVarPaths->id, setStateStr, status);
+            SOPC_Logger_TraceInfo(
+                SOPC_LOG_MODULE_CLIENTSERVER, "AlarmCondition %s state %s change to %s failed with status %d",
+                (conditionIdStr != NULL ? conditionIdStr : "<NULL>"), stateVarPaths->id, setStateStr, status);
         }
         else
         {
             // Trace at error level as failure is unexpected
-            SOPC_Logger_TraceError(SOPC_LOG_MODULE_CLIENTSERVER,
-                                   "AlarmCondition %s state %s change to %s failed with status %d", conditionIdStr,
-                                   stateVarPaths->id, setStateStr, status);
+            SOPC_Logger_TraceError(
+                SOPC_LOG_MODULE_CLIENTSERVER, "AlarmCondition %s state %s change to %s failed with status %d",
+                (conditionIdStr != NULL ? conditionIdStr : "<NULL>"), stateVarPaths->id, setStateStr, status);
         }
         SOPC_Free(conditionIdStr);
     }
@@ -1623,7 +1629,8 @@ SOPC_ReturnStatus SOPC_InternalAlarmCondition_SetBoolState(
             const char* setStateStr = (newState ? "true" : "false");
             SOPC_Logger_TraceError(SOPC_LOG_MODULE_CLIENTSERVER,
                                    "AlarmCondition %s state %s change for %s failed to UPDATE NODES with status %d",
-                                   conditionIdStr, stateVarPaths->self, setStateStr, writeStatus);
+                                   (conditionIdStr != NULL ? conditionIdStr : "<NULL>"), stateVarPaths->self,
+                                   setStateStr, writeStatus);
             SOPC_Free(conditionIdStr);
         }
     }
@@ -1657,7 +1664,7 @@ SOPC_ReturnStatus SOPC_InternalAlarmCondition_SetBoolState(
             char* conditionIdStr = SOPC_InternalConditionIdToString(pAlarmCondition);
             SOPC_Logger_TraceWarning(
                 SOPC_LOG_MODULE_CLIENTSERVER, "AlarmCondition %s ClientUserId change to %s failed with status %d",
-                conditionIdStr,
+                (conditionIdStr != NULL ? conditionIdStr : "<NULL>"),
                 (userIdVar.Value.String.Length <= 0 ? "<NULL>" : SOPC_String_GetRawCString(&userIdVar.Value.String)),
                 userIdStatus);
             SOPC_Free(conditionIdStr);
@@ -1671,7 +1678,7 @@ SOPC_ReturnStatus SOPC_InternalAlarmCondition_SetBoolState(
             char* conditionIdStr = SOPC_InternalConditionIdToString(pAlarmCondition);
             SOPC_Logger_TraceWarning(
                 SOPC_LOG_MODULE_CLIENTSERVER, "AlarmCondition %s Comment change to %s failed with status %d",
-                conditionIdStr,
+                (conditionIdStr != NULL ? conditionIdStr : "<NULL>"),
                 (optComment->defaultText.Length <= 0 ? "<NULL>" : SOPC_String_GetRawCString(&optComment->defaultText)),
                 commentStatus);
             SOPC_Free(conditionIdStr);
@@ -1691,21 +1698,23 @@ SOPC_ReturnStatus SOPC_InternalAlarmCondition_SetBoolState(
                 SOPC_Logger_TraceError(
                     SOPC_LOG_MODULE_CLIENTSERVER,
                     "AlarmCondition %s event triggering for %s state change to %s failed with status %d",
-                    conditionIdStr, stateVarPaths->self, setStateStr, eventStatus);
+                    (conditionIdStr != NULL ? conditionIdStr : "<NULL>"), stateVarPaths->self, setStateStr,
+                    eventStatus);
             }
             else if (eventStatus == SOPC_STATUS_INVALID_STATE)
             {
                 SOPC_Logger_TraceDebug(
                     SOPC_LOG_MODULE_CLIENTSERVER,
                     "AlarmCondition %s event not triggered for %s state change to %s because it is disabled",
-                    conditionIdStr, stateVarPaths->self, setStateStr);
+                    (conditionIdStr != NULL ? conditionIdStr : "<NULL>"), stateVarPaths->self, setStateStr);
             }
             else
             {
                 char* eventIdStr = SOPC_InternalGetEventIdString(pAlarmCondition->data);
                 SOPC_Logger_TraceDebug(SOPC_LOG_MODULE_CLIENTSERVER,
                                        "AlarmCondition %s event triggered for %s state change to %s with eventId=%s",
-                                       conditionIdStr, stateVarPaths->self, setStateStr, eventIdStr);
+                                       (conditionIdStr != NULL ? conditionIdStr : "<NULL>"), stateVarPaths->self,
+                                       setStateStr, eventIdStr);
                 SOPC_Free(eventIdStr);
             }
             SOPC_Free(conditionIdStr);
@@ -1792,9 +1801,9 @@ static void SOPC_InternalAlarmCondition_SetRetainState(SOPC_AlarmCondition* pAla
             if (status != SOPC_STATUS_OK)
             {
                 char* conditionIdStr = SOPC_InternalConditionIdToString(pAlarmCondition);
-                SOPC_Logger_TraceError(SOPC_LOG_MODULE_CLIENTSERVER,
-                                       "AlarmCondition %s Retain change to %s failed with status %d", conditionIdStr,
-                                       (retain ? "true" : "false"), status);
+                SOPC_Logger_TraceError(
+                    SOPC_LOG_MODULE_CLIENTSERVER, "AlarmCondition %s Retain change to %s failed with status %d",
+                    (conditionIdStr != NULL ? conditionIdStr : "<NULL>"), (retain ? "true" : "false"), status);
                 SOPC_Free(conditionIdStr);
             }
         } // else: do not change Retain value as Active state does not match
@@ -1835,7 +1844,8 @@ SOPC_ReturnStatus SOPC_InternalAlarmCondition_SetEnabledState(SOPC_AlarmConditio
                 SOPC_Logger_TraceError(
                     SOPC_LOG_MODULE_CLIENTSERVER,
                     "AlarmCondition %s event triggering for %s state change to %s failed with status %d",
-                    conditionIdStr, cRetainPath, (enabled ? "true" : "false"), retStatus);
+                    (conditionIdStr != NULL ? conditionIdStr : "<NULL>"), cRetainPath, (enabled ? "true" : "false"),
+                    retStatus);
                 SOPC_Free(conditionIdStr);
             }
         }
@@ -1859,15 +1869,16 @@ SOPC_ReturnStatus SOPC_InternalAlarmCondition_SetEnabledState(SOPC_AlarmConditio
                 SOPC_Logger_TraceError(
                     SOPC_LOG_MODULE_CLIENTSERVER,
                     "AlarmCondition %s event triggering for %s state change to %s failed with status %d",
-                    conditionIdStr, cEnabledStatePaths.self, (enabled ? "true" : "false"), eventStatus);
+                    (conditionIdStr != NULL ? conditionIdStr : "<NULL>"), cEnabledStatePaths.self,
+                    (enabled ? "true" : "false"), eventStatus);
             }
             else
             {
                 char* eventIdStr = SOPC_InternalGetEventIdString(pAlarmCondition->data);
                 SOPC_Logger_TraceDebug(SOPC_LOG_MODULE_CLIENTSERVER,
                                        "AlarmCondition %s event triggered for %s state change to %s with eventId=%s",
-                                       conditionIdStr, cEnabledStatePaths.self, (enabled ? "true" : "false"),
-                                       eventIdStr);
+                                       (conditionIdStr != NULL ? conditionIdStr : "<NULL>"), cEnabledStatePaths.self,
+                                       (enabled ? "true" : "false"), eventIdStr);
                 SOPC_Free(eventIdStr);
             }
             SOPC_Free(conditionIdStr);
@@ -1929,7 +1940,7 @@ SOPC_ReturnStatus SOPC_InternalAlarmCondition_SetConfirmable(SOPC_AlarmCondition
                 SOPC_Logger_TraceError(
                     SOPC_LOG_MODULE_CLIENTSERVER,
                     "AlarmCondition %s event triggering for ConfirmedState change to false failed with status %d",
-                    conditionIdStr, status);
+                    (conditionIdStr != NULL ? conditionIdStr : "<NULL>"), status);
             }
             else
             {
@@ -1937,7 +1948,7 @@ SOPC_ReturnStatus SOPC_InternalAlarmCondition_SetConfirmable(SOPC_AlarmCondition
                 SOPC_Logger_TraceDebug(
                     SOPC_LOG_MODULE_CLIENTSERVER,
                     "AlarmCondition %s event triggered for ConfirmedState change to false with eventId=%s",
-                    conditionIdStr, eventIdStr);
+                    (conditionIdStr != NULL ? conditionIdStr : "<NULL>"), eventIdStr);
                 SOPC_Free(eventIdStr);
             }
             SOPC_Free(conditionIdStr);
@@ -1984,14 +1995,14 @@ SOPC_ReturnStatus SOPC_InternalAlarmCondition_Acknowledge(SOPC_AlarmCondition* p
                 {
                     SOPC_Logger_TraceError(SOPC_LOG_MODULE_CLIENTSERVER,
                                            "AlarmCondition %s event triggering for Acknowledged failed with status %d",
-                                           conditionIdStr, status);
+                                           (conditionIdStr != NULL ? conditionIdStr : "<NULL>"), status);
                 }
                 else
                 {
                     char* eventIdStr = SOPC_InternalGetEventIdString(pAlarmCondition->data);
                     SOPC_Logger_TraceDebug(SOPC_LOG_MODULE_CLIENTSERVER,
                                            "AlarmCondition %s event triggered for Acknowledged with eventId=%s",
-                                           conditionIdStr, eventIdStr);
+                                           (conditionIdStr != NULL ? conditionIdStr : "<NULL>"), eventIdStr);
                     SOPC_Free(eventIdStr);
                 }
                 SOPC_Free(conditionIdStr);
@@ -2043,15 +2054,15 @@ SOPC_ReturnStatus SOPC_InternalAlarmCondition_SetAcknowledgeable(SOPC_AlarmCondi
                 SOPC_Logger_TraceError(
                     SOPC_LOG_MODULE_CLIENTSERVER,
                     "AlarmCondition %s event triggering for AckedState change to false failed with status %d",
-                    conditionIdStr, status);
+                    (conditionIdStr != NULL ? conditionIdStr : "<NULL>"), status);
             }
             else
             {
                 char* eventIdStr = SOPC_InternalGetEventIdString(pAlarmCondition->data);
                 SOPC_Logger_TraceDebug(
                     SOPC_LOG_MODULE_CLIENTSERVER,
-                    "AlarmCondition %s event triggered for AckedState change to false with eventId=%s", conditionIdStr,
-                    eventIdStr);
+                    "AlarmCondition %s event triggered for AckedState change to false with eventId=%s",
+                    (conditionIdStr != NULL ? conditionIdStr : "<NULL>"), eventIdStr);
                 SOPC_Free(eventIdStr);
             }
             SOPC_Free(conditionIdStr);
@@ -2101,14 +2112,15 @@ SOPC_ReturnStatus SOPC_InternalAlarmCondition_SetActiveState(SOPC_AlarmCondition
                     SOPC_Logger_TraceError(
                         SOPC_LOG_MODULE_CLIENTSERVER,
                         "AlarmCondition %s event triggering for Active state to %s failed with status %d",
-                        conditionIdStr, active ? "true" : "false", status);
+                        (conditionIdStr != NULL ? conditionIdStr : "<NULL>"), active ? "true" : "false", status);
                 }
                 else
                 {
                     char* eventIdStr = SOPC_InternalGetEventIdString(pAlarmCondition->data);
                     SOPC_Logger_TraceDebug(SOPC_LOG_MODULE_CLIENTSERVER,
                                            "AlarmCondition %s event triggered for Active state to %s with eventId=%s",
-                                           conditionIdStr, active ? "true" : "false", eventIdStr);
+                                           (conditionIdStr != NULL ? conditionIdStr : "<NULL>"),
+                                           active ? "true" : "false", eventIdStr);
                     SOPC_Free(eventIdStr);
                 }
                 SOPC_Free(conditionIdStr);
@@ -2151,7 +2163,7 @@ SOPC_ReturnStatus SOPC_InternalAlarmCondition_SetComment(SOPC_AlarmCondition* pA
             char* conditionIdStr = SOPC_InternalConditionIdToString(pAlarmCondition);
             SOPC_Logger_TraceWarning(
                 SOPC_LOG_MODULE_CLIENTSERVER, "AlarmCondition %s ClientUserId change to %s failed with status %d",
-                conditionIdStr,
+                (conditionIdStr != NULL ? conditionIdStr : "<NULL>"),
                 (userIdVar.Value.String.Length <= 0 ? "<NULL>" : SOPC_String_GetRawCString(&userIdVar.Value.String)),
                 status);
             SOPC_Free(conditionIdStr);

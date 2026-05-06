@@ -416,7 +416,8 @@ SOPC_ReturnStatus SOPC_AlarmCondition_SetSeverity(SOPC_AlarmCondition* pAlarmCon
                     SOPC_LOG_MODULE_CLIENTSERVER,
                     "AlarmCondition %s event triggering for LastSeverity condition variable change to %" PRIu16
                     "(new Severity=%" PRIu16 ") failed with status %d",
-                    conditionIdStr, prevSeverityVar->Value.Uint16, severity, eventStatus);
+                    (conditionIdStr != NULL ? conditionIdStr : "<NULL>"), prevSeverityVar->Value.Uint16, severity,
+                    eventStatus);
             }
             else
             {
@@ -424,7 +425,8 @@ SOPC_ReturnStatus SOPC_AlarmCondition_SetSeverity(SOPC_AlarmCondition* pAlarmCon
                 SOPC_Logger_TraceDebug(SOPC_LOG_MODULE_CLIENTSERVER,
                                        "AlarmCondition %s event triggered for LastSeverity variable change to %" PRIu16
                                        "(new Severity=%" PRIu16 ") with eventId=%s",
-                                       conditionIdStr, prevSeverityVar->Value.Uint16, severity, eventIdStr);
+                                       (conditionIdStr != NULL ? conditionIdStr : "<NULL>"),
+                                       prevSeverityVar->Value.Uint16, severity, eventIdStr);
                 SOPC_Free(eventIdStr);
             }
             SOPC_Free(conditionIdStr);
@@ -480,7 +482,8 @@ static SOPC_ReturnStatus SOPC_AlarmCondition_CommonSetVariableFromStrPath(SOPC_A
                 SOPC_Logger_TraceError(SOPC_LOG_MODULE_CLIENTSERVER,
                                        "AlarmCondition %s event triggering for %s condition variable change to %s "
                                        "failed with status %d",
-                                       conditionIdStr, varPath, (NULL == varStr ? "<NULL>" : varStr), eventStatus);
+                                       (conditionIdStr != NULL ? conditionIdStr : "<NULL>"), varPath,
+                                       (NULL == varStr ? "<NULL>" : varStr), eventStatus);
             }
             else
             {
@@ -488,7 +491,8 @@ static SOPC_ReturnStatus SOPC_AlarmCondition_CommonSetVariableFromStrPath(SOPC_A
                 SOPC_Logger_TraceDebug(
                     SOPC_LOG_MODULE_CLIENTSERVER,
                     "AlarmCondition %s event triggered for condition variable %s change to %s with eventId=%s",
-                    conditionIdStr, varPath, (NULL == varStr ? "<NULL>" : varStr), eventIdStr);
+                    (conditionIdStr != NULL ? conditionIdStr : "<NULL>"), varPath, (NULL == varStr ? "<NULL>" : varStr),
+                    eventIdStr);
                 SOPC_Free(eventIdStr);
             }
             SOPC_Free(conditionIdStr);
