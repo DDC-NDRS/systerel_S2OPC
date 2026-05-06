@@ -197,8 +197,8 @@ endif()
 
 # If requested set PIC compiler flag
 option(POSITION_INDEPENDENT_CODE "Build position independent code (-fPIC)" OFF)
-if (BUILD_SHARED_LIBS)
-  # Enforce Position Independent Code when building share library
+if (BUILD_SHARED_LIBS OR WITH_PYS2OPC)
+  # Enforce Position Independent Code when building shared library
   set(POSITION_INDEPENDENT_CODE ON)
 endif()
 if (POSITION_INDEPENDENT_CODE)
