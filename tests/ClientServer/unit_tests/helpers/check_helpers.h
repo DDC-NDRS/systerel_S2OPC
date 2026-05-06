@@ -76,4 +76,6 @@ Suite* tests_make_suite_base64(void);
 
 Suite* tests_make_suite_address_space_access(void);
 
+Suite* tests_make_suite_pki_create_from_store(void);
+
 #endif // CHECK_HELPERS_H

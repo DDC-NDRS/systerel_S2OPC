@@ -114,7 +114,8 @@ target_include_directories(check_helpers PRIVATE ${S2OPC_CLIENTSERVER_INTERNAL_I
 
 target_link_libraries(check_helpers PRIVATE Check::check s2opc_clientserver s2opc_clientserver-loader-embedded)
 target_compile_options(check_helpers PRIVATE ${S2OPC_COMPILER_FLAGS})
-target_compile_definitions(check_helpers PRIVATE ${S2OPC_DEFINITIONS})
+target_compile_definitions(check_helpers PRIVATE ${S2OPC_DEFINITIONS}
+                                                 TEST_CLIENTSERVER_PKI_DIR="${CMAKE_SOURCE_DIR}/tests/ClientServer/data/PKI")
 if (S2OPC_CRYPTO_CYCLONE)
   target_compile_definitions(check_helpers PRIVATE "S2OPC_CRYPTO_CYCLONE")
 endif()

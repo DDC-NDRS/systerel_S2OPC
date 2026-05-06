@@ -82,6 +82,7 @@ int main(void)
     srunner_add_suite(sr, tests_make_suite_XML_parsers());
     srunner_add_suite(sr, tests_make_suite_base64());
     srunner_add_suite(sr, tests_make_suite_address_space_access());
+    srunner_add_suite(sr, tests_make_suite_pki_create_from_store());
 
     srunner_run_all(sr, CK_NORMAL);
     number_failed = srunner_ntests_failed(sr);
