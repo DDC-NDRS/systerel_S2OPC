@@ -51,11 +51,11 @@
         <SecurityMode mode="Sign"/>
         <UserPolicy policyId="username_Basic256Sha256" tokenType="username"/>
       </Connection>
-      <Connection reverseEndpointURL="opc.tcp://localhost:4844" serverURL="opc.tcp://localhost:4841" id="reverse">
+      <Connection serverURL="opc.tcp://localhost:4841" id="x509_write">
         <ServerCertificate path="server_public/server_4k_cert.der"/>
         <SecurityPolicy uri="http://opcfoundation.org/UA/SecurityPolicy#Basic256Sha256"/>
-        <SecurityMode mode="SignAndEncrypt"/>
-        <UserPolicy policyId="X509" tokenType="certificate">
+        <SecurityMode mode="Sign"/>
+        <UserPolicy policyId="X509_Basic256Sha256" tokenType="certificate">
           <UserX509 cert_path="user_public/user_2k_cert.der" key_path="user_private/encrypted_user_2k_key.pem" encrypted="true"/>
         </UserPolicy>
       </Connection>

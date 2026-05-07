@@ -187,7 +187,7 @@
       <Reference ReferenceType="HasTypeDefinition">i=63</Reference>
     </References>
     <RolePermissions>
-      <RolePermission Permissions="65">i=15668</RolePermission> <!-- Browe + Write for Observer (i=15668) : Overides DRP Observer -->
+      <RolePermission Permissions="65">i=15668</RolePermission> <!-- Browse + Write for Observer (i=15668) : Overrides DRP Observer -->
     </RolePermissions>
     <Value>
       <uax:Int64>-1000</uax:Int64>
@@ -207,6 +207,20 @@
       <uax:Int64>-1000</uax:Int64>
     </Value>
   </UAVariable>
+  <UAVariable AccessLevel="99" BrowseName="1:Int64_DRP_RP_3" DataType="Int64" NodeId="ns=1;s=Int64_DRP_RP_3">
+    <DisplayName>Int64_DRP_RP_3</DisplayName>
+    <Description>Int64_DRP_RP_3</Description>
+    <References>
+      <Reference IsForward="false" ReferenceType="HasComponent">ns=1;s=TestRolesFolder</Reference>
+      <Reference ReferenceType="HasTypeDefinition">i=63</Reference>
+    </References>
+    <RolePermissions>
+      <RolePermission Permissions="65">i=15716</RolePermission> <!-- Browse + Write for ConfigureAdmin (i=15668) : Overrides DRP ConfigureAdmin -->
+    </RolePermissions>
+    <Value>
+      <uax:Int64>1000</uax:Int64>
+    </Value>
+  </UAVariable>
   <UAVariable AccessLevel="99" BrowseName="1:Int64_RP" DataType="Int64" NodeId="ns=1;s=Int64_RP">
     <DisplayName>Int64_RP</DisplayName>
     <Description>Int64_RP</Description>
@@ -217,7 +231,7 @@
     <RolePermissions>
       <RolePermission Permissions="1">i=15668</RolePermission> <!-- Browse for Observer (i=15668) -->
       <RolePermission Permissions="33">i=15680</RolePermission> <!-- Browse + Read for Operator (i=15680) -->
-      <RolePermission Permissions="65">i=15716</RolePermission> <!-- Browse + Write for ConfigureAdmin (i=15716) -->
+      <RolePermission Permissions="1">i=15716</RolePermission> <!-- Browse for ConfigureAdmin (i=15716) -->
     </RolePermissions>
     <Value>
       <uax:Int64>-1000</uax:Int64>

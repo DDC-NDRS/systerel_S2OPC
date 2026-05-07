@@ -1371,6 +1371,7 @@
       <Reference ReferenceType="HasTypeDefinition" IsForward="false">i=24209</Reference>
       <Reference ReferenceType="HasTypeDefinition" IsForward="false">ns=1;s=Int64_DRP_RP</Reference>
       <Reference ReferenceType="HasTypeDefinition" IsForward="false">ns=1;s=Int64_DRP_RP_2</Reference>
+      <Reference ReferenceType="HasTypeDefinition" IsForward="false">ns=1;s=Int64_DRP_RP_3</Reference>
       <Reference ReferenceType="HasTypeDefinition" IsForward="false">ns=1;s=Int64_DRP_no_RP</Reference>
       <Reference ReferenceType="HasTypeDefinition" IsForward="false">ns=1;s=Int64_RP</Reference>
       <Reference ReferenceType="HasTypeDefinition" IsForward="false">ns=1;s=TestObject_Counter</Reference>
@@ -49659,8 +49660,8 @@
           </uax:TypeId>
           <uax:Body>
             <uax:IdentityMappingRuleType>
-              <uax:CriteriaType>5</uax:CriteriaType>
-              <uax:Criteria>NULL</uax:Criteria>
+              <uax:CriteriaType>7</uax:CriteriaType>
+              <uax:Criteria>urn:S2OPC:localhost</uax:Criteria>
             </uax:IdentityMappingRuleType>
           </uax:Body>
         </uax:ExtensionObject>
@@ -49747,8 +49748,8 @@
           </uax:TypeId>
           <uax:Body>
             <uax:IdentityMappingRuleType>
-              <uax:CriteriaType>1</uax:CriteriaType>
-              <uax:Criteria>me</uax:Criteria>
+              <uax:CriteriaType>5</uax:CriteriaType>
+              <uax:Criteria>NULL</uax:Criteria>
             </uax:IdentityMappingRuleType>
           </uax:Body>
         </uax:ExtensionObject>
@@ -49940,6 +49941,20 @@
       <uax:Int64>-1000</uax:Int64>
     </Value>
   </UAVariable>
+  <UAVariable AccessLevel="99" BrowseName="1:Int64_DRP_RP_3" DataType="Int64" NodeId="ns=1;s=Int64_DRP_RP_3">
+    <DisplayName>Int64_DRP_RP_3</DisplayName>
+    <Description>Int64_DRP_RP_3</Description>
+    <References>
+      <Reference IsForward="false" ReferenceType="HasComponent">ns=1;s=TestRolesFolder</Reference>
+      <Reference ReferenceType="HasTypeDefinition">i=63</Reference>
+    </References>
+    <RolePermissions>
+      <RolePermission Permissions="65">i=15716</RolePermission>
+    </RolePermissions>
+    <Value>
+      <uax:Int64>1000</uax:Int64>
+    </Value>
+  </UAVariable>
   <UAVariable AccessLevel="99" BrowseName="1:Int64_DRP_no_RP" DataType="Int64" NodeId="ns=1;s=Int64_DRP_no_RP">
     <DisplayName>Int64_DRP_no_RP</DisplayName>
     <Description>Int64_DRP_no_RP</Description>
@@ -49961,7 +49976,7 @@
     <RolePermissions>
       <RolePermission Permissions="1">i=15668</RolePermission>
       <RolePermission Permissions="33">i=15680</RolePermission>
-      <RolePermission Permissions="65">i=15716</RolePermission>
+      <RolePermission Permissions="1">i=15716</RolePermission>
     </RolePermissions>
     <Value>
       <uax:Int64>-1000</uax:Int64>
@@ -50012,6 +50027,7 @@
       <Reference ReferenceType="HasTypeDefinition">i=61</Reference>
       <Reference ReferenceType="HasComponent">ns=1;s=Int64_DRP_RP</Reference>
       <Reference ReferenceType="HasComponent">ns=1;s=Int64_DRP_RP_2</Reference>
+      <Reference ReferenceType="HasComponent">ns=1;s=Int64_DRP_RP_3</Reference>
       <Reference ReferenceType="HasComponent">ns=1;s=Int64_DRP_no_RP</Reference>
       <Reference ReferenceType="HasComponent">ns=1;s=Int64_RP</Reference>
       <Reference ReferenceType="HasComponent">ns=1;s=TestObject</Reference>

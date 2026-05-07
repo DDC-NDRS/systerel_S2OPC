@@ -166,8 +166,8 @@
           </TypeId>
           <Body>
             <IdentityMappingRuleType>
-              <CriteriaType>5</CriteriaType> <!-- Anonymous -->
-              <Criteria>NULL</Criteria>
+              <CriteriaType>7</CriteriaType> <!-- Application URI -->
+              <Criteria>urn:S2OPC:localhost</Criteria>
             </IdentityMappingRuleType>
           </Body>
         </ExtensionObject>
@@ -252,8 +252,8 @@
           </TypeId>
           <Body>
             <IdentityMappingRuleType>
-              <CriteriaType>1</CriteriaType> <!-- Username -->
-              <Criteria>me</Criteria>
+              <CriteriaType>5</CriteriaType> <!-- Anonymous -->
+              <Criteria>NULL</Criteria>
             </IdentityMappingRuleType>
           </Body>
         </ExtensionObject>
