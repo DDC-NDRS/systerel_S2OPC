@@ -201,17 +201,32 @@
       <Reference ReferenceType="HasProperty" IsForward="false">i=15680</Reference>
     </References>
     <Value>
-      <ExtensionObject xmlns="http://opcfoundation.org/UA/2008/02/Types.xsd">
-        <TypeId>
-          <Identifier>i=15728</Identifier>
-        </TypeId>
-        <Body>
-          <IdentityMappingRuleType>
-            <CriteriaType>6</CriteriaType> <!-- Authenticated user -->
-            <Criteria>NULL</Criteria>
-          </IdentityMappingRuleType>
-        </Body>
-      </ExtensionObject>
+      <ListOfExtensionObject xmlns="http://opcfoundation.org/UA/2008/02/Types.xsd">
+        <!-- 1st mapping rule -->
+        <ExtensionObject>
+          <TypeId>
+            <Identifier>i=15728</Identifier>
+          </TypeId>
+          <Body>
+            <IdentityMappingRuleType>
+              <CriteriaType>6</CriteriaType> <!-- Authenticated user -->
+              <Criteria>NULL</Criteria>
+            </IdentityMappingRuleType>
+          </Body>
+        </ExtensionObject>
+        <!-- 2nd mapping rule -->
+        <ExtensionObject>
+          <TypeId>
+            <Identifier>i=15728</Identifier>
+          </TypeId>
+          <Body>
+            <IdentityMappingRuleType>
+              <CriteriaType>2</CriteriaType> <!-- Certificate Thumbprint -->
+              <Criteria>97A30BB9BD112A834C269C24E9466FEB85DBFB3C</Criteria> <!-- user_2k_cert.der -->
+            </IdentityMappingRuleType>
+          </Body>
+        </ExtensionObject>
+      </ListOfExtensionObject>
     </Value>
   </UAVariable>
   <UAObject NodeId="i=15716" BrowseName="ConfigureAdmin">
@@ -229,17 +244,20 @@
       <Reference ReferenceType="HasProperty" IsForward="false">i=15716</Reference>
     </References>
     <Value>
-      <ExtensionObject xmlns="http://opcfoundation.org/UA/2008/02/Types.xsd">
-        <TypeId>
-          <Identifier>i=15728</Identifier>
-        </TypeId>
-        <Body>
-          <IdentityMappingRuleType>
-            <CriteriaType>1</CriteriaType> <!-- Username -->
-            <Criteria>me</Criteria>
-          </IdentityMappingRuleType>
-        </Body>
-      </ExtensionObject>
+      <ListOfExtensionObject xmlns="http://opcfoundation.org/UA/2008/02/Types.xsd">
+        <!-- 1st mapping rule -->
+        <ExtensionObject>
+          <TypeId>
+            <Identifier>i=15728</Identifier>
+          </TypeId>
+          <Body>
+            <IdentityMappingRuleType>
+              <CriteriaType>1</CriteriaType> <!-- Username -->
+              <Criteria>me</Criteria>
+            </IdentityMappingRuleType>
+          </Body>
+        </ExtensionObject>
+      </ListOfExtensionObject>
     </Value>
   </UAVariable>
   <UAObject NodeId="i=15704" BrowseName="SecurityAdmin">
@@ -257,17 +275,20 @@
       <Reference ReferenceType="HasProperty" IsForward="false">i=15704</Reference>
     </References>
     <Value>
-      <ExtensionObject xmlns="http://opcfoundation.org/UA/2008/02/Types.xsd">
-        <TypeId>
-          <Identifier>i=15728</Identifier>
-        </TypeId>
-        <Body>
-          <IdentityMappingRuleType>
-            <CriteriaType>1</CriteriaType> <!-- Username -->
-            <Criteria>secuAdmin</Criteria>
-          </IdentityMappingRuleType>
-        </Body>
-      </ExtensionObject>
+    <ListOfExtensionObject xmlns="http://opcfoundation.org/UA/2008/02/Types.xsd">
+        <!-- 1st mapping rule -->
+        <ExtensionObject>
+          <TypeId>
+            <Identifier>i=15728</Identifier>
+          </TypeId>
+          <Body>
+            <IdentityMappingRuleType>
+              <CriteriaType>1</CriteriaType> <!-- Username -->
+              <Criteria>secuAdmin</Criteria>
+            </IdentityMappingRuleType>
+          </Body>
+        </ExtensionObject>
+      </ListOfExtensionObject>
     </Value>
   </UAVariable>
   <!-- Definition of the role-related references nodes of the NamespaceMetadataType NS0 -->

@@ -49700,17 +49700,30 @@
       <Reference ReferenceType="HasProperty" IsForward="false">i=15680</Reference>
     </References>
     <Value>
-      <uax:ExtensionObject>
-        <uax:TypeId>
-          <uax:Identifier>i=15728</uax:Identifier>
-        </uax:TypeId>
-        <uax:Body>
-          <uax:IdentityMappingRuleType>
-            <uax:CriteriaType>6</uax:CriteriaType>
-            <uax:Criteria>NULL</uax:Criteria>
-          </uax:IdentityMappingRuleType>
-        </uax:Body>
-      </uax:ExtensionObject>
+      <uax:ListOfExtensionObject>
+        <uax:ExtensionObject>
+          <uax:TypeId>
+            <uax:Identifier>i=15728</uax:Identifier>
+          </uax:TypeId>
+          <uax:Body>
+            <uax:IdentityMappingRuleType>
+              <uax:CriteriaType>6</uax:CriteriaType>
+              <uax:Criteria>NULL</uax:Criteria>
+            </uax:IdentityMappingRuleType>
+          </uax:Body>
+        </uax:ExtensionObject>
+        <uax:ExtensionObject>
+          <uax:TypeId>
+            <uax:Identifier>i=15728</uax:Identifier>
+          </uax:TypeId>
+          <uax:Body>
+            <uax:IdentityMappingRuleType>
+              <uax:CriteriaType>2</uax:CriteriaType>
+              <uax:Criteria>97A30BB9BD112A834C269C24E9466FEB85DBFB3C</uax:Criteria>
+            </uax:IdentityMappingRuleType>
+          </uax:Body>
+        </uax:ExtensionObject>
+      </uax:ListOfExtensionObject>
     </Value>
   </UAVariable>
   <UAVariable NodeId="i=16258" BrowseName="Identities" ParentNodeId="i=15704" DataType="i=15634" ValueRank="1" ArrayDimensions="0">
@@ -49720,17 +49733,19 @@
       <Reference ReferenceType="HasProperty" IsForward="false">i=15704</Reference>
     </References>
     <Value>
-      <uax:ExtensionObject>
-        <uax:TypeId>
-          <uax:Identifier>i=15728</uax:Identifier>
-        </uax:TypeId>
-        <uax:Body>
-          <uax:IdentityMappingRuleType>
-            <uax:CriteriaType>1</uax:CriteriaType>
-            <uax:Criteria>secuAdmin</uax:Criteria>
-          </uax:IdentityMappingRuleType>
-        </uax:Body>
-      </uax:ExtensionObject>
+      <uax:ListOfExtensionObject>
+        <uax:ExtensionObject>
+          <uax:TypeId>
+            <uax:Identifier>i=15728</uax:Identifier>
+          </uax:TypeId>
+          <uax:Body>
+            <uax:IdentityMappingRuleType>
+              <uax:CriteriaType>1</uax:CriteriaType>
+              <uax:Criteria>secuAdmin</uax:Criteria>
+            </uax:IdentityMappingRuleType>
+          </uax:Body>
+        </uax:ExtensionObject>
+      </uax:ListOfExtensionObject>
     </Value>
   </UAVariable>
   <UAVariable NodeId="i=16269" BrowseName="Identities" ParentNodeId="i=15716" DataType="i=15634" ValueRank="1" ArrayDimensions="0">
@@ -49740,17 +49755,19 @@
       <Reference ReferenceType="HasProperty" IsForward="false">i=15716</Reference>
     </References>
     <Value>
-      <uax:ExtensionObject>
-        <uax:TypeId>
-          <uax:Identifier>i=15728</uax:Identifier>
-        </uax:TypeId>
-        <uax:Body>
-          <uax:IdentityMappingRuleType>
-            <uax:CriteriaType>1</uax:CriteriaType>
-            <uax:Criteria>me</uax:Criteria>
-          </uax:IdentityMappingRuleType>
-        </uax:Body>
-      </uax:ExtensionObject>
+      <uax:ListOfExtensionObject>
+        <uax:ExtensionObject>
+          <uax:TypeId>
+            <uax:Identifier>i=15728</uax:Identifier>
+          </uax:TypeId>
+          <uax:Body>
+            <uax:IdentityMappingRuleType>
+              <uax:CriteriaType>1</uax:CriteriaType>
+              <uax:Criteria>me</uax:Criteria>
+            </uax:IdentityMappingRuleType>
+          </uax:Body>
+        </uax:ExtensionObject>
+      </uax:ListOfExtensionObject>
     </Value>
   </UAVariable>
   <UAMethod NodeId="i=16301" BrowseName="AddRole" MethodDeclarationId="i=15997">
