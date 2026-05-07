@@ -21,7 +21,7 @@
 
  File Name            : session_role_identity_eval.c
 
- Date                 : 09/08/2024 09:19:53
+ Date                 : 11/05/2026 09:07:51
 
  C Translator Version : tradc Java V1.2 (06/02/2022)
 
@@ -47,13 +47,16 @@ void session_role_identity_eval__user_and_identity_match(
    t_bool * const session_role_identity_eval__p_bres) {
    {
       constants__t_CriteriaType_i session_role_identity_eval__l_criteria_type;
-      constants__t_Criteria_i session_role_identity_eval__l_username;
+      constants__t_Criteria_i session_role_identity_eval__l_criteria_string;
       t_bool session_role_identity_eval__l_is_anonymous;
       t_bool session_role_identity_eval__l_b_is_user_username;
+      t_bool session_role_identity_eval__l_b_is_user_cert;
       
       *session_role_identity_eval__p_bres = false;
       session_role_identity_bs__read_identity_criteriaType(session_role_identity_eval__p_identity,
          &session_role_identity_eval__l_criteria_type);
+      session_role_identity_bs__read_identity_criteria(session_role_identity_eval__p_identity,
+         &session_role_identity_eval__l_criteria_string);
       if (session_role_identity_eval__l_criteria_type == constants__e_CriteriaType_anonymous) {
          *session_role_identity_eval__p_bres = true;
       }
@@ -65,16 +68,28 @@ void session_role_identity_eval__user_and_identity_match(
                user_bs__is_username(session_role_identity_eval__p_user,
                   &session_role_identity_eval__l_b_is_user_username);
                if (session_role_identity_eval__l_b_is_user_username == true) {
-                  session_role_identity_bs__read_identity_criteria(session_role_identity_eval__p_identity,
-                     &session_role_identity_eval__l_username);
                   user_bs__are_username_equal(session_role_identity_eval__p_user,
-                     session_role_identity_eval__l_username,
+                     session_role_identity_eval__l_criteria_string,
+                     session_role_identity_eval__p_bres);
+               }
+            }
+            else if (session_role_identity_eval__l_criteria_type == constants__e_CriteriaType_thumbprint) {
+               user_bs__is_certificate(session_role_identity_eval__p_user,
+                  &session_role_identity_eval__l_b_is_user_cert);
+               if (session_role_identity_eval__l_b_is_user_cert == true) {
+                  user_bs__are_certificate_tb_equal(session_role_identity_eval__p_user,
+                     session_role_identity_eval__l_criteria_string,
                      session_role_identity_eval__p_bres);
                }
             }
             else if (session_role_identity_eval__l_criteria_type == constants__e_CriteriaType_authenticatedUser) {
                *session_role_identity_eval__p_bres = true;
             }
+         }
+         else if (session_role_identity_eval__l_criteria_type == constants__e_CriteriaType_application) {
+            user_bs__are_application_uri_equal(session_role_identity_eval__p_user,
+               session_role_identity_eval__l_criteria_string,
+               session_role_identity_eval__p_bres);
          }
       }
    }

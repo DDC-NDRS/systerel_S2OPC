@@ -34,12 +34,14 @@ OPERATIONS
     p_bres <-- user_and_identity_match(p_user, p_identity) =
     VAR
         l_criteria_type,
-        l_username,
+        l_criteria_string,
         l_is_anonymous,
-        l_b_is_user_username
+        l_b_is_user_username,
+        l_b_is_user_cert
     IN
         p_bres := FALSE;
         l_criteria_type <-- read_identity_criteriaType(p_identity);
+        l_criteria_string <-- read_identity_criteria(p_identity);
         IF l_criteria_type = e_CriteriaType_anonymous THEN
             // Grant role
             p_bres := TRUE
@@ -49,12 +51,22 @@ OPERATIONS
                 IF l_criteria_type = e_CriteriaType_username THEN
                     l_b_is_user_username <-- is_username(p_user);
                     IF l_b_is_user_username = TRUE THEN
-                        l_username <-- read_identity_criteria(p_identity);
-                        p_bres <-- are_username_equal(p_user, l_username)
+                        p_bres <-- are_username_equal(p_user, l_criteria_string)
+                    END
+                ELSIF l_criteria_type = e_CriteriaType_thumbprint THEN
+                    l_b_is_user_cert <-- is_certificate(p_user);
+                    IF l_b_is_user_cert = TRUE THEN
+                        p_bres <-- are_certificate_tb_equal(p_user, l_criteria_string)
                     END
                 ELSIF l_criteria_type = e_CriteriaType_authenticatedUser THEN
                     p_bres := TRUE
                 END
+            ELSIF l_criteria_type = e_CriteriaType_application THEN
+                /* Only evaluated if anonymous user because:
+                   This criteria type is used if a Role should be granted to a Session
+                   for Application Authentication with Anonymous UserIdentityToken.
+                */
+                p_bres <-- are_application_uri_equal(p_user, l_criteria_string)
             END
         END
     END

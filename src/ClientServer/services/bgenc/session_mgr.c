@@ -21,7 +21,7 @@
 
  File Name            : session_mgr.c
 
- Date                 : 09/03/2026 16:23:14
+ Date                 : 07/05/2026 15:59:35
 
  C Translator Version : tradc Java V1.2 (06/02/2022)
 
@@ -472,6 +472,12 @@ void session_mgr__server_receive_session_req(
          session_core__get_session_state_or_closed(*session_mgr__session,
             &session_mgr__l_session_state);
          if (session_mgr__l_valid_session == true) {
+            session_core__get_server_session_client_app_desc(*session_mgr__session,
+               &session_mgr__l_client_app_desc);
+            session_core__get_server_session_client_cert_tb(*session_mgr__session,
+               &session_mgr__l_client_cert_tb);
+            session_core__get_server_session_name(*session_mgr__session,
+               &session_mgr__l_session_name);
             if (((session_mgr__l_session_state == constants__e_session_created) ||
                (session_mgr__l_session_state == constants__e_session_userActivated)) ||
                (session_mgr__l_session_state == constants__e_session_scOrphaned)) {
@@ -488,6 +494,11 @@ void session_mgr__server_receive_session_req(
                      session_mgr__security_failed,
                      &session_mgr__l_user);
                   if (*session_mgr__service_ret == constants_statuscodes_bs__e_sc_ok) {
+                     app_cb_call_context_bs__set_app_call_context_session(*session_mgr__session,
+                        session_mgr__l_client_app_desc,
+                        session_mgr__l_client_cert_tb,
+                        session_mgr__l_session_name,
+                        session_mgr__l_user);
                      session_core__server_activate_session_req_and_resp_sm(session_mgr__channel,
                         *session_mgr__session,
                         session_mgr__l_user,
@@ -512,12 +523,6 @@ void session_mgr__server_receive_session_req(
                   constants_statuscodes_bs__e_sc_bad_invalid_state);
                *session_mgr__service_ret = constants_statuscodes_bs__e_sc_bad_invalid_state;
             }
-            session_core__get_server_session_client_app_desc(*session_mgr__session,
-               &session_mgr__l_client_app_desc);
-            session_core__get_server_session_client_cert_tb(*session_mgr__session,
-               &session_mgr__l_client_cert_tb);
-            session_core__get_server_session_name(*session_mgr__session,
-               &session_mgr__l_session_name);
             app_cb_call_context_bs__set_app_call_context_session(*session_mgr__session,
                session_mgr__l_client_app_desc,
                session_mgr__l_client_cert_tb,

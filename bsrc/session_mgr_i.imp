@@ -590,6 +590,9 @@ OPERATIONS
                 l_session_state <-- get_session_state_or_closed (session);
                 IF l_valid_session = TRUE
                 THEN
+                    l_client_app_desc <-- get_server_session_client_app_desc (session);
+                    l_client_cert_tb <-- get_server_session_client_cert_tb (session);
+                    l_session_name <-- get_server_session_name (session);
                     IF l_session_state = e_session_created or
                         l_session_state = e_session_userActivated or
                         l_session_state = e_session_scOrphaned
@@ -599,6 +602,8 @@ OPERATIONS
                             service_ret, security_failed, l_user <-- allocate_authenticated_user (channel, session, l_user_token, l_user_token_signature);
                             IF service_ret = e_sc_ok
                             THEN
+                                // Note: we need it to be set for the role computation (and we need it at the end to cover failures)
+                                set_app_call_context_session (session, l_client_app_desc, l_client_cert_tb, l_session_name, l_user);
                                 // TODO: differentiate sc_activate from user_activate directly here
                                 service_ret <-- server_activate_session_req_and_resp_sm (channel, session, l_user, req_msg, resp_msg)
                             ELSIF security_failed = TRUE
@@ -621,9 +626,6 @@ OPERATIONS
                         service_ret := e_sc_bad_invalid_state
                     END
                     ;
-                    l_client_app_desc <-- get_server_session_client_app_desc (session);
-                    l_client_cert_tb <-- get_server_session_client_cert_tb (session);
-                    l_session_name <-- get_server_session_name (session);
                     set_app_call_context_session (session, l_client_app_desc, l_client_cert_tb, l_session_name, l_user)
                 ELSE
                     // session token was not correct

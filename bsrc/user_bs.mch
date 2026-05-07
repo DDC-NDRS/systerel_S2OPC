@@ -26,21 +26,31 @@ SEES
 ABSTRACT_VARIABLES
     s_user_anonymous,
     s_user_username,
-    a_username
+    s_user_certificate,
+    a_username,
+    a_certThumb
 
 INVARIANT
     s_user_anonymous <: t_user &
     s_user_username <: t_user &
-    s_user_anonymous /\ s_user_username = {} &
-    a_username : s_user_username --> t_Criteria
+    s_user_certificate <: t_user &
+    s_user_anonymous /\ s_user_username /\ s_user_certificate = {} &
+    a_username : s_user_username --> t_Criteria &
+    a_certThumb : s_user_certificate --> t_Criteria
 
 INITIALISATION
     s_user_anonymous,
     s_user_username,
-    a_username :( s_user_anonymous <: t_user &
-    s_user_username <: t_user &
-    s_user_anonymous /\ s_user_username = {} &
-    a_username : s_user_username --> t_Criteria)
+    s_user_certificate,
+    a_username,
+    a_certThumb
+    :(s_user_anonymous <: t_user &
+      s_user_username <: t_user &
+      s_user_certificate <: t_user &
+      s_user_anonymous /\ s_user_username /\ s_user_certificate = {} &
+      a_username : s_user_username --> t_Criteria &
+      a_certThumb : s_user_certificate --> t_Criteria
+    )
 
 OPERATIONS
     b_res <-- is_anonymous(p_user) =
@@ -69,6 +79,38 @@ OPERATIONS
         p_username : t_Criteria_i
     THEN
         b_res := bool(a_username(p_user) = p_username)
+    END
+    ;
+
+    b_res <-- is_certificate(p_user) =
+    PRE
+        p_user : t_user_i &
+        p_user : t_user
+    THEN
+        b_res := bool(p_user : s_user_certificate)
+    END
+    ;
+
+    b_res <-- are_certificate_tb_equal(p_user, p_thumbprint) =
+    PRE
+        p_user : t_user_i &
+        p_user : t_user &
+        p_user : s_user_certificate &
+        p_thumbprint : t_Criteria_i
+    THEN
+        b_res := bool(a_certThumb(p_user) = p_thumbprint)
+    END
+    ;
+
+    p_bres <-- are_application_uri_equal(p_user, p_cli_app_uri) =
+    PRE
+        p_user : t_user_i &
+        p_user : t_user &
+        // Granted to a Session for Application Auth with Anonymous user
+        p_user : s_user_anonymous &
+        p_cli_app_uri : t_Criteria_i
+    THEN
+        p_bres :: BOOL
     END
 
 END

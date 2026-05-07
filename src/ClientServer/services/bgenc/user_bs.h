@@ -21,7 +21,7 @@
 
  File Name            : user_bs.h
 
- Date                 : 05/08/2024 09:48:16
+ Date                 : 07/05/2026 15:25:45
 
  C Translator Version : tradc Java V1.2 (06/02/2022)
 
@@ -48,11 +48,22 @@ extern void user_bs__INITIALISATION(void);
 /*--------------------
    OPERATIONS Clause
   --------------------*/
+extern void user_bs__are_application_uri_equal(
+   const constants__t_user_i user_bs__p_user,
+   const constants__t_Criteria_i user_bs__p_cli_app_uri,
+   t_bool * const user_bs__p_bres);
+extern void user_bs__are_certificate_tb_equal(
+   const constants__t_user_i user_bs__p_user,
+   const constants__t_Criteria_i user_bs__p_thumbprint,
+   t_bool * const user_bs__b_res);
 extern void user_bs__are_username_equal(
    const constants__t_user_i user_bs__p_user,
    const constants__t_Criteria_i user_bs__p_username,
    t_bool * const user_bs__b_res);
 extern void user_bs__is_anonymous(
+   const constants__t_user_i user_bs__p_user,
+   t_bool * const user_bs__b_res);
+extern void user_bs__is_certificate(
    const constants__t_user_i user_bs__p_user,
    t_bool * const user_bs__b_res);
 extern void user_bs__is_username(
