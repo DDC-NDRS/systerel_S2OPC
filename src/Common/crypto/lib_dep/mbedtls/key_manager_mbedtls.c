@@ -422,8 +422,9 @@ static int sopc_create_aes256_key_with_pbkdf1_md5(unsigned char* pKey,
     SOPC_ASSERT(0 != pwdLen);
     SOPC_ASSERT('\0' == pwd[pwdLen]);
 
-    mbedtls_md5_context ctx = {0};
     unsigned char sum[16];
+    mbedtls_md5_context ctx;
+    mbedtls_md5_init(&ctx);
     int errLib = MBEDTLS_MD5_STARTS(&ctx);
     if (0 == errLib)
     {

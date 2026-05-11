@@ -913,6 +913,7 @@ SOPC_ReturnStatus CryptoProvider_CTR_Crypt_AES256(const SOPC_CryptoProvider* pPr
 
     SOPC_ReturnStatus status = SOPC_STATUS_OK;
     mbedtls_aes_context aes;
+    mbedtls_aes_init(&aes);
 
     if (mbedtls_aes_setkey_enc(&aes, (const unsigned char*) pExpKey, 256) != 0)
     {
