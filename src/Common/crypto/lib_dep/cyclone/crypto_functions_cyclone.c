@@ -55,15 +55,20 @@ static error_t CyclonePrngRead(void* context, uint8_t* output, size_t length)
     error_t errLib = ERROR_FAILURE;
 
     SOPC_Buffer* buffer_output = SOPC_Buffer_Create((uint32_t) length);
-    SOPC_ReturnStatus status = SOPC_GetRandom(buffer_output, (uint32_t) length);
-    memcpy(output, buffer_output->data, length);
-    SOPC_Buffer_Delete(buffer_output);
-
-    if (SOPC_STATUS_OK == status)
+    if (NULL == buffer_output)
     {
+        return ERROR_OUT_OF_MEMORY;
+    }
+
+    SOPC_ReturnStatus status = SOPC_GetRandom(buffer_output, (uint32_t) length);
+    if (SOPC_STATUS_OK == status && NULL != buffer_output->data)
+    {
+        memcpy(output, buffer_output->data, length);
         // Successful processing
         errLib = NO_ERROR;
     }
+
+    SOPC_Buffer_Delete(buffer_output);
 
     return errLib;
 }
