@@ -54,7 +54,13 @@ SOPC_ReturnStatus SOPC_CryptoProvider_Init(SOPC_CryptoProvider* pCryptoProvider)
     mbedtls_entropy_init(&pctx->ctxEnt);
     mbedtls_ctr_drbg_init(&pctx->ctxDrbg);
     if (mbedtls_ctr_drbg_seed(&pctx->ctxDrbg, &mbedtls_entropy_func, &pctx->ctxEnt, NULL, 0) != 0)
+    {
+        mbedtls_ctr_drbg_free(&pctx->ctxDrbg);
+        mbedtls_entropy_free(&pctx->ctxEnt);
+        SOPC_Free(pctx);
+        pCryptoProvider->pCryptolibContext = NULL;
         return SOPC_STATUS_NOK;
+    }
 
     return SOPC_STATUS_OK;
 }
