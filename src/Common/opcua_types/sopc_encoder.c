@@ -18,6 +18,7 @@
  */
 
 #include <math.h>
+#include <stdint.h>
 #include <string.h>
 
 #include "opcua_identifiers.h"
@@ -25,10 +26,10 @@
 #include "sopc_common_constants.h"
 #include "sopc_encodeabletype.h"
 #include "sopc_encoder.h"
+#include "sopc_enums.h"
 #include "sopc_helper_endianness_cfg.h"
 #include "sopc_macros.h"
 #include "sopc_mem_alloc.h"
-#include "sopc_types.h"
 
 SOPC_ReturnStatus SOPC_Byte_WriteAux(const void* value, SOPC_Buffer* buf, uint32_t nestedStructLevel)
 {
@@ -2580,28 +2581,35 @@ static SOPC_ReturnStatus ReadVariantArrayBuiltInType(SOPC_Buffer* buf,
             status = SOPC_STATUS_OUT_OF_MEMORY;
         }
 
-        if (SOPC_STATUS_OK == status && *length > 0 && (uint64_t) *length <= SIZE_MAX / eltOptimSize)
+        if (SOPC_STATUS_OK == status)
         {
-            array->BooleanArr = SOPC_Calloc((size_t) *length, eltOptimSize);
+            if (*length > 0 && (uint64_t) *length <= UINT32_MAX / eltOptimSize)
+            {
+                array->BooleanArr = SOPC_Calloc((size_t) *length, eltOptimSize);
 
-            if (NULL == array->BooleanArr)
-            {
-                status = SOPC_STATUS_OUT_OF_MEMORY;
-            }
-            else
-            {
-                status = SOPC_Buffer_Read(array->BooleanArr, buf, (uint32_t)((uint32_t)(*length) * eltOptimSize));
+                if (NULL == array->BooleanArr)
+                {
+                    status = SOPC_STATUS_OUT_OF_MEMORY;
+                }
+                else
+                {
+                    status = SOPC_Buffer_Read(array->BooleanArr, buf, (uint32_t)((uint32_t)(*length) * eltOptimSize));
+                    if (SOPC_STATUS_OK != status)
+                    {
+                        status = SOPC_STATUS_ENCODING_ERROR;
+                    }
+                }
+
                 if (SOPC_STATUS_OK != status)
                 {
-                    status = SOPC_STATUS_ENCODING_ERROR;
+                    SOPC_Free(array->BooleanArr);
+                    array->BooleanArr = NULL;
+                    *length = 0;
                 }
             }
-
-            if (SOPC_STATUS_OK != status)
+            else if (*length > 0)
             {
-                SOPC_Free(array->BooleanArr);
-                array->BooleanArr = NULL;
-                *length = 0;
+                status = SOPC_STATUS_OUT_OF_MEMORY;
             }
         }
     }
@@ -3070,6 +3078,10 @@ SOPC_ReturnStatus SOPC_Read_Array(SOPC_Buffer* buf,
             *eltsArray = NULL;
             *noOfElts = 0;
         }
+    }
+    else if (*noOfElts > 0)
+    {
+        status = SOPC_STATUS_OUT_OF_MEMORY;
     }
 
     return status;
