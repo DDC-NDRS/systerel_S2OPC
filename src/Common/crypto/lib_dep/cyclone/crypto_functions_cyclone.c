@@ -733,9 +733,14 @@ SOPC_ReturnStatus AsymSign_RSASSA(const SOPC_CryptoProvider* pProvider,
             {
                 maxSaltLen = hLen;
             }
-            else
+            else if (keyLength >= hLen + 2)
             {
                 maxSaltLen = keyLength - hLen - 2;
+            }
+            else
+            {
+                // KeyLength is too small
+                return SOPC_STATUS_NOK;
             }
 
             errLib = rsassaPssSign(&CyclonePrng, pProvider->pCryptolibContext, &pKey->privKey, pHash, maxSaltLen, hash,
@@ -793,9 +798,14 @@ SOPC_ReturnStatus AsymVerify_RSASSA(const SOPC_CryptoProvider* pProvider,
             {
                 maxSaltLen = hLen;
             }
-            else
+            else if (keyLength >= hLen + 2)
             {
                 maxSaltLen = keyLength - hLen - 2;
+            }
+            else
+            {
+                // KeyLength is too small
+                return SOPC_STATUS_NOK;
             }
 
             // Signature length = key length
