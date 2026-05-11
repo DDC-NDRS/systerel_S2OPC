@@ -166,7 +166,7 @@ bool SOPC_PubSub_Security_Verify(const SOPC_PubSub_SecurityType* security, SOPC_
 
     uint32_t sizeSignature;
     SOPC_ReturnStatus status = SOPC_PubSub_Security_GetSignSize(security, true, &sizeSignature);
-    if (SOPC_STATUS_OK != status || sizeSignature >= src->length)
+    if (SOPC_STATUS_OK != status || sizeSignature + payloadPosition >= src->length)
     {
         return false;
     }
