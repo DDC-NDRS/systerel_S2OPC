@@ -1575,7 +1575,7 @@ static bool SC_ServerTransition_TcpInit_To_TcpNegotiate(SOPC_SecureConnection* s
                 *errorStatus = OpcUa_BadTcpInternalError;
             }
         }
-        else if (SOPC_STATUS_WOULD_BLOCK)
+        else if (SOPC_STATUS_WOULD_BLOCK == status)
         {
             result = false;
             *errorStatus = OpcUa_BadTcpEndpointUrlInvalid;
