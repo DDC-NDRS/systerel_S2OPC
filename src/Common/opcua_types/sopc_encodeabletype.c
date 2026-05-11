@@ -466,6 +466,10 @@ static SOPC_EncodeableObject_PfnDecode* getPfnDecode(const SOPC_EncodeableType_F
 
 static SOPC_ReturnStatus SOPC_EncodeableType_PfnCopyArray(void* destValue, const void* srcValue)
 {
+    if (NULL == destValue || NULL == srcValue)
+    {
+        return SOPC_STATUS_INVALID_PARAMETERS;
+    }
     // When copying array, values in an array were only allocated before this call
     // We need at least the encodeableType field to be initialized for generic copy function to work
     SOPC_ReturnStatus status =
@@ -657,6 +661,10 @@ static SOPC_ReturnStatus SOPC_EncodeableObject_InternalInitialize(SOPC_Encodeabl
 
 void SOPC_EncodeableObject_Initialize(SOPC_EncodeableType* type, void* pValue)
 {
+    if (NULL == type || NULL == pValue)
+    {
+        return;
+    }
     SOPC_ReturnStatus status = SOPC_EncodeableObject_InternalInitialize(type, pValue);
     SOPC_UNUSED_RESULT(status);
     return;
