@@ -2708,7 +2708,7 @@ static SOPC_ReturnStatus SOPC_Variant_Read_Internal(SOPC_Variant* variant, SOPC_
 
             if (SOPC_STATUS_OK == status &&
                 (variant->Value.Matrix.Dimensions < 0 || variant->Value.Matrix.Dimensions > encCfg->max_array_length ||
-                 (uint64_t) variant->Value.Matrix.Dimensions * 1 > SIZE_MAX))
+                 (uint64_t) variant->Value.Matrix.Dimensions > SIZE_MAX / sizeof(int32_t)))
             {
                 status = SOPC_STATUS_OUT_OF_MEMORY;
             }
