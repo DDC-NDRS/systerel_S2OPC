@@ -338,6 +338,8 @@ static void SOPC_SocketsNetworkEventMgr_LoopThreadStop(void)
     {
         return;
     }
+    // Ensure SOPC_SocketsNetworkEventMgr_InterruptForInputEvent is not enqueuing value during socket close
+    SOPC_Atomic_Int_Set(&receptionThread.initDone, false);
 
     SOPC_ReturnStatus status = SOPC_STATUS_NOK;
 
@@ -353,8 +355,6 @@ static void SOPC_SocketsNetworkEventMgr_LoopThreadStop(void)
     /* Close all sockets created to interrupt select */
     SOPC_Socket_Close(&receptionThread.sigServerConnectionSock);
     SOPC_Socket_Close(&receptionThread.sigServerListeningSock);
-
-    SOPC_Atomic_Int_Set(&receptionThread.initDone, false);
 }
 
 void SOPC_SocketsNetworkEventMgr_Initialize(void)
