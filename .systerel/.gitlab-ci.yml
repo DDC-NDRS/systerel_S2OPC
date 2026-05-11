@@ -471,12 +471,13 @@ build-fuzz:
 
 build-musl:
   stage: build-others
-  image: registry.gitlab.com/systerel/s2opc/build-musl@sha256:91feabf132e663ccff3b4490830782cfb67b82696769a4e0cb57d632d7c6b360 # build-musl:v1.0
+  image: registry.gitlab.com/systerel/s2opc/build-musl@sha256:a17ceffc3dafed43b195e3eba86abb511a3a8bca9efb322fcb56af69d3489035 # build-musl:v2.0
   needs: []
   script: 
     - *build_command_line
+    - readelf -l build_musl/bin/toolkit_demo_server | grep -q "/lib/ld-musl-x86_64.so.1" || exit 1
   variables:
-    BUILD_DIR: build
+    BUILD_DIR: build_musl
     CMAKE_TOOLCHAIN_FILE: toolchain-musl.cmake
   artifacts:
     name: "bin-musl-${CI_COMMIT_REF_SLUG}_${CI_COMMIT_SHA}_job${CI_JOB_ID}"
@@ -487,7 +488,7 @@ build-musl:
   rules:
     - if: "$CROSS_COMPILE != null || $ALL_BUILDS != null || $CI_PIPELINE_SOURCE == 'merge_request_event' || $CI_COMMIT_TAG"
       when: always
-
+      
 ###
 # Test jobs
 ###

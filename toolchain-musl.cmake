@@ -20,10 +20,10 @@
 SET(CMAKE_SYSTEM_NAME Linux)
 
 # which compilers to use for C and C++
-SET(CMAKE_C_COMPILER musl-gcc)
+SET(CMAKE_C_COMPILER /usr/local/musl/bin/musl-gcc)
 
 # here is the target environment located
-SET(CMAKE_FIND_ROOT_PATH /usr/lib/x86_64-linux-musl)
+SET(CMAKE_FIND_ROOT_PATH /usr/local/musl)
 
 # adjust the default behaviour of the FIND_XXX() commands:
 # search headers and libraries in the target environment, search
