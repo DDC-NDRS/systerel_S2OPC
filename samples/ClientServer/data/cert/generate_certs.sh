@@ -29,18 +29,29 @@ CONF_CLI=cli_req.cnf
 CONF_SRV=srv_req.cnf
 CA_KEY=cakey.pem
 CA_CERT=cacert.pem
+# Note: for production, OWASP recommends 600000 iterations
+echo "WARNING: For production set ITER=600000 iterations for key encryption instead of 100000 used for demo purpose"
+ITER=100000
 
 DURATION=730
 
 # If no argument provided, default behaviour: regenerate CA + its crl, and application certificates, all with new keys.
 if [ $# == 0 ]; then
-    # CA generation: generate key, generate self signed certificate
-    # /!\ CA key encrypted with AES-256-CBC, these commands require the password.
-    openssl genrsa -out $CA_KEY -aes-256-cbc 4096
-    openssl req -config $CONF_FILE -new -x509 -key $CA_KEY -out $CA_CERT -days $DURATION
 
+    # Check CA_KEY_PASS is set
+    [ -z "${CA_KEY_PASS:-}" ] && { echo "ERROR: CA_KEY_PASS environment variable is not set"; exit 1; }
+    # Check KEY_PASS is set
+    [ -z "${KEY_PASS:-}" ] && { echo "ERROR: KEY_PASS environment variable is not set"; exit 1; }
+
+    # CA generation: generate key, generate self signed certificate
+    openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:4096 -out $CA_KEY.tmp
+    openssl pkcs8 -topk8 -in $CA_KEY.tmp -v2 aes-256-cbc -v2prf hmacWithSHA256 -iter $ITER -passout env:CA_KEY_PASS -out ${CA_KEY}
+    rm -f $CA_KEY.tmp
+    # Generate CA certificate
+    openssl req -config $CONF_FILE -new -x509 -key $CA_KEY -passin env:CA_KEY_PASS -out $CA_CERT -days $DURATION
+    
     # Generate an empty Certificate Revocation List, convert it to DER format
-    openssl ca -config $CONF_FILE -gencrl -crldays $DURATION -out cacrl.pem
+    openssl ca -config $CONF_FILE -gencrl -crldays $DURATION -passin env:CA_KEY_PASS -out cacrl.pem
     openssl crl -in cacrl.pem -outform der -out cacrl.der
 
     # Generate, for both client and server, and both 2048 and 4096 key lengths, a new key pair, and csr
@@ -48,20 +59,18 @@ if [ $# == 0 ]; then
     openssl req -config $CONF_CLI -reqexts client_cert -sha256 -nodes -newkey rsa:4096 -keyout client_4k_key.pem -out client_4k.csr
     openssl req -config $CONF_SRV -reqexts server_cert -sha256 -nodes -newkey rsa:2048 -keyout server_2k_key.pem -out server_2k.csr
     openssl req -config $CONF_SRV -reqexts server_cert -sha256 -nodes -newkey rsa:4096 -keyout server_4k_key.pem -out server_4k.csr
-
     # Generate, for the client and the server, the encrypted private keys (these commands require the password).
     echo "****** Server private keys encryption ******"
-    openssl rsa -in server_2k_key.pem -aes-256-cbc -out encrypted_server_2k_key.pem
-    openssl rsa -in server_4k_key.pem -aes-256-cbc -out encrypted_server_4k_key.pem
+    openssl pkcs8 -topk8 -in server_2k_key.pem -v2 aes-256-cbc -v2prf hmacWithSHA256 -iter $ITER -passout env:KEY_PASS -out encrypted_server_2k_key.pem
+    openssl pkcs8 -topk8 -in server_4k_key.pem -v2 aes-256-cbc -v2prf hmacWithSHA256 -iter $ITER -passout env:KEY_PASS -out encrypted_server_4k_key.pem
     echo "****** Client private keys encryption ******"
-    openssl rsa -in client_2k_key.pem -aes-256-cbc -out encrypted_client_2k_key.pem
-    openssl rsa -in client_4k_key.pem -aes-256-cbc -out encrypted_client_4k_key.pem
-
+    openssl pkcs8 -topk8 -in client_2k_key.pem -v2 aes-256-cbc -v2prf hmacWithSHA256 -iter $ITER -passout env:KEY_PASS -out encrypted_client_2k_key.pem
+    openssl pkcs8 -topk8 -in client_4k_key.pem -v2 aes-256-cbc -v2prf hmacWithSHA256 -iter $ITER -passout env:KEY_PASS -out encrypted_client_4k_key.pem
     # Remove the unencrypted keys
     rm client*_key.pem && rm server*_key.pem
 
     # Convert CA root into DER
-    openssl x509 -in &CA_CERT -out cacert.der -outform der
+    openssl x509 -in $CA_CERT -out cacert.der -outform der
 
     # Output hexlified certificate to include in check_crypto_certificates.c
     echo -e "\nApplication certificate Authority (please update static security data 'char cacert[]'):"
@@ -86,10 +95,10 @@ else
 fi
 
 # Sign application certificates by the CA, for the next two years
-openssl ca -batch -config $CONF_FILE -policy signing_policy -extensions client_signing_req -days $DURATION -in client_2k.csr -out client_2k_cert.pem
-openssl ca -batch -config $CONF_FILE -policy signing_policy -extensions client_signing_req -days $DURATION -in client_4k.csr -out client_4k_cert.pem
-openssl ca -batch -config $CONF_FILE -policy signing_policy -extensions server_signing_req -days $DURATION -in server_2k.csr -out server_2k_cert.pem
-openssl ca -batch -config $CONF_FILE -policy signing_policy -extensions server_signing_req -days $DURATION -in server_4k.csr -out server_4k_cert.pem
+openssl ca -batch -config $CONF_FILE -policy signing_policy -extensions client_signing_req -days $DURATION -in client_2k.csr -passin env:CA_KEY_PASS -out client_2k_cert.pem
+openssl ca -batch -config $CONF_FILE -policy signing_policy -extensions client_signing_req -days $DURATION -in client_4k.csr -passin env:CA_KEY_PASS -out client_4k_cert.pem
+openssl ca -batch -config $CONF_FILE -policy signing_policy -extensions server_signing_req -days $DURATION -in server_2k.csr -passin env:CA_KEY_PASS -out server_2k_cert.pem
+openssl ca -batch -config $CONF_FILE -policy signing_policy -extensions server_signing_req -days $DURATION -in server_4k.csr -passin env:CA_KEY_PASS -out server_4k_cert.pem
 
 # Remove all the CSRs
 rm ./*.csr

@@ -28,18 +28,29 @@ CONF_CA_USR=usr_cassl.cnf
 CONF_USR=usr_req.cnf
 CA_KEY_USR=user_cakey.pem
 CA_CERT_USR=user_cacert.pem
+# Note: for production, OWASP recommends 600000 iterations
+echo "WARNING: For production set ITER=600000 iterations for key encryption instead of 100000 used for demo purpose"
+ITER=100000
 
 DURATION=730
 
 # If no argument provided, default behaviour: regenerate user root CA + its crl, and user certificates, all with new keys.
 if [ $# == 0 ]; then
+
+    # Check CA_KEY_PASS is set
+    [ -z "${CA_KEY_PASS:-}" ] && { echo "ERROR: CA_KEY_PASS environment variable is not set"; exit 1; }
+    # Check KEY_PASS is set
+    [ -z "${KEY_PASS:-}" ] && { echo "ERROR: KEY_PASS environment variable is not set"; exit 1; }
+
     # CA generation for users X509IdentityToken: generate key, generate self signed certificate
-    # /!\ only for test as no pass phrase is embedeed
-    openssl genrsa -out $CA_KEY_USR -aes-256-cbc 4096
-    openssl req -config $CONF_CA_USR -new -x509 -key $CA_KEY_USR -out $CA_CERT_USR -days $DURATION
+    openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:4096 -out $CA_KEY_USR.tmp
+    openssl pkcs8 -topk8 -in $CA_KEY_USR.tmp -v2 aes-256-cbc -v2prf hmacWithSHA256 -iter $ITER -passout env:CA_KEY_PASS -out ${CA_KEY_USR}
+    rm -f $CA_KEY_USR.tmp
+    # Generate CA certificate
+    openssl req -config $CONF_CA_USR -new -x509 -key $CA_KEY_USR -passin env:CA_KEY_PASS -out $CA_CERT_USR -days $DURATION
 
     # Generate an empty Certificate Revocation List, convert it to DER format
-    openssl ca -config $CONF_CA_USR -gencrl -crldays $DURATION -out user_cacrl.pem
+    openssl ca -config $CONF_CA_USR -gencrl -crldays $DURATION -passin env:CA_KEY_PASS -out user_cacrl.pem
     openssl crl -in user_cacrl.pem -outform der -out user_cacrl.der
 
     # Generate user X509IdentityToken 2048 key lengths, a new key pair
@@ -48,8 +59,8 @@ if [ $# == 0 ]; then
 
     # Generate user encrypted private keys (these commands require the password).
     echo "****** User private keys encryption ******"
-    openssl rsa -in user_2k_key.pem -aes-256-cbc -out encrypted_user_2k_key.pem
-    openssl rsa -in user_4k_key.pem -aes-256-cbc -out encrypted_user_4k_key.pem
+    openssl pkcs8 -topk8 -in user_2k_key.pem -v2 aes-256-cbc -v2prf hmacWithSHA256 -iter $ITER -passout env:KEY_PASS -out encrypted_user_2k_key.pem
+    openssl pkcs8 -topk8 -in user_4k_key.pem -v2 aes-256-cbc -v2prf hmacWithSHA256 -iter $ITER -passout env:KEY_PASS -out encrypted_user_4k_key.pem
 
     # Remove the unencrypted keys
     rm user*_key.pem
@@ -78,8 +89,8 @@ else
 fi
 
 # And sign them, for the next two years
-openssl ca -batch -config $CONF_CA_USR -policy signing_policy -extensions user_signing_req -days $DURATION -in user_2k.csr -out user_2k_cert.pem
-openssl ca -batch -config $CONF_CA_USR -policy signing_policy -extensions user_signing_req -days $DURATION -in user_4k.csr -out user_4k_cert.pem
+openssl ca -batch -config $CONF_CA_USR -policy signing_policy -extensions user_signing_req -days $DURATION -in user_2k.csr -passin env:CA_KEY_PASS -out user_2k_cert.pem
+openssl ca -batch -config $CONF_CA_USR -policy signing_policy -extensions user_signing_req -days $DURATION -in user_4k.csr -passin env:CA_KEY_PASS -out user_4k_cert.pem
 
 # Remove the CSRs
 rm ./*.csr
