@@ -25,6 +25,7 @@
 
 #include "check_crypto_certificates.h"
 
+#include "sopc_enums.h"
 #include "sopc_key_cert_pair.h"
 #include "sopc_key_manager.h"
 #include "sopc_mem_alloc.h"
@@ -164,26 +165,23 @@ START_TEST(test_crypto_gen_rsa_export_import_encrypted)
     SOPC_AsymmetricKey* pGenKey = NULL;
     SOPC_SerializedAsymmetricKey* pSerGenKey = NULL;
     SOPC_ReturnStatus status = SOPC_KeyManager_AsymmetricKey_GenRSA(4096, &pGenKey);
-    ck_assert(SOPC_STATUS_OK == status);
+    ck_assert_int_eq(SOPC_STATUS_OK, status);
     status = SOPC_KeyManager_SerializedAsymmetricKey_CreateFromKey(pGenKey, false, &pSerGenKey);
-    ck_assert(SOPC_STATUS_OK == status);
+    ck_assert_int_eq(SOPC_STATUS_OK, status);
     /* Export and encrypt the new key */
     size_t pwdLen = strlen(PASSWORD);
-    ck_assert(pwdLen < UINT32_MAX);
-#ifndef S2OPC_CRYPTO_CYCLONE
+    ck_assert_uint_lt(pwdLen, UINT32_MAX);
     status = SOPC_KeyManager_AsymmetricKey_ToPEMFile(pGenKey, false, "./crypto_tools_encrypted_gen_key.pem", PASSWORD,
                                                      (uint32_t) pwdLen);
-#else
-    /* The Cyclone library does not support encryption for PEM private keys. */
-    status = SOPC_KeyManager_AsymmetricKey_ToPEMFile(pGenKey, false, "./crypto_tools_encrypted_gen_key.pem", NULL, 0);
-#endif
-    ck_assert(SOPC_STATUS_OK == status);
-    /* Import and decrypt the new key */
+    ck_assert_int_eq(SOPC_STATUS_NOT_SUPPORTED, status);
+
+    /* To restore when password implemented
+    // Import and decrypt the new key
     SOPC_SerializedAsymmetricKey* pSerDecKey = NULL;
     status = SOPC_KeyManager_SerializedAsymmetricKey_CreateFromFile_WithPwd("./crypto_tools_encrypted_gen_key.pem",
                                                                             &pSerDecKey, PASSWORD, (uint32_t) pwdLen);
     ck_assert(SOPC_STATUS_OK == status);
-    /* Compare the generated key with the imported one */
+    // Compare the generated key with the imported one
     uint32_t genKeyLen = SOPC_SecretBuffer_GetLength(pSerGenKey);
     uint32_t decKeyLen = SOPC_SecretBuffer_GetLength(pSerDecKey);
     ck_assert(genKeyLen == decKeyLen);
@@ -193,10 +191,11 @@ START_TEST(test_crypto_gen_rsa_export_import_encrypted)
     ck_assert_ptr_nonnull(pRawDecKey);
     int match = memcmp(pRawGenKey, pRawDecKey, genKeyLen);
     ck_assert(0 == match);
-    /* Clear */
+    // Clear
+    SOPC_KeyManager_SerializedAsymmetricKey_Delete(pSerDecKey);
+    */
     SOPC_KeyManager_AsymmetricKey_Free(pGenKey);
     SOPC_KeyManager_SerializedAsymmetricKey_Delete(pSerGenKey);
-    SOPC_KeyManager_SerializedAsymmetricKey_Delete(pSerDecKey);
 }
 END_TEST
 

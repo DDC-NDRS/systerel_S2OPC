@@ -171,12 +171,11 @@ SOPC_ReturnStatus SOPC_KeyManager_AsymmetricKey_ToDER(const SOPC_AsymmetricKey* 
  * \param pKey      A valid pointer to the asymmetric key (public/private).
  * \param bIsPublic Whether the key is public or private.
  * \param filePath  Path to the file.
- * \param pwd       An optional password (!= NULL). The password must be a zero-terminated string with
+ * \param pwd       NOT SUPPORTED FOR NOW
+ *                  An optional password (!= NULL). The password must be a zero-terminated string with
  *                  at most \p pwdLen non null chars, and at least \p pwdLen + 1 allocated chars.
- * \param pwdLen    The length of the password.
- *
- * \note            The supported encryption algorithm is AES-256-CBC. \p pwd and \p pwdLen are used only
- *                  to encrypt the key when it is private.
+ * \param pwdLen    NOT SUPPORTED FOR NOW
+ *                  The length of the password or 0 if no password defined.
  *
  * \warning         Only PKCS#1 format is supported, In other words, the function is limited to RSA keys.
  *

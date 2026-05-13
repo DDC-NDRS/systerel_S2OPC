@@ -28,6 +28,7 @@
 #include "sopc_common_constants.h"
 #include "sopc_crypto_profiles.h"
 #include "sopc_crypto_provider.h"
+#include "sopc_enums.h"
 #include "sopc_helper_encode.h"
 #include "sopc_helper_string.h"
 #include "sopc_key_manager.h"
@@ -464,7 +465,7 @@ SOPC_ReturnStatus SOPC_KeyManager_AsymmetricKey_ToPEMFile(SOPC_AsymmetricKey* pK
     /* The Cyclone library does not support encryption for PEM private keys. */
     if (NULL != pwd)
     {
-        return SOPC_STATUS_NOK;
+        return SOPC_STATUS_NOT_SUPPORTED;
     }
 
     error_t errLib = NO_ERROR;
