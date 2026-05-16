@@ -28,8 +28,9 @@ REPORT_DIR=./report
 REPORT_FILE=$REPORT_DIR/report.info
 
 mkdir -p $REPORT_DIR
-lcov --ignore-errors source -d $COMMON_DIR -d $CLIENTSERVER_DIR -d $PUBSUB_DIR -c -o $REPORT_FILE
+LCOV_IGNORE="--ignore-errors source,inconsistent"
+lcov $LCOV_IGNORE -d $COMMON_DIR -d $CLIENTSERVER_DIR -d $PUBSUB_DIR -c -o $REPORT_FILE
 # Remove bogus mbedtls files
-lcov -r $REPORT_FILE "/usr/*" -o $REPORT_FILE
-genhtml -o $REPORT_DIR -t "Code coverage from all tests" $REPORT_FILE
-lcov --summary $REPORT_FILE
+lcov $LCOV_IGNORE -r $REPORT_FILE "/usr/*" -o $REPORT_FILE
+genhtml $LCOV_IGNORE -o $REPORT_DIR -t "Code coverage from all tests" $REPORT_FILE
+lcov $LCOV_IGNORE --summary $REPORT_FILE
