@@ -21,15 +21,34 @@
 # Calls lcov/genhtml after project has been built with WITH_COVERAGE=1
 set -e
 
-COMMON_DIR=build/src/Common/CMakeFiles/s2opc_common.dir/
-CLIENTSERVER_DIR=build/src/ClientServer/CMakeFiles/s2opc_clientserver.dir/
-PUBSUB_DIR=build/src/PubSub/CMakeFiles/s2opc_pubsub.dir/
 REPORT_DIR=./report
 REPORT_FILE=$REPORT_DIR/report.info
+LCOV_IGNORE="--ignore-errors source,inconsistent,empty"
 
 mkdir -p $REPORT_DIR
-LCOV_IGNORE="--ignore-errors source,inconsistent"
-lcov $LCOV_IGNORE -d $COMMON_DIR -d $CLIENTSERVER_DIR -d $PUBSUB_DIR -c -o $REPORT_FILE
+
+# Each test job uploads its gcov files under build-<job_name>/, so that
+# concurrent artifact extraction in coverage-analysis does not overwrite
+# .gcda files across jobs. Fall back to build/ for local runs.
+BUILD_DIRS=()
+for d in build-test-*; do
+    [ -d "$d" ] && BUILD_DIRS+=("$d")
+done
+[ ${#BUILD_DIRS[@]} -eq 0 ] && BUILD_DIRS=(build)
+
+# Capture one .info per build dir, then merge (lcov sums counters per file/test).
+LCOV_ADD_ARGS=()
+for BUILD_DIR in "${BUILD_DIRS[@]}"; do
+    PARTIAL="$REPORT_DIR/${BUILD_DIR}.info"
+    lcov $LCOV_IGNORE \
+        -d "$BUILD_DIR/src/Common/CMakeFiles/s2opc_common.dir/" \
+        -d "$BUILD_DIR/src/ClientServer/CMakeFiles/s2opc_clientserver.dir/" \
+        -d "$BUILD_DIR/src/PubSub/CMakeFiles/s2opc_pubsub.dir/" \
+        -c -o "$PARTIAL"
+    LCOV_ADD_ARGS+=(-a "$PARTIAL")
+done
+
+lcov $LCOV_IGNORE "${LCOV_ADD_ARGS[@]}" -o $REPORT_FILE
 # Remove bogus mbedtls files
 lcov $LCOV_IGNORE -r $REPORT_FILE "/usr/*" -o $REPORT_FILE
 genhtml $LCOV_IGNORE -o $REPORT_DIR -t "Code coverage from all tests" $REPORT_FILE

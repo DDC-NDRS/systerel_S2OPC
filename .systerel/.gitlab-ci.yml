@@ -604,6 +604,16 @@ test-check:
   script:
     - './.set-bin-root.sh'
     - './test-all.sh'
+  # Isolate coverage files in a job-specific directory to avoid collision
+  # when several test jobs' artifacts are extracted side-by-side in coverage-analysis.
+  after_script:
+    - |
+      mkdir -p "build-${CI_JOB_NAME}"
+      find build -type f \( -name '*.gcda' -o -name '*.gcno' \) | while IFS= read -r f; do
+          dest="build-${CI_JOB_NAME}/${f#build/}"
+          mkdir -p "$(dirname "$dest")"
+          mv "$f" "$dest"
+      done
   artifacts:
     name: 'test-unit-results-${CI_COMMIT_REF_SLUG}_${CI_COMMIT_SHA}_job${CI_JOB_ID}'
     paths:
@@ -611,8 +621,8 @@ test-check:
       - 'build/bin/**/*.log'
       - 'build/tests/**/Testing'
       - 'build/samples/**/Testing'
-      - 'build/**/*.*.gcda' # coverage analysis
-      - 'build/**/*.*.gcno' # coverage analysis
+      - 'build-${CI_JOB_NAME}/**/*.gcda' # coverage analysis
+      - 'build-${CI_JOB_NAME}/**/*.gcno' # coverage analysis
     when: always
     expire_in: '1 week'
 # Common rules defined by test-unit job below
@@ -662,6 +672,16 @@ test-unit-all-builds:
   script:
     - ulimit -n 1024
     - 'cd tests/ClientServer/acceptance_tools/ && ./launch_acceptance_tests.sh'
+  # Isolate coverage files in a job-specific directory to avoid collision
+  # when several test jobs' artifacts are extracted side-by-side in coverage-analysis.
+  after_script:
+    - |
+      mkdir -p "build-${CI_JOB_NAME}"
+      find build -type f \( -name '*.gcda' -o -name '*.gcno' \) | while IFS= read -r f; do
+          dest="build-${CI_JOB_NAME}/${f#build/}"
+          mkdir -p "$(dirname "$dest")"
+          mv "$f" "$dest"
+      done
   artifacts:
     name: 'uactt-logs-${CI_COMMIT_REF_SLUG}_${CI_COMMIT_SHA}_job${CI_JOB_ID}'
     paths:
@@ -669,8 +689,8 @@ test-unit-all-builds:
       - 'build/bin/**/*.log'
       - 'tests/ClientServer/acceptance_tools/*.log'
       - "tests/ClientServer/acceptance_tools/Acceptation_S2OPC/*.selection.xml"
-      - '**/*.*.gcda' # coverage analysis
-      - '**/*.*.gcno' # coverage analysis
+      - 'build-${CI_JOB_NAME}/**/*.gcda' # coverage analysis
+      - 'build-${CI_JOB_NAME}/**/*.gcno' # coverage analysis
     when: always
     expire_in: '1 week'
 
@@ -693,10 +713,10 @@ test-uactt:
     LINUX_UACTT: 1
   rules:
     - if: "$NO_TESTS != null || $WINDOWS_TEST != null || $CROSS_COMPILE != null || \
-           $WITH_COVERITY != null || $WITH_COVERAGE != null || $WITH_DOC != null || \
+           $WITH_COVERITY != null || $WITH_DOC != null || \
            $S2OPC_PUBSUB_ONLY != null || $ALL_BUILDS != null || $ALL_TESTS != null || $HIL_TESTS != null"
       when: never
-    - if: "$CI_PIPELINE_SOURCE == 'merge_request_event' || $CI_COMMIT_BRANCH == 'master' || $CI_COMMIT_TAG || $RUN_UACTT != null"
+    - if: "$WITH_COVERAGE != null || $CI_PIPELINE_SOURCE == 'merge_request_event' || $CI_COMMIT_BRANCH == 'master' || $CI_COMMIT_TAG || $RUN_UACTT != null"
       when: on_success
 
 test-faulty-packets :
