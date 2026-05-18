@@ -268,7 +268,7 @@ static bool parse_signed64_value(const char* data, int64_t* dest)
     char buf[21];
     const size_t len = strlen(data);
 
-    if (NULL == dest)
+    if (NULL == dest || len > 21)
     {
         return false;
     }
@@ -897,7 +897,7 @@ static bool parse_variable_attributes(const char* attr_name,
     }
     else if (TEXT_EQUALS(ATTR_VARIABLE_VALUE_RANK, attr_name))
     {
-        int64_t rank;
+        int64_t rank = INT64_MIN;
 
         result = parse_signed64_value(attr_val, &rank) && rank >= -3 && rank <= 65535;
         if (result && (rank > 0 || rank == -1))
