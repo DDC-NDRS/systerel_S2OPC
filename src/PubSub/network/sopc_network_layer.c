@@ -1966,8 +1966,19 @@ static inline SOPC_NetworkMessage_Error_Code Decode_Message_V1(
 
     if (SOPC_STATUS_OK == status)
     {
-        dsmReaders = SOPC_Calloc(msg_count, sizeof(SOPC_DataSetReader*));
-        SOPC_ASSERT(NULL != dsmReaders);
+        // There should be at least one dataSetMessage
+        if (msg_count > 0)
+        {
+            dsmReaders = SOPC_Calloc(msg_count, sizeof(SOPC_DataSetReader*));
+            if (NULL == dsmReaders)
+            {
+                set_status_default(&status, &code, SOPC_UADP_NetworkMessage_Error_Read_Alloc_Failed);
+            }
+        }
+        else
+        {
+            set_status_default(&status, &code, SOPC_UADP_NetworkMessage_Error_Read_InvalidMessageCount);
+        }
     }
 
     // DataSetMessage Writer Ids (Payload Header)
@@ -1987,7 +1998,7 @@ static inline SOPC_NetworkMessage_Error_Code Decode_Message_V1(
                 dsmReaders[i] = readerConf->callbacks.pGetReader_Func(group, conf, writer_id);
             }
 
-            // Check if there is at last one DSM to read, otherwise decoding can be canceled
+            // Check if there is at least one DSM to read, otherwise decoding can be canceled
             if (dsmReaders[i] != NULL)
             {
                 mustDecode = true;

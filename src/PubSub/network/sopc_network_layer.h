@@ -86,6 +86,7 @@ typedef enum
     SOPC_UADP_NetworkMessage_Error_Read_DsmTimeStamp,
     SOPC_UADP_NetworkMessage_Error_Read_NoMatchingGroup = 0x30000000,
     SOPC_UADP_NetworkMessage_Error_Read_NoMatchingReader,
+    SOPC_UADP_NetworkMessage_Error_Read_InvalidMessageCount,
     SOPC_UADP_NetworkMessage_Error_Read_BadMetaData,
     SOPC_UADP_NetworkMessage_Error_Unsupported_Version = 0x40000000,
     SOPC_UADP_NetworkMessage_Error_Unsupported_Flags1,
