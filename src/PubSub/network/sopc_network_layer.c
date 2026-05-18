@@ -1901,15 +1901,19 @@ static inline SOPC_NetworkMessage_Error_Code Decode_SecurityHeader(SOPC_Buffer* 
 
         if (SOPC_STATUS_OK == status)
         {
-            // New data are Payload and signature.
-            uint32_t sizePayload = SOPC_Buffer_Remaining(buffer) - sizeSignature;
+            uint32_t bufferRemainingSize = SOPC_Buffer_Remaining(buffer);
+            if (bufferRemainingSize >= sizeSignature)
+            {
+                // New data are Payload and signature.
+                uint32_t sizePayload = bufferRemainingSize - sizeSignature;
 
-            // This data shall be forget after calling Decrypt function
-            security->msgNonceRandom = securityMessageNonce;
-            // This function decrypt "sizePayload" bytes of the buffer from current position
-            // Crypted data are replace by clear data in the buffer
-            *buffer_payload = SOPC_PubSub_Security_Decrypt(security, buffer, sizePayload);
-            security->msgNonceRandom = NULL;
+                // This data shall be forget after calling Decrypt function
+                security->msgNonceRandom = securityMessageNonce;
+                // This function decrypt "sizePayload" bytes of the buffer from current position
+                // Crypted data are replace by clear data in the buffer
+                *buffer_payload = SOPC_PubSub_Security_Decrypt(security, buffer, sizePayload);
+                security->msgNonceRandom = NULL;
+            }
             if (NULL == *buffer_payload)
             {
                 set_status_default(&status, &code, SOPC_UADP_NetworkMessage_Error_Read_SecurityDecrypt_Failed);
