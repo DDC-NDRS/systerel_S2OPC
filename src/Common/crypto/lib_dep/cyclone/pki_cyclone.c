@@ -1050,7 +1050,8 @@ static void sopc_pki_remove_rejected_cert(SOPC_CertificateList** ppRejectedList,
                                      cur->crt.tbsCert.subject.raw.value, cur->crt.tbsCert.subject.raw.length);
         if (bMatchName)
         {
-            if (0 == memcmp(pCert->raw->data, cur->raw->data, pCert->raw->length))
+            if (pCert->raw->length == cur->raw->length &&
+                0 == memcmp(pCert->raw->data, cur->raw->data, pCert->raw->length))
             {
                 bFound = true;
             }
