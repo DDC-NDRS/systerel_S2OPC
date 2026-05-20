@@ -225,11 +225,11 @@ hil-test:
 
 .build-linux: &build_linux
   stage: build
-  image: docker.aix.systerel.fr/c838/build@sha256:0c1fdb136b737f449cc63e63e11f653fca45695055293b4b9514342b70836264 # digest of build:1.59
+  image: docker.aix.systerel.fr/c838/build@sha256:caa54bdfe64ec38b912b913f08b67af7a1d6ce4801646e3cfc668b296c79f99b # digest of build:1.60
   script:
     - &build_command_line './build.sh || exit 1'
   variables: &build_linux_variables
-    DOCKER_DIGEST: 'sha256:0c1fdb136b737f449cc63e63e11f653fca45695055293b4b9514342b70836264'
+    DOCKER_DIGEST: 'sha256:caa54bdfe64ec38b912b913f08b67af7a1d6ce4801646e3cfc668b296c79f99b'
     BUILD_DIR: build
     CMAKE_C_FLAGS: "-DSOPC_REQUEST_TIMEOUT_MS=35000" # increase timeout for CI tests
   artifacts:

@@ -1,5 +1,5 @@
 @REM Uncomment or set variables to build without build_s2opc script
-@REM set MBEDTLS_DIR=%~dp0..\mbedtls-3.6.5
+@REM set MBEDTLS_DIR=%~dp0..\mbedtls-3.6.6
 @REM set MBEDTLS_INSTALL_DIR="%MBEDTLS_DIR%\install"
 @REM set VS_VERSION="Visual Studio 17 2022"
 @REM set CONFIG="Release"
