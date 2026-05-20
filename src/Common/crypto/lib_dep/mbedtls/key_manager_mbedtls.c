@@ -116,7 +116,7 @@ SOPC_ReturnStatus SOPC_KeyManager_AsymmetricKey_CreateFromBuffer(const uint8_t* 
             res = is_public ? mbedtls_pk_parse_public_key(&key->pk, null_terminated_buffer, 1 + lenBuf)
                             : MBEDTLS_PK_PARSE_KEY(&key->pk, null_terminated_buffer, 1 + lenBuf, NULL, 0,
                                                    mbedtls_ctr_drbg_random, &ctr_drbg);
-            memset(null_terminated_buffer, 0, 1 + lenBuf);
+            mbedtls_platform_zeroize(null_terminated_buffer, 1 + lenBuf);
             SOPC_Free(null_terminated_buffer);
         }
     }
@@ -310,7 +310,7 @@ SOPC_ReturnStatus SOPC_KeyManager_AsymmetricKey_ToDER(const SOPC_AsymmetricKey* 
     }
 
     // Clear and free the temporary buffer
-    memset(buffer, 0, (size_t) lengthWritten);
+    mbedtls_platform_zeroize(buffer, (size_t) lengthWritten);
     SOPC_Free(buffer);
 
     return status;
@@ -449,7 +449,7 @@ static int sopc_create_aes256_key_with_pbkdf1_md5(unsigned char* pKey,
     }
     /* Clear */
     mbedtls_md5_free(&ctx);
-    memset(sum, 0, SOPC_CBC_BLOCK_SIZE_BYTES);
+    mbedtls_platform_zeroize(sum, SOPC_CBC_BLOCK_SIZE_BYTES);
     return errLib;
 }
 
@@ -482,8 +482,8 @@ static int sopc_rsa_pem_aes256_cbc_encrypt(const unsigned char* pIv,
     }
     /* Clear */
     mbedtls_aes_free(&ctx);
-    memset(aesKey, 0, SOPC_AES_256_KEY_SIZE_BYTES);
-    memset(pIvCopy, 0, SOPC_CBC_BLOCK_SIZE_BYTES);
+    mbedtls_platform_zeroize(aesKey, SOPC_AES_256_KEY_SIZE_BYTES);
+    mbedtls_platform_zeroize(pIvCopy, SOPC_CBC_BLOCK_SIZE_BYTES);
     return errLib;
 }
 
@@ -650,10 +650,10 @@ static int sopc_export_rsa_key(SOPC_AsymmetricKey* pKey,
     /* Clear */
     if (NULL != pPEM)
     {
-        memset(pPEM, 0, PEMBufferSize);
+        mbedtls_platform_zeroize(pPEM, PEMBufferSize);
         SOPC_Free(pPEM);
     }
-    memset(pDER, 0, DERSize);
+    mbedtls_platform_zeroize(pDER, DERSize);
     SOPC_Free(pDER);
     return errLib;
 }
@@ -735,7 +735,7 @@ SOPC_ReturnStatus SOPC_KeyManager_SerializedAsymmetricKey_CreateFromKey(const SO
     }
 
     // Clear and free the temporary buffer
-    memset(buffer, 0, pLenWritten);
+    mbedtls_platform_zeroize(buffer, pLenWritten);
     SOPC_Free(buffer);
 
     return status;
@@ -1376,7 +1376,7 @@ SOPC_ReturnStatus SOPC_KeyManager_Certificate_GetSanDnsNames(const SOPC_Certific
             }
         }
         /* next iteration */
-        memset(&san_out, 0, sizeof(mbedtls_x509_subject_alternative_name));
+        mbedtls_platform_zeroize(&san_out, sizeof(mbedtls_x509_subject_alternative_name));
         asn1_seq = asn1_seq->next;
     }
     if (SOPC_STATUS_OK == status)

@@ -46,6 +46,7 @@
 #include "mbedtls/ctr_drbg.h"
 #include "mbedtls/entropy.h"
 #include "mbedtls/md.h"
+#include "mbedtls/platform_util.h"
 #include "mbedtls/rsa.h"
 
 static SOPC_ReturnStatus generic_SymmCrypt(SOPC_SecurityPolicy_ID policyId,
@@ -82,7 +83,7 @@ static SOPC_ReturnStatus generic_SymmCrypt(SOPC_SecurityPolicy_ID policyId,
                                             (unsigned char*) pOutput);
                 if (res == 0)
                 {
-                    memset(iv_cpy, 0, symmLen_Block);
+                    mbedtls_platform_zeroize(iv_cpy, symmLen_Block);
                     status = SOPC_STATUS_OK;
                 }
             }
@@ -96,7 +97,7 @@ static SOPC_ReturnStatus generic_SymmCrypt(SOPC_SecurityPolicy_ID policyId,
                                             (unsigned char*) pOutput);
                 if (res == 0)
                 {
-                    memset(iv_cpy, 0, symmLen_Block);
+                    mbedtls_platform_zeroize(iv_cpy, symmLen_Block);
                     status = SOPC_STATUS_OK;
                 }
             }
@@ -337,7 +338,7 @@ SOPC_ReturnStatus CryptoProvider_DeriveData_PRF_SHA256(const SOPC_CryptoProvider
     status = PSHA_outer(pmd_info, bufA, lenBufA, pSecret, lenSecret, pSeed, lenSeed, pOutput, lenOutput);
 
     // Clear and release A
-    memset(bufA, 0, lenBufA);
+    mbedtls_platform_zeroize(bufA, lenBufA);
     SOPC_Free(bufA);
 
     return status;
@@ -869,7 +870,7 @@ SOPC_ReturnStatus CryptoProvider_DeriveData_PRF_SHA1(const SOPC_CryptoProvider* 
     status = PSHA_outer(pmd_info, bufA, lenBufA, pSecret, lenSecret, pSeed, lenSeed, pOutput, lenOutput);
 
     // Clear and release A
-    memset(bufA, 0, lenBufA);
+    mbedtls_platform_zeroize(bufA, lenBufA);
     SOPC_Free(bufA);
 
     return status;
@@ -959,7 +960,7 @@ SOPC_ReturnStatus CryptoProvider_CTR_Crypt_AES256(const SOPC_CryptoProvider* pPr
         }
 
         /* stream_block contains sensitive materials, it must be cleared */
-        memset(stream_block, 0, sizeof(stream_block));
+        mbedtls_platform_zeroize(stream_block, sizeof(stream_block));
     }
 
     mbedtls_aes_free(&aes);
