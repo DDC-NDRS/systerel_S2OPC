@@ -1968,15 +1968,15 @@ SOPC_ReturnStatus SOPC_KeyManager_Certificate_IsSelfSigned(const SOPC_Certificat
     *pbIsSelfSigned = false;
     const mbedtls_x509_crt* crt = &pCert->crt;
     /* Verify that the CA is self sign */
-    int res = memcmp(crt->issuer_raw.p, crt->subject_raw.p, crt->issuer_raw.len);
-    if (crt->issuer_raw.len == crt->subject_raw.len && 0 == res)
+    if (crt->issuer_raw.len == crt->subject_raw.len &&
+        0 == memcmp(crt->issuer_raw.p, crt->subject_raw.p, crt->issuer_raw.len))
     {
         /* Is it correctly signed? Inspired by x509_crt_check_signature */
         const mbedtls_md_info_t* md_info = mbedtls_md_info_from_type(crt->sig_md);
         unsigned char hash[MBEDTLS_MD_MAX_SIZE];
 
         /* First hash the certificate, then verify it is signed */
-        res = mbedtls_md(md_info, crt->tbs.p, crt->tbs.len, hash);
+        int res = mbedtls_md(md_info, crt->tbs.p, crt->tbs.len, hash);
         if (0 == res)
         {
             mbedtls_pk_context crt_pk = crt->pk;
