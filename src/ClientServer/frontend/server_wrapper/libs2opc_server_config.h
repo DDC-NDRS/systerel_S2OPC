@@ -51,6 +51,8 @@
  *  .logSysConfig = {.fileSystemLogConfig = {.logDirPath = "", .logMaxBytes = 1048576, .logMaxFiles = 50}}
  *
  * \result SOPC_STATUS_OK in case of success, otherwise SOPC_STATUS_INVALID_STATE in case of double initialization.
+ *
+ * \warning This function is not thread-safe, be sure not to call it in different threads simultaneously.
  */
 SOPC_ReturnStatus SOPC_ServerConfigHelper_Initialize(void);
 
@@ -62,6 +64,8 @@ SOPC_ReturnStatus SOPC_ServerConfigHelper_Initialize(void);
  *       and allow to reconfigure it. For now in this latter case,
  *       the sessions/subscriptions that are not closed will only be closed
  *       on their respective timeout.
+ *
+ * \warning This function is not thread-safe, be sure not to call it in different threads simultaneously.
  */
 void SOPC_ServerConfigHelper_Clear(void);
 

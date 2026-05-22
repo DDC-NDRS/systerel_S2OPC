@@ -61,6 +61,8 @@ typedef enum
  *        parameter shall be NULL.
  *
  * \result SOPC_STATUS_OK in case of success, otherwise SOPC_STATUS_INVALID_STATE in case of double initialization.
+ *
+ * \warning This function is not thread-safe, be sure not to call it in different threads simultaneously.
  */
 SOPC_ReturnStatus SOPC_CommonHelper_Initialize(const SOPC_Log_Configuration* optLogConfig,
                                                const SOPC_Audit_Configuration* optAuditConfig);
@@ -71,6 +73,8 @@ SOPC_ReturnStatus SOPC_CommonHelper_Initialize(const SOPC_Log_Configuration* opt
  *
  * \note This function and ::SOPC_CommonHelper_Initialize function are not thread-safe and shall be called in the same
  * thread.
+ *
+ * \warning This function is not thread-safe, be sure not to call it in different threads simultaneously.
  */
 void SOPC_CommonHelper_Clear(void);
 

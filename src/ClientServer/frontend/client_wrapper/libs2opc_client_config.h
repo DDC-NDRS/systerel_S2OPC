@@ -41,6 +41,8 @@
  *  .logSysConfig = {.fileSystemLogConfig = {.logDirPath = "", .logMaxBytes = 1048576, .logMaxFiles = 50}}
  *
  * \result SOPC_STATUS_OK in case of success, otherwise SOPC_STATUS_INVALID_STATE in case of double initialization.
+ *
+ * \warning This function is not thread-safe, be sure not to call it in different threads simultaneously.
  */
 SOPC_ReturnStatus SOPC_ClientConfigHelper_Initialize(void);
 
@@ -52,6 +54,8 @@ SOPC_ReturnStatus SOPC_ClientConfigHelper_Initialize(void);
  *
  * \warning The caller must ensure that no further call to access the existing
  *          configuration, connections and subscriptions after this call.
+ *
+ * \warning This function is not thread-safe, be sure not to call it in different threads simultaneously.
  */
 void SOPC_ClientConfigHelper_Clear(void);
 
