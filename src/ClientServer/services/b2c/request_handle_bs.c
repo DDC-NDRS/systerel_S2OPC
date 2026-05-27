@@ -96,7 +96,7 @@ void request_handle_bs__client_fresh_req_handle(
         while (false == noHandleAvailable &&
                *request_handle_bs__request_handle == constants__c_client_request_handle_indet)
         {
-            cpt = (uint16_t)((cpt + 1) % (SOPC_MAX_PENDING_REQUESTS + 1));
+            cpt = (cpt + 1) % (SOPC_MAX_PENDING_REQUESTS + 1);
             if (cpt == startedIdx)
             {
                 // Note: startedIdx content is never tested (simplest implem)

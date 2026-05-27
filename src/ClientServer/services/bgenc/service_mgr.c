@@ -21,7 +21,7 @@
 
  File Name            : service_mgr.c
 
- Date                 : 09/03/2026 16:32:16
+ Date                 : 27/05/2026 09:55:06
 
  C Translator Version : tradc Java V1.2 (06/02/2022)
 
@@ -892,6 +892,10 @@ void service_mgr__local_client_discovery_service_request(
             service_mgr__l_req_handle = constants__c_client_request_handle_indet;
             *service_mgr__ret = constants_statuscodes_bs__e_sc_bad_out_of_memory;
          }
+         if ((service_mgr__l_valid_req_handle == true) &&
+            (*service_mgr__ret != constants_statuscodes_bs__e_sc_ok)) {
+            request_handle_bs__client_remove_req_handle(service_mgr__l_req_handle);
+         }
          if (service_mgr__l_msg_header != constants__c_msg_header_indet) {
             message_out_bs__dealloc_msg_header_out(service_mgr__l_msg_header);
          }
@@ -1547,6 +1551,10 @@ void service_mgr__client_service_create_session(
          message_out_bs__dealloc_msg_header_out(service_mgr__l_msg_header);
          message_out_bs__dealloc_msg_out(service_mgr__l_req_msg);
       }
+      else {
+         session_mgr__client_close_session(service_mgr__session,
+            constants_statuscodes_bs__e_sc_bad_out_of_memory);
+      }
       *service_mgr__buffer_out = service_mgr__l_buffer;
       *service_mgr__req_handle = service_mgr__l_req_handle;
    }
@@ -1609,6 +1617,11 @@ void service_mgr__client_service_activate_orphaned_session(
                   session_mgr__client_close_session(service_mgr__session,
                      service_mgr__l_sc);
                }
+            }
+            else {
+               request_handle_bs__client_remove_req_handle(service_mgr__l_req_handle);
+               session_mgr__client_close_session(service_mgr__session,
+                  constants_statuscodes_bs__e_sc_bad_out_of_memory);
             }
          }
          message_out_bs__dealloc_msg_header_out(service_mgr__l_msg_header);
@@ -1687,6 +1700,7 @@ void service_mgr__client_service_activate_session(
                }
             }
             else {
+               request_handle_bs__client_remove_req_handle(service_mgr__l_req_handle);
                session_mgr__client_close_session(service_mgr__session,
                   service_mgr__l_ret);
             }
@@ -1768,6 +1782,9 @@ void service_mgr__client_service_close_session(
                   service_mgr__l_channel = constants__c_channel_indet;
                   request_handle_bs__client_remove_req_handle(service_mgr__l_req_handle);
                }
+            }
+            else {
+               request_handle_bs__client_remove_req_handle(service_mgr__l_req_handle);
             }
          }
          else {
@@ -1883,6 +1900,10 @@ void service_mgr__client_service_request(
          }
          else {
             *service_mgr__ret = constants_statuscodes_bs__e_sc_bad_out_of_memory;
+         }
+         if ((service_mgr__l_valid_req_handle == true) &&
+            (*service_mgr__ret != constants_statuscodes_bs__e_sc_ok)) {
+            request_handle_bs__client_remove_req_handle(service_mgr__l_req_handle);
          }
          if (service_mgr__l_msg_header != constants__c_msg_header_indet) {
             message_out_bs__dealloc_msg_header_out(service_mgr__l_msg_header);

@@ -1033,6 +1033,11 @@ OPERATIONS
                     l_req_handle := c_client_request_handle_indet;
                     ret := e_sc_bad_out_of_memory
                 END;
+                IF l_valid_req_handle = TRUE &
+                    ret /= e_sc_ok
+                THEN
+                    client_remove_req_handle (l_req_handle)
+                END;
                 IF l_msg_header /= c_msg_header_indet
                 THEN
                     dealloc_msg_header_out (l_msg_header)
@@ -1497,6 +1502,8 @@ OPERATIONS
             END;
             dealloc_msg_header_out (l_msg_header);
             dealloc_msg_out (l_req_msg)
+        ELSE
+            client_close_session (session, e_sc_bad_out_of_memory)
         END;
         buffer_out := l_buffer;
         req_handle := l_req_handle
@@ -1541,6 +1548,9 @@ OPERATIONS
                         client_remove_req_handle (l_req_handle);
                         client_close_session (session, l_sc)
                     END
+                ELSE
+                    client_remove_req_handle (l_req_handle);
+                    client_close_session (session, e_sc_bad_out_of_memory)
                 END
             END;
             dealloc_msg_header_out (l_msg_header);
@@ -1593,6 +1603,7 @@ OPERATIONS
                         client_close_session (session, l_ret)
                     END
                 ELSE
+                    client_remove_req_handle (l_req_handle);
                     client_close_session (session, l_ret)
                 END
             ELSE
@@ -1650,6 +1661,8 @@ OPERATIONS
                         l_channel := c_channel_indet;
                         client_remove_req_handle (l_req_handle)
                     END
+                ELSE
+                    client_remove_req_handle (l_req_handle)
                 END
             ELSE
                 ret := e_sc_bad_out_of_memory
@@ -1742,6 +1755,11 @@ OPERATIONS
                     END
                 ELSE
                     ret := e_sc_bad_out_of_memory
+                END;
+                IF l_valid_req_handle = TRUE &
+                    ret /= e_sc_ok
+                THEN
+                    client_remove_req_handle (l_req_handle)
                 END;
                 IF l_msg_header /= c_msg_header_indet
                 THEN

@@ -702,6 +702,8 @@ OPERATIONS
                 l_channel_config_idx, l_reverse_endpoint_config_idx <-- get_all_channel_info (channel);
                 ASSERT l_channel_config_idx : t_channel_config_idx
                 THEN
+                    // Note: if we manage reconnection on same session in the future
+                    //       we will need to keep session requests context
                     client_snd_all_msg_failure (channel, e_sc_bad_secure_channel_closed);
                     // Updates associated sessions states
                     client_secure_channel_lost_session_sm (channel, l_channel_config_idx)
