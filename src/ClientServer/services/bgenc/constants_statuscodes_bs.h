@@ -21,7 +21,7 @@
 
  File Name            : constants_statuscodes_bs.h
 
- Date                 : 20/11/2025 15:07:43
+ Date                 : 03/06/2026 15:59:18
 
  C Translator Version : tradc Java V1.2 (06/02/2022)
 
@@ -46,8 +46,9 @@
 typedef enum {
    constants_statuscodes_bs__c_StatusCode_indet,
    constants_statuscodes_bs__e_sc_ok,
-   constants_statuscodes_bs__e_sc_bad_generic,
-   constants_statuscodes_bs__e_sc_uncertain_generic,
+   constants_statuscodes_bs__e_sc_good_generic_mask,
+   constants_statuscodes_bs__e_sc_bad_generic_mask,
+   constants_statuscodes_bs__e_sc_uncertain_generic_mask,
    constants_statuscodes_bs__e_sc_bad_internal_error,
    constants_statuscodes_bs__e_sc_bad_secure_channel_closed,
    constants_statuscodes_bs__e_sc_bad_secure_channel_id_invalid,

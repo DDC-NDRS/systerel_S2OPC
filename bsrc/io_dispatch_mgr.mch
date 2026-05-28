@@ -243,7 +243,7 @@ OPERATIONS
             e_sc_bad_invalid_argument, /* message has not expected type */
             e_sc_bad_encoding_error,
             e_sc_bad_too_many_ops, /* An operation is already recorded to be sen when SC will be connected */
-            e_sc_bad_generic}
+            e_sc_bad_generic_mask}
     END
     ;
 

@@ -25,8 +25,9 @@ SEES
 
 SETS
     t_StatusCode_i = {c_StatusCode_indet, e_sc_ok,
-                      e_sc_bad_generic,
-                      e_sc_uncertain_generic,
+                      e_sc_good_generic_mask,
+                      e_sc_bad_generic_mask,
+                      e_sc_uncertain_generic_mask,
                       e_sc_bad_internal_error,
                       e_sc_bad_secure_channel_closed,
                       e_sc_bad_secure_channel_id_invalid,
@@ -127,7 +128,8 @@ SETS
 ABSTRACT_CONSTANTS
     c_RawStatusCode_BadInvalidState,
     c_RawStatusCode_Good,
-    c_RawStatusCode_Uncertain,
+    c_RawStatusCode_GoodMask,
+    c_RawStatusCode_UncertainMask,
 
     conv_StatusCode_To_RawStatusCode,
     conv_RawStatusCode_To_StatusCode,
@@ -138,15 +140,17 @@ PROPERTIES
 
     c_RawStatusCode_BadInvalidState : t_RawStatusCode &
     c_RawStatusCode_Good : t_RawStatusCode &
-    c_RawStatusCode_Uncertain : t_RawStatusCode &
+    c_RawStatusCode_GoodMask : t_RawStatusCode &
+    c_RawStatusCode_UncertainMask : t_RawStatusCode &
 
     t_StatusCode = t_StatusCode_i - {c_StatusCode_indet} &
 
     conv_StatusCode_To_RawStatusCode : t_StatusCode --> t_RawStatusCode &
     conv_RawStatusCode_To_StatusCode : t_RawStatusCode --> t_StatusCode & /* Possible precision loss */
 
-    conv_StatusCode_To_RawStatusCode(e_sc_ok)                = c_RawStatusCode_Good &
-    conv_StatusCode_To_RawStatusCode(e_sc_uncertain_generic) = c_RawStatusCode_Uncertain
+    conv_StatusCode_To_RawStatusCode(e_sc_ok)                     = c_RawStatusCode_Good &
+    conv_StatusCode_To_RawStatusCode(e_sc_good_generic_mask)      = c_RawStatusCode_GoodMask &
+    conv_StatusCode_To_RawStatusCode(e_sc_uncertain_generic_mask) = c_RawStatusCode_UncertainMask
 
 OPERATIONS
 

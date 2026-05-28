@@ -70,7 +70,7 @@ OPERATIONS
         l_isvalid,
         l_node
     IN
-        l_sc := e_sc_bad_generic;
+        l_sc := e_sc_bad_generic_mask;
         l_nodeRolePermissions := c_RolePermissionTypes_indet;
         l_isvalid, l_node <-- readall_AddressSpace_Node(p_nodeId);
         IF l_isvalid = TRUE

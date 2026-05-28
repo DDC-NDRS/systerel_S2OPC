@@ -651,10 +651,13 @@ void util_status_code__B_to_C(constants_statuscodes_bs__t_StatusCode_i bstatus, 
     case constants_statuscodes_bs__e_sc_ok:
         *status = SOPC_GoodGenericStatus;
         break;
-    case constants_statuscodes_bs__e_sc_bad_generic:
+    case constants_statuscodes_bs__e_sc_good_generic_mask:
+        *status = SOPC_GoodGenericStatus;
+        break;
+    case constants_statuscodes_bs__e_sc_bad_generic_mask:
         *status = SOPC_BadStatusMask; // generic bad status
         break;
-    case constants_statuscodes_bs__e_sc_uncertain_generic:
+    case constants_statuscodes_bs__e_sc_uncertain_generic_mask:
         *status = SOPC_UncertainStatusMask; // generic uncertain status
         break;
     case constants_statuscodes_bs__e_sc_bad_internal_error:
@@ -952,10 +955,13 @@ SOPC_ReturnStatus util_status_code__B_to_return_status_C(constants_statuscodes_b
     case constants_statuscodes_bs__e_sc_ok:
         result = SOPC_STATUS_OK;
         break;
-    case constants_statuscodes_bs__e_sc_bad_generic:
+    case constants_statuscodes_bs__e_sc_good_generic_mask:
+        result = SOPC_STATUS_OK;
+        break;
+    case constants_statuscodes_bs__e_sc_bad_generic_mask:
         result = SOPC_STATUS_NOK;
         break;
-    case constants_statuscodes_bs__e_sc_uncertain_generic:
+    case constants_statuscodes_bs__e_sc_uncertain_generic_mask:
         result = SOPC_STATUS_NOK;
         break;
     case constants_statuscodes_bs__e_sc_bad_internal_error:
@@ -1040,12 +1046,15 @@ void util_status_code__C_to_B(SOPC_StatusCode status, constants_statuscodes_bs__
 {
     /*
      * Important note: Good* and Uncertain* statuses shall always be translated
-     *                 to normalized enum value (e_sc_ok / e_sc_uncertain_generic)
+     *                 to normalized enum value (e_sc_ok / e_sc_uncertain_generic_mask)
      *                 to ensure expected behavior with current B model.
      *                 Otherwise model shall be updated (e.g. see treat_one_method_call)
      */
     switch (status)
     {
+    case 0x00000000:
+        *bstatus = constants_statuscodes_bs__e_sc_ok;
+        break;
     case OpcUa_BadInternalError:
         *bstatus = constants_statuscodes_bs__e_sc_bad_internal_error;
         break;
@@ -1331,20 +1340,20 @@ void util_status_code__C_to_B(SOPC_StatusCode status, constants_statuscodes_bs__
     default:
         if ((status & SOPC_GoodStatusOppositeMask) == 0)
         {
-            *bstatus = constants_statuscodes_bs__e_sc_ok;
+            *bstatus = constants_statuscodes_bs__e_sc_good_generic_mask;
         }
         else if ((status & SOPC_BadStatusMask) != 0)
         {
-            *bstatus = constants_statuscodes_bs__e_sc_bad_generic;
+            *bstatus = constants_statuscodes_bs__e_sc_bad_generic_mask;
         }
         else if ((status & SOPC_UncertainStatusMask) != 0)
         {
-            *bstatus = constants_statuscodes_bs__e_sc_uncertain_generic;
+            *bstatus = constants_statuscodes_bs__e_sc_uncertain_generic_mask;
         }
         else
         {
             // Not identified status code => Use severity Bad
-            *bstatus = constants_statuscodes_bs__e_sc_bad_generic;
+            *bstatus = constants_statuscodes_bs__e_sc_bad_generic_mask;
         }
     }
 }

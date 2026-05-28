@@ -461,7 +461,7 @@ static void onServiceEvent(SOPC_EventHandler* handler,
             SOPC_Logger_TraceError(SOPC_LOG_MODULE_CLIENTSERVER,
                                    "ServicesMgr: SE_TO_SE_ACTIVATE_SESSION session=%" PRIu32 " user parameter is NULL",
                                    id);
-            sCode = constants_statuscodes_bs__e_sc_bad_generic;
+            sCode = constants_statuscodes_bs__e_sc_bad_generic_mask;
         }
         break;
     case SE_TO_SE_SERVER_DATA_CHANGED:

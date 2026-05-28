@@ -547,7 +547,7 @@ OPERATIONS
                         ret := e_sc_bad_too_many_ops /* Too many requests already recorded to be sent when SC will be connected */
                     END
                 ELSE
-                    ret := e_sc_bad_generic /* Invalid channel config idx OR maximum channels opened reached */
+                    ret := e_sc_bad_generic_mask /* Invalid channel config idx OR maximum channels opened reached */
                 END
             ELSE
                 /* Already connected channel: will trigger a create session event synchronously

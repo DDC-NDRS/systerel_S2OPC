@@ -212,7 +212,7 @@ OPERATIONS
         RefIndex_Reference
         :(
             sc_addnode : t_StatusCode_i &
-            sc_addnode : {e_sc_ok, e_sc_uncertain_generic,  /* root node created but (partial) failure for creating whole hierarchy from TypeDefinition */
+            sc_addnode : {e_sc_ok, e_sc_uncertain_generic_mask,  /* root node created but (partial) failure for creating whole hierarchy from TypeDefinition */
                           e_sc_bad_browse_name_duplicated, e_sc_bad_reference_not_allowed,
                           e_sc_bad_type_definition_invalid, e_sc_bad_node_attributes_invalid, e_sc_bad_out_of_memory,
                           e_sc_bad_node_class_invalid} & // BadNodeClassInvalid used for unsupported NodeClass for now
@@ -243,7 +243,7 @@ OPERATIONS
             Node_RefIndexEnd        : s_Node     +-> t_RefIndex  &
             RefIndex_Reference      : s_Node * t_RefIndex >+> t_Reference &
 
-            (sc_addnode = e_sc_ok or sc_addnode = e_sc_uncertain_generic =>
+            (sc_addnode = e_sc_ok or sc_addnode = e_sc_uncertain_generic_mask =>
                 /* We use inclusion since adding 1 node might lead to add several nodes */
                 s_Node$0 <: s_Node &
                 a_NodeId$0 <: a_NodeId &
@@ -303,7 +303,7 @@ OPERATIONS
                     )
                 )
             ) &
-            (not (sc_addnode = e_sc_ok or sc_addnode = e_sc_uncertain_generic) =>
+            (not (sc_addnode = e_sc_ok or sc_addnode = e_sc_uncertain_generic_mask) =>
                 s_Node = s_Node$0 &
 
                 /* Attributes */

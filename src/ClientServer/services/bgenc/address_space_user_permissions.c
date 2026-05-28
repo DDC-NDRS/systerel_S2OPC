@@ -21,7 +21,7 @@
 
  File Name            : address_space_user_permissions.c
 
- Date                 : 31/10/2024 10:53:56
+ Date                 : 03/06/2026 15:58:57
 
  C Translator Version : tradc Java V1.2 (06/02/2022)
 
@@ -51,7 +51,7 @@ void address_space_user_permissions__l_read_AddressSpace_RolePermissionsOrDefaul
       t_bool address_space_user_permissions__l_isvalid;
       constants__t_Node_i address_space_user_permissions__l_node;
       
-      address_space_user_permissions__l_sc = constants_statuscodes_bs__e_sc_bad_generic;
+      address_space_user_permissions__l_sc = constants_statuscodes_bs__e_sc_bad_generic_mask;
       address_space_user_permissions__l_nodeRolePermissions = constants__c_RolePermissionTypes_indet;
       address_space_bs__readall_AddressSpace_Node(address_space_user_permissions__p_nodeId,
          &address_space_user_permissions__l_isvalid,

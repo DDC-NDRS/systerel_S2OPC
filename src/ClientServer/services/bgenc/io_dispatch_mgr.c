@@ -21,7 +21,7 @@
 
  File Name            : io_dispatch_mgr.c
 
- Date                 : 03/12/2025 14:19:06
+ Date                 : 03/06/2026 15:59:00
 
  C Translator Version : tradc Java V1.2 (06/02/2022)
 
@@ -610,7 +610,7 @@ void io_dispatch_mgr__client_send_discovery_request(
                }
             }
             else {
-               *io_dispatch_mgr__ret = constants_statuscodes_bs__e_sc_bad_generic;
+               *io_dispatch_mgr__ret = constants_statuscodes_bs__e_sc_bad_generic_mask;
             }
          }
          else {

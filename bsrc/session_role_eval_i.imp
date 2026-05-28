@@ -186,7 +186,7 @@ OPERATIONS
         p_bres := FALSE;
         l_nb_identities := 0;
         l_continue := FALSE;
-        l_sc := e_sc_bad_generic;
+        l_sc := e_sc_bad_generic_mask;
         l_val := c_Variant_indet;
         // Get the Identities node in the RoleType node
         l_identities_nodeId, l_identities_node <-- l_get_role_identities_node(p_role_node);
