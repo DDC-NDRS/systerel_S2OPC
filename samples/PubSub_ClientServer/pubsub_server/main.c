@@ -265,8 +265,8 @@ int main(int argc, char* const argv[])
         struct networkMessageIdentifier nmId = Server_PubAcyclicSend_Requested();
         if (nmId.pubId.type != SOPC_Null_PublisherId)
         {
-            status = Server_Trigger_Publisher(nmId) ? SOPC_STATUS_OK : SOPC_STATUS_NOK;
-            if (SOPC_STATUS_NOK == status)
+            res = Server_Trigger_Publisher(nmId);
+            if (!res)
             {
                 printf("# Warning: Acyclic send request failed with [publisherId : %" PRIu64
                        ", writerGroupId : %" PRIu16
@@ -275,12 +275,11 @@ int main(int argc, char* const argv[])
                        "as acyclic publisher and writer group id correspond to configuration. \n",
                        nmId.pubId.data.uint, nmId.writerGroupId);
             }
-            status = SOPC_STATUS_OK;
         }
         /* Tuple [PublisherId, WriterGroupId, DataSetWriterId] cannot be equal to [0, 0, 0]. If FilteringDsmEmission
          * hasn't been trigger then publisherId type is NUll */
         struct publisherDsmIdentifier pubDsmId = Server_PubFilteringDataSetMessage_Requested();
-        if (pubDsmId.pubId.type != SOPC_Null_PublisherId)
+        if (pubDsmId.dsmId.pubId.type != SOPC_Null_PublisherId)
         {
             status = Server_Trigger_FilteringDsmEmission(pubDsmId) ? SOPC_STATUS_OK : SOPC_STATUS_NOK;
             if (SOPC_STATUS_OK != status)
@@ -289,9 +288,24 @@ int main(int argc, char* const argv[])
                        ", WriterGroupId : %" PRIu16 ", dataSetWriterId : %" PRIu16
                        " ]. \n"
                        "Check that PubSub is started and configuration match the tuple furnish\n",
-                       pubDsmId.pubId.data.uint, pubDsmId.writerGroupId, pubDsmId.dataSetWriterId);
+                       pubDsmId.dsmId.pubId.data.uint, pubDsmId.dsmId.writerGroupId, pubDsmId.dsmId.dataSetWriterId);
             }
             status = SOPC_STATUS_OK;
+        }
+        /* Tuple [PublisherId, WriterGroupId, DataSetWriterId] cannot be equal to [0, 0, 0]. If ResetDsmSequenceNumber
+         * hasn't been trigger then publisherId type is NUll */
+        struct dsmIdentifier subDsmId = Server_SubResetDataSetMessage_Requested();
+        if (subDsmId.pubId.type != SOPC_Null_PublisherId)
+        {
+            res = Server_Trigger_ResetDataSetMessage(&subDsmId);
+            if (!res)
+            {
+                printf("# Warning: Reset DataSetMessage request fail for tuple [ publisherId : %" PRIu64
+                       ", WriterGroupId : %" PRIu16 ", dataSetWriterId : %" PRIu16
+                       " ]. \n"
+                       "Check that PubSub is started and configuration match the tuple furnish\n",
+                       subDsmId.pubId.data.uint, subDsmId.writerGroupId, subDsmId.dataSetWriterId);
+            }
         }
     }
 

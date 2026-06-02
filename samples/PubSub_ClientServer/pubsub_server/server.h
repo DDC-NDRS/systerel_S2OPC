@@ -48,12 +48,17 @@ SOPC_ReturnStatus Server_LoadAddressSpace(void);
 SOPC_ReturnStatus Server_StartServer(void);
 bool Server_IsRunning(void);
 
-/** Intercat with Pub module */
-struct publisherDsmIdentifier
+struct dsmIdentifier
 {
     SOPC_Conf_PublisherId pubId;
     uint16_t writerGroupId;
     uint16_t dataSetWriterId;
+};
+
+/** Intercat with Pub module */
+struct publisherDsmIdentifier
+{
+    struct dsmIdentifier dsmId;
     bool enableEmission;
 };
 
@@ -80,6 +85,9 @@ bool Server_Trigger_FilteringDsmEmission(struct publisherDsmIdentifier pubDsmId)
 char* Server_GetConfigurationPath(void);
 void Server_SetSubStatusAsync(SOPC_PubSubState state);
 void Server_SetSubStatusSync(SOPC_PubSubState state);
+
+struct dsmIdentifier Server_SubResetDataSetMessage_Requested(void);
+bool Server_Trigger_ResetDataSetMessage(const struct dsmIdentifier* dsmId);
 
 bool Server_SetTargetVariables(const OpcUa_WriteValue* nodesToWrite, const int32_t nbValues);
 SOPC_DataValue* Server_GetSourceVariables(const OpcUa_ReadValueId* lrv, const int32_t nbValues);
