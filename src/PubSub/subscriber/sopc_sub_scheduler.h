@@ -69,4 +69,18 @@ bool SOPC_SubScheduler_Start(SOPC_PubSubConfiguration* config,
 
 void SOPC_SubScheduler_Stop(void);
 
+/**
+ * @brief Reset sequence number expected by the subscriber for a DataSetMessage identified by tuple
+ * [pubId, groupId, writerId].
+ *
+ * @param pubId Publisher Id of the networkMessage
+ * @param groupId WriterGroupId to filter dataSetMessage
+ * @param writerId dataSetWriterId to filter dataSetMessage
+ *
+ * @return true if succeed to reset sequence number, false otherwise
+ */
+bool SOPC_SubScheduler_ResetSequenceNumber(const SOPC_Conf_PublisherId* pubId,
+                                           const uint16_t groupId,
+                                           const uint16_t writerId);
+
 #endif /* SOPC_SUB_SCHEDULER_H_ */

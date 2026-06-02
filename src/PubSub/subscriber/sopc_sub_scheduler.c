@@ -206,7 +206,8 @@ typedef struct SOPC_SubScheduler_Writer_Ctx
     uint16_t writerId;
     uint16_t groupId;
     bool dataSetMessageSequenceNumberSet;
-    uint16_t dataSetMessageSequenceNumber;
+    int32_t
+        dataSetMessageSequenceNumber; //  Sequence number are encode on a uint16 but to use atomic we use int32 types
     SOPC_HighRes_TimeReference* timeout;
     double timeoutIntervalMs;
     SOPC_PubSubState connectionMode;
@@ -231,6 +232,10 @@ static void SOPC_SubScheduler_CtxMqtt_Clear(SOPC_SubScheduler_TransportCtx*);
 /* Callback defined to release ethernet transport context */
 static void SOPC_SubScheduler_CtxEth_Clear(SOPC_SubScheduler_TransportCtx*);
 
+/* Return writer context identified by tuple [pubId, groupId, writerId], NULL if no writerContext has been found */
+static SOPC_SubScheduler_Writer_Ctx* findWriterContext(const SOPC_Conf_PublisherId* pubId,
+                                                       const uint16_t groupId,
+                                                       const uint16_t writerId);
 struct SOPC_SubScheduler_TransportCtx
 {
     SOPC_PubSubProtocol_Type protocol;
@@ -337,7 +342,7 @@ static void SOPC_SubScheduler_UpdateDsmState(SOPC_SubScheduler_Writer_Ctx* ctx, 
         {
             // Update dsm context
             ctx->dataSetMessageSequenceNumberSet = false;
-            ctx->dataSetMessageSequenceNumber = 0;
+            SOPC_Atomic_Int_Set(&ctx->dataSetMessageSequenceNumber, 0);
             SOPC_PubSub_SecurityType* security = NULL;
             // Update Security SN if security is managed
             SOPC_PubSub_SecurityStatus status = SOPC_SubScheduler_Get_Security_Infos(
@@ -903,6 +908,23 @@ void SOPC_SubScheduler_Stop(void)
     SOPC_Atomic_Int_Set(&schedulerCtx.processingStartStop, false);
 }
 
+bool SOPC_SubScheduler_ResetSequenceNumber(const SOPC_Conf_PublisherId* pubId,
+                                           const uint16_t groupId,
+                                           const uint16_t writerId)
+{
+    bool result = false;
+    if (NULL != pubId)
+    {
+        SOPC_SubScheduler_Writer_Ctx* writerCtx = findWriterContext(pubId, groupId, writerId);
+        if (NULL != writerCtx)
+        {
+            SOPC_Atomic_Int_Set(&writerCtx->dataSetMessageSequenceNumber, 0);
+            result = true;
+        }
+    }
+    return result;
+}
+
 /**
  *  This function is called periodically by subscriber reception thread to
  * check if some DSM are in timeout.
@@ -1104,24 +1126,24 @@ static bool SOPC_SubScheduler_Is_Writer_SN_Newer(const SOPC_Conf_PublisherId* pu
     {
         if (ctx->dataSetMessageSequenceNumberSet)
         {
-            if (SOPC_Is_UInt16_Sequence_Number_Newer(receivedSN, ctx->dataSetMessageSequenceNumber))
+            uint16_t dataSetMessageSN = (uint16_t) SOPC_Atomic_Int_Get(&ctx->dataSetMessageSequenceNumber);
+            if (SOPC_Is_UInt16_Sequence_Number_Newer(receivedSN, dataSetMessageSN))
             {
-                ctx->dataSetMessageSequenceNumber = receivedSN;
+                SOPC_Atomic_Int_Set(&ctx->dataSetMessageSequenceNumber, (int32_t) receivedSN);
                 return true;
             }
             else
             {
                 if (NULL != schedulerCtx.dsmSnGapCallback)
                 {
-                    schedulerCtx.dsmSnGapCallback(*pubId, groupId, writerId, ctx->dataSetMessageSequenceNumber,
-                                                  receivedSN);
+                    schedulerCtx.dsmSnGapCallback(*pubId, groupId, writerId, dataSetMessageSN, receivedSN);
                 }
                 return false;
             }
         }
         else
         {
-            ctx->dataSetMessageSequenceNumber = receivedSN;
+            SOPC_Atomic_Int_Set(&ctx->dataSetMessageSequenceNumber, (int32_t) receivedSN);
             ctx->dataSetMessageSequenceNumberSet = true;
             return true;
         }
