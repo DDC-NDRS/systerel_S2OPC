@@ -897,12 +897,12 @@ static SOPC_ReturnStatus test_request_overwrite(SOPC_ClientConnection* connectio
             else
             { // Check status is overwritten
                 SOPC_StatusCode actualStatus = pReadResp->Results[0].Status;
-#ifndef WITH_STATIC_SECURITY_DATA
+#ifndef WITH_CONST_ADDSPACE
                 SOPC_StatusCode expectedStatus =
                     expectOverwrittenStatusAndValue ? OpcUa_GoodCompletesAsynchronously : SOPC_GoodGenericStatus;
 #else
                 SOPC_StatusCode expectedStatus =
-                    SOPC_GoodGenericStatus; // Status cannot be overwritten in static security data mode
+                    SOPC_GoodGenericStatus; // Status cannot be overwritten in const addspace mode
 #endif
                 if (actualStatus != expectedStatus)
                 {

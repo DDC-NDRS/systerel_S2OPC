@@ -350,7 +350,9 @@ if (WITH_STATIC_SECURITY_DATA)
                              "validation_tests/server"
                              "${S2OPC_ROOT_PATH}/samples/ClientServer/data/cert")
 endif()
-
+if (WITH_CONST_ADDSPACE)
+  target_compile_definitions(toolkit_test_client PRIVATE "WITH_CONST_ADDSPACE")
+endif()
 
 add_custom_command(
   TARGET toolkit_test_client POST_BUILD
@@ -523,6 +525,10 @@ if (WITH_STATIC_SECURITY_DATA)
   target_compile_definitions(${TOOLKIT_TEST_SERVER} PRIVATE "WITH_STATIC_SECURITY_DATA")
   target_include_directories(${TOOLKIT_TEST_SERVER} PRIVATE
                              "${S2OPC_ROOT_PATH}/samples/ClientServer/data/cert")
+endif()
+
+if (WITH_CONST_ADDSPACE)
+  target_compile_definitions(${TOOLKIT_TEST_SERVER} PRIVATE "WITH_CONST_ADDSPACE")
 endif()
 
 if (expat_FOUND)

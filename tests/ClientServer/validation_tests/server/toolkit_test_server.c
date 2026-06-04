@@ -1069,8 +1069,13 @@ static SOPC_StatusCode Test_OverwriteClientRequestCallback(const SOPC_CallContex
                 nodeToWrite->Value.Value.ArrayType == SOPC_VariantArrayType_SingleValue &&
                 nodeToWrite->Value.Value.Value.Uint64 == 9999)
             {
+#ifndef WITH_CONST_ADDSPACE
                 // Simulate an asynchronous termination of the write request
                 writeRequest->NodesToWrite[i].Value.Status = OpcUa_GoodCompletesAsynchronously;
+#else
+                // With const addspace, the status code cannot be overwritten (access level restriction)
+                writeRequest->NodesToWrite[i].Value.Status = SOPC_GoodGenericStatus;
+#endif
                 // Change value to (value - 1) (allows test with const addspace)
                 writeRequest->NodesToWrite[i].Value.Value.Value.Uint64 = nodeToWrite->Value.Value.Value.Uint64 - 1;
             }
