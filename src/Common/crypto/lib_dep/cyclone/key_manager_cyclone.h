@@ -92,7 +92,11 @@ struct SOPC_CRLList
 
 struct SOPC_CSR
 {
-    X509CsrInfo csr; /**< The context of the CSR, lib specific */
+    X509CsrInfo csr;    /**< The context of the CSR, lib specific */
+    char* subjectName;  /**< Copy of the subject string referenced by \p csr */
+    char* uri;          /**< Copy of the URI SubjectAltName referenced by \p csr */
+    char** dns;         /**< Copies of the DNS SubjectAltName strings referenced by \p csr */
+    uint32_t dnsLength; /**< Number of entries in \p dns */
 };
 
 // INTERNAL FUNCTIONS

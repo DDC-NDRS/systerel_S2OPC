@@ -2239,69 +2239,112 @@ SOPC_ReturnStatus SOPC_KeyManager_CSR_Create(const char* subjectName,
     /* CSR v1 */
     pCSR->csr.certReqInfo.version = X509_VERSION_1;
 
-    /* Subject */
-    status = sopc_parse_subject_name(subjectName, &pCSR->csr.certReqInfo.subject);
+    /* Deep copy of the subjectName */
+    pCSR->subjectName = SOPC_strdup(subjectName);
+    if (NULL == pCSR->subjectName)
+    {
+        status = SOPC_STATUS_OUT_OF_MEMORY;
+    }
+
     if (SOPC_STATUS_OK == status)
     {
-        /* Signature algorithm */
-        sopc_set_rsa_sha256_signature_oid(&pCSR->csr.signatureAlgo);
-
-        /* Extensions */
-        X509Extensions* ext = &pCSR->csr.certReqInfo.attributes.extensionReq;
-        memset(ext, 0, sizeof(*ext));
-
-        /* Basic constraints : a client/server CSR can't be CA */
-        ext->basicConstraints.critical = true;
-        ext->basicConstraints.cA = false;
-        ext->basicConstraints.pathLenConstraint = 0;
-
-        /* Key usage */
-        ext->keyUsage.critical = true;
-        ext->keyUsage.bitmap = X509_KEY_USAGE_DIGITAL_SIGNATURE | X509_KEY_USAGE_NON_REPUDIATION |
-                               X509_KEY_USAGE_KEY_ENCIPHERMENT | X509_KEY_USAGE_DATA_ENCIPHERMENT;
-
-        /* Extended key usage */
-        ext->extKeyUsage.critical = false;
-        ext->extKeyUsage.bitmap = bIsServer ? X509_EXT_KEY_USAGE_SERVER_AUTH : X509_EXT_KEY_USAGE_CLIENT_AUTH;
-
-        /* SubjectAltName */
-        if (NULL != uri || arrayLength > 0)
-        {
-            uint32_t sanIdx = 0;
-            ext->subjectAltName.critical = false;
-
-            if (NULL != uri)
-            {
-                ext->subjectAltName.generalNames[sanIdx].type = X509_GENERAL_NAME_TYPE_URI;
-                ext->subjectAltName.generalNames[sanIdx].value = uri;
-                ext->subjectAltName.generalNames[sanIdx].length = strlen(uri);
-                sanIdx++;
-            }
-
-            for (uint32_t i = 0; i < arrayLength && SOPC_STATUS_OK == status; ++i)
-            {
-                if (NULL == pDnsArray[i])
-                {
-                    status = SOPC_STATUS_INVALID_PARAMETERS;
-                }
-                else
-                {
-                    ext->subjectAltName.generalNames[sanIdx].type = X509_GENERAL_NAME_TYPE_DNS;
-                    ext->subjectAltName.generalNames[sanIdx].value = pDnsArray[i];
-                    ext->subjectAltName.generalNames[sanIdx].length = strlen(pDnsArray[i]);
-                    sanIdx++;
-                }
-            }
-            if (SOPC_STATUS_OK == status)
-            {
-                ext->subjectAltName.numGeneralNames = sanIdx;
-            }
-        }
-
+        /* Subject */
+        status = sopc_parse_subject_name(pCSR->subjectName, &pCSR->csr.certReqInfo.subject);
         if (SOPC_STATUS_OK == status)
         {
-            /* subjectPublicKeyInfo will be filled in ToDER function */
-            memset(&pCSR->csr.certReqInfo.subjectPublicKeyInfo, 0, sizeof(pCSR->csr.certReqInfo.subjectPublicKeyInfo));
+            /* Signature algorithm */
+            sopc_set_rsa_sha256_signature_oid(&pCSR->csr.signatureAlgo);
+
+            /* Extensions */
+            X509Extensions* ext = &pCSR->csr.certReqInfo.attributes.extensionReq;
+            memset(ext, 0, sizeof(*ext));
+
+            /* Basic constraints : a client/server CSR can't be CA */
+            ext->basicConstraints.critical = true;
+            ext->basicConstraints.cA = false;
+            ext->basicConstraints.pathLenConstraint = 0;
+
+            /* Key usage */
+            ext->keyUsage.critical = true;
+            ext->keyUsage.bitmap = X509_KEY_USAGE_DIGITAL_SIGNATURE | X509_KEY_USAGE_NON_REPUDIATION |
+                                   X509_KEY_USAGE_KEY_ENCIPHERMENT | X509_KEY_USAGE_DATA_ENCIPHERMENT;
+
+            /* Extended key usage */
+            ext->extKeyUsage.critical = false;
+            ext->extKeyUsage.bitmap = bIsServer ? X509_EXT_KEY_USAGE_SERVER_AUTH : X509_EXT_KEY_USAGE_CLIENT_AUTH;
+
+            /* SubjectAltName */
+            if (NULL != uri || arrayLength > 0)
+            {
+                uint32_t sanIdx = 0;
+                ext->subjectAltName.critical = false;
+
+                if (NULL != uri)
+                {
+                    pCSR->uri = SOPC_strdup(uri);
+                    if (NULL == pCSR->uri)
+                    {
+                        status = SOPC_STATUS_OUT_OF_MEMORY;
+                    }
+                    else
+                    {
+                        ext->subjectAltName.generalNames[sanIdx].type = X509_GENERAL_NAME_TYPE_URI;
+                        ext->subjectAltName.generalNames[sanIdx].value = pCSR->uri;
+                        ext->subjectAltName.generalNames[sanIdx].length = strlen(pCSR->uri);
+                        sanIdx++;
+                    }
+                }
+
+                if (SOPC_STATUS_OK == status && arrayLength > 0)
+                {
+                    pCSR->dns = SOPC_Calloc(arrayLength, sizeof(char*));
+                    if (NULL == pCSR->dns)
+                    {
+                        status = SOPC_STATUS_OUT_OF_MEMORY;
+                    }
+                    else
+                    {
+                        pCSR->dnsLength = arrayLength;
+                    }
+                }
+
+                if (SOPC_STATUS_OK == status)
+                {
+                    for (uint32_t i = 0; i < arrayLength && SOPC_STATUS_OK == status; ++i)
+                    {
+                        if (NULL == pDnsArray[i])
+                        {
+                            status = SOPC_STATUS_INVALID_PARAMETERS;
+                        }
+                        else
+                        {
+                            pCSR->dns[i] = SOPC_strdup(pDnsArray[i]);
+                            if (NULL == pCSR->dns[i])
+                            {
+                                status = SOPC_STATUS_OUT_OF_MEMORY;
+                            }
+                            else
+                            {
+                                ext->subjectAltName.generalNames[sanIdx].type = X509_GENERAL_NAME_TYPE_DNS;
+                                ext->subjectAltName.generalNames[sanIdx].value = pCSR->dns[i];
+                                ext->subjectAltName.generalNames[sanIdx].length = strlen(pCSR->dns[i]);
+                                sanIdx++;
+                            }
+                        }
+                    }
+                }
+                if (SOPC_STATUS_OK == status)
+                {
+                    ext->subjectAltName.numGeneralNames = sanIdx;
+                }
+            }
+
+            if (SOPC_STATUS_OK == status)
+            {
+                /* subjectPublicKeyInfo will be filled in ToDER function */
+                memset(&pCSR->csr.certReqInfo.subjectPublicKeyInfo, 0,
+                       sizeof(pCSR->csr.certReqInfo.subjectPublicKeyInfo));
+            }
         }
     }
 
@@ -2311,7 +2354,7 @@ SOPC_ReturnStatus SOPC_KeyManager_CSR_Create(const char* subjectName,
     }
     else
     {
-        SOPC_Free(pCSR);
+        SOPC_KeyManager_CSR_Free(pCSR);
     }
 
     return status;
@@ -2460,5 +2503,15 @@ void SOPC_KeyManager_CSR_Free(SOPC_CSR* pCSR)
         return;
     }
     memset(&pCSR->csr, 0, sizeof(pCSR->csr));
+    SOPC_Free(pCSR->subjectName);
+    SOPC_Free(pCSR->uri);
+    if (NULL != pCSR->dns)
+    {
+        for (uint32_t i = 0; i < pCSR->dnsLength; ++i)
+        {
+            SOPC_Free(pCSR->dns[i]);
+        }
+        SOPC_Free(pCSR->dns);
+    }
     SOPC_Free(pCSR);
 }
