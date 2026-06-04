@@ -64,7 +64,10 @@
 #define SOPC_KEY_MANAGER_SHA1_SIZE 20
 #define SOPC_CSR_DER_MAX_SIZE 8192u
 
+#ifdef CYCLONE_CI_TEST_ONLY_RSA
+// Only necessary for the placeholder RSA implementation
 YarrowContext yarrowContext;
+#endif
 
 /* ------------------------------------------------------------------------------------------------
  * AsymmetricKey API
@@ -253,6 +256,8 @@ SOPC_ReturnStatus SOPC_KeyManager_AsymmetricKey_GenRSA(uint32_t RSAKeySize, SOPC
 #ifndef S2OPC_CYCLONE_CI_TEST_ONLY_RSA
     return SOPC_STATUS_NOT_SUPPORTED;
 #endif
+#else
+    YarrowContext yarrowContext;
 #endif
 
     *ppKey = NULL;
@@ -292,11 +297,16 @@ SOPC_ReturnStatus SOPC_KeyManager_AsymmetricKey_GenRSA(uint32_t RSAKeySize, SOPC
         SOPC_KeyManager_AsymmetricKey_Free(pKey);
         status = SOPC_STATUS_NOK;
     }
+    else
+    {
+        *ppKey = pKey;
+    }
     yarrowDeinit(&yarrowContext);
-    memset(seed->data, 0, seed->length);
-    SOPC_Buffer_Delete(seed);
-
-    *ppKey = pKey;
+    if (NULL != seed)
+    {
+        memset(seed->data, 0, seed->length);
+        SOPC_Buffer_Delete(seed);
+    }
     return (status == SOPC_STATUS_OK) ? status : SOPC_STATUS_NOK;
 }
 
