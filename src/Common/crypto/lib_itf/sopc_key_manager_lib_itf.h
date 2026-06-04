@@ -644,6 +644,9 @@ void SOPC_KeyManager_CRL_Free(SOPC_CRLList* pCRL);
  *        The basic constraints is set to false for the CA flag.
  *
  * \return \c SOPC_STATUS_OK on success, or an error code in case of failure.
+ *
+ * \warning For CycloneCrypto version only: the caller must not free the \p subjectName, \p uri, or \p pDnsArray
+ *          until the CSR is freed (see #1773)
  */
 SOPC_ReturnStatus SOPC_KeyManager_CSR_Create(const char* subjectName,
                                              const bool bIsServer,
