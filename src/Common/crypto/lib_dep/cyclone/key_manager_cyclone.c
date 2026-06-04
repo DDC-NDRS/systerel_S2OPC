@@ -1096,6 +1096,7 @@ SOPC_ReturnStatus SOPC_KeyManager_Certificate_GetSanDnsNames(const SOPC_Certific
 
     uint32_t arrayLength = 0;
     char** dnsNameArray = NULL;
+    SOPC_ReturnStatus status = SOPC_STATUS_OK;
 
     // Count the number of alternate DNS entries
     for (int i = 0; i < X509_MAX_SUBJECT_ALT_NAMES; i++)
@@ -1111,31 +1112,46 @@ SOPC_ReturnStatus SOPC_KeyManager_Certificate_GetSanDnsNames(const SOPC_Certific
     {
         // Create an array to store them
         dnsNameArray = SOPC_Calloc(arrayLength, sizeof(char*));
-        if (NULL == dnsNameArray)
-        {
-            return SOPC_STATUS_OUT_OF_MEMORY;
-        }
-
+        status = (NULL == dnsNameArray ? SOPC_STATUS_OUT_OF_MEMORY : status);
         // Loop through and fill the array
         arrayLength = 0;
-        for (int i = 0; i < X509_MAX_SUBJECT_ALT_NAMES; i++)
+        for (int i = 0; i < X509_MAX_SUBJECT_ALT_NAMES && SOPC_STATUS_OK == status; i++)
         {
             if (X509_GENERAL_NAME_TYPE_DNS == pCert->crt.tbsCert.extensions.subjectAltName.generalNames[i].type)
             {
                 uint32_t len = (uint32_t) pCert->crt.tbsCert.extensions.subjectAltName.generalNames[i].length;
-                dnsNameArray[arrayLength] = SOPC_Malloc((size_t) len + 1);
-                strncpy(dnsNameArray[arrayLength], pCert->crt.tbsCert.extensions.subjectAltName.generalNames[i].value,
-                        len);
-                dnsNameArray[arrayLength][len] = '\0';
-                arrayLength++;
+                char* dnsName = SOPC_Malloc((size_t) len + 1);
+                status = (NULL == dnsName ? SOPC_STATUS_OUT_OF_MEMORY : status);
+                if (SOPC_STATUS_OK == status)
+                {
+                    strncpy(dnsName, pCert->crt.tbsCert.extensions.subjectAltName.generalNames[i].value, len);
+                    dnsName[len] = '\0';
+                    dnsNameArray[arrayLength] = dnsName;
+                    arrayLength++;
+                }
+                if (SOPC_STATUS_OK != status)
+                {
+                    SOPC_Free(dnsName);
+                }
             }
         }
+    }
+    if (SOPC_STATUS_OK != status && NULL != dnsNameArray)
+    {
+        // Clear the array already filled content
+        for (uint32_t j = 0; j < arrayLength; j++)
+        {
+            SOPC_Free(dnsNameArray[j]);
+        }
+        SOPC_Free(dnsNameArray);
+        dnsNameArray = NULL;
+        arrayLength = 0;
     }
 
     *ppDnsNameArray = dnsNameArray;
     *pArrayLength = arrayLength;
 
-    return SOPC_STATUS_OK;
+    return status;
 }
 
 /* Creates a new string. Later have to free the result */
