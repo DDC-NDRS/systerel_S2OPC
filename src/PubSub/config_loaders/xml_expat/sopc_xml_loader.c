@@ -268,7 +268,7 @@ static bool parse_signed64_value(const char* data, int64_t* dest)
     char buf[21];
     const size_t len = strlen(data);
 
-    if (NULL == dest || len > 21)
+    if (NULL == dest || len >= sizeof(buf))
     {
         return false;
     }
