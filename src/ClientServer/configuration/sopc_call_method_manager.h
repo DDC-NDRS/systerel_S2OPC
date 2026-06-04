@@ -58,7 +58,7 @@ typedef struct SOPC_MethodCallFunc SOPC_MethodCallFunc;
  *                        by the function
  * \param param           user defined parameter provided to ::SOPC_MethodCallManager_AddMethod
  *
- * \return status code of the function. Should be SOPC_STATUS_OK if succeeded.
+ * \return status code of the function. Should be SOPC_GoodGenericStatus if succeeded.
  */
 typedef SOPC_StatusCode SOPC_MethodCallFunc_Ptr(const SOPC_CallContext* callContextPtr,
                                                 const SOPC_NodeId* objectId,
