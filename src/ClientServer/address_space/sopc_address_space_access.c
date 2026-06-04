@@ -506,7 +506,7 @@ SOPC_StatusCode SOPC_AddressSpaceAccess_WriteValue(SOPC_AddressSpaceAccess* addS
                 return OpcUa_BadWriteNotSupported;
             }
         }
-        else if (SOPC_GoodGenericStatus != optStatus)
+        else if (SOPC_GoodGenericStatus != *optStatus)
         {
             char* statusStr = SOPC_StatusCodeToStringAlloc(*optStatus);
             char* nodeIdStr = SOPC_NodeId_ToCString(nodeId);
