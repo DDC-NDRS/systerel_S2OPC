@@ -762,16 +762,29 @@ static SOPC_ReturnStatus internal_compare_user_decrypted_password_nonce(const SO
     }
     if (SOPC_STATUS_OK == status)
     {
-        if (decryptedLength - ENCRYPTED_USER_IDENTITY_TOKEN_LENGTH_FIELD_SIZE != totalLength)
+        if (decryptedLength < ENCRYPTED_USER_IDENTITY_TOKEN_LENGTH_FIELD_SIZE ||
+            decryptedLength - ENCRYPTED_USER_IDENTITY_TOKEN_LENGTH_FIELD_SIZE != totalLength)
         {
             SOPC_Logger_TraceError(SOPC_LOG_MODULE_CLIENTSERVER,
                                    "Client user decryption: encoded length (%" PRIu32
                                    ") is not compatible with decryped length (%" PRIu32 " - 4)",
                                    totalLength, decryptedLength);
+            status = SOPC_STATUS_INVALID_PARAMETERS;
         }
     }
 
     // Compare server nonce
+    if (SOPC_STATUS_OK == status)
+    {
+        if (totalLength < lenNonce)
+        {
+            SOPC_Logger_TraceError(SOPC_LOG_MODULE_CLIENTSERVER,
+                                   "Client user decryption: encoded length (%" PRIu32
+                                   ") is smaller than server nonce length (%" PRIu32 ")",
+                                   totalLength, lenNonce);
+            status = SOPC_STATUS_INVALID_PARAMETERS;
+        }
+    }
     if (SOPC_STATUS_OK == status)
     {
         pwdLength = totalLength - lenNonce;
