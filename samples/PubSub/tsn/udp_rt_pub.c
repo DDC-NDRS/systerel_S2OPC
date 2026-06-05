@@ -106,6 +106,7 @@ static SOPC_Dataset_LL_NetworkMessage* UDP_Pub_Test_Get_NetworkMessage(void)
     SOPC_Dataset_LL_NetworkMessage_Set_GroupVersion(nm, 963852);
     SOPC_Dataset_LL_DataSetMsg_Set_WriterId(dsm, 123);
     SOPC_Dataset_LL_DataSetMsg_Set_ContentMask(dsm, &default_Uapd_DSM_Mask);
+    SOPC_Dataset_LL_DataSetMsg_Set_EnableEmission(dsm, true);
 
     SOPC_Variant variant;
     // variant 1
