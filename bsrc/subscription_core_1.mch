@@ -403,12 +403,13 @@ OPERATIONS
     END
     ;
 
-    set_subscription_state (p_subscription, p_state) =
+    set_subscription_state (p_subscription, p_state, p_transition) =
     PRE
         p_subscription : t_subscription_i &
         p_subscription : dom(a_subscription_state) &
         p_state : t_subscriptionState_i &
-        p_state : t_subscriptionState
+        p_state : t_subscriptionState &
+        p_transition : NAT
     THEN
         a_subscription_state (p_subscription) := p_state
     END
@@ -656,6 +657,36 @@ OPERATIONS
     THEN
         p_monitoredItemQueue :(p_monitoredItemQueue : t_monitoredItemQueue_i &
                                p_monitoredItemQueue = a_monitoredItemQueue(p_subscription))
+    END
+    ;
+
+    log_subscription_transition (p_subscription, p_old_state, p_new_state, p_transition) =
+    PRE
+        p_subscription : t_subscription_i &
+        p_subscription : s_subscription &
+        p_old_state : t_subscriptionState_i &
+        p_new_state : t_subscriptionState_i &
+        p_transition : NAT
+    THEN
+        skip
+    END
+    ;
+
+    log_subscription_request_received (p_subscription, p_transition) =
+    PRE
+        p_subscription : t_subscription_i &
+        p_subscription : s_subscription &
+        p_transition : NAT
+    THEN
+        skip
+    END
+    ;
+
+    log_subscription_request_received_invalid_on_session (p_subscription) =
+    PRE
+        p_subscription : t_subscription_i
+    THEN
+        skip
     END
 
 END

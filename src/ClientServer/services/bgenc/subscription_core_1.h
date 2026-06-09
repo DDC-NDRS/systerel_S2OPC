@@ -21,7 +21,7 @@
 
  File Name            : subscription_core_1.h
 
- Date                 : 09/03/2026 17:46:33
+ Date                 : 09/06/2026 14:37:47
 
  C Translator Version : tradc Java V1.2 (06/02/2022)
 
@@ -44,6 +44,7 @@
 #include "message_in_bs.h"
 #include "message_out_bs.h"
 #include "request_handle_bs.h"
+#include "subscription_core_bs.h"
 
 /*----------------------------
    CONCRETE_VARIABLES Clause
@@ -87,6 +88,11 @@ extern void subscription_core_1__INITIALISATION(void);
 extern void subscription_core_1__local_is_valid_subscription(
    const constants__t_subscription_i subscription_core_1__p_subscription,
    t_bool * const subscription_core_1__is_valid);
+extern void subscription_core_1__local_log_subscription_transition(
+   const constants__t_subscription_i subscription_core_1__p_subscription,
+   const constants__t_subscriptionState_i subscription_core_1__p_old_state,
+   const constants__t_subscriptionState_i subscription_core_1__p_new_state,
+   const t_entier4 subscription_core_1__p_transition);
 
 /*--------------------
    OPERATIONS Clause
@@ -188,6 +194,16 @@ extern void subscription_core_1__is_valid_subscription_on_session(
    const constants__t_session_i subscription_core_1__p_session,
    const constants__t_subscription_i subscription_core_1__p_subscription,
    t_bool * const subscription_core_1__is_valid);
+extern void subscription_core_1__log_subscription_request_received(
+   const constants__t_subscription_i subscription_core_1__p_subscription,
+   const t_entier4 subscription_core_1__p_transition);
+extern void subscription_core_1__log_subscription_request_received_invalid_on_session(
+   const constants__t_subscription_i subscription_core_1__p_subscription);
+extern void subscription_core_1__log_subscription_transition(
+   const constants__t_subscription_i subscription_core_1__p_subscription,
+   const constants__t_subscriptionState_i subscription_core_1__p_old_state,
+   const constants__t_subscriptionState_i subscription_core_1__p_new_state,
+   const t_entier4 subscription_core_1__p_transition);
 extern void subscription_core_1__reset_session_publishRequestQueue(
    const constants__t_session_i subscription_core_1__p_session);
 extern void subscription_core_1__reset_subscription_KeepAliveCounter(
@@ -224,7 +240,8 @@ extern void subscription_core_1__set_subscription_publishInterval(
    const constants__t_opcua_duration_i subscription_core_1__p_revPublishInterval);
 extern void subscription_core_1__set_subscription_state(
    const constants__t_subscription_i subscription_core_1__p_subscription,
-   const constants__t_subscriptionState_i subscription_core_1__p_state);
+   const constants__t_subscriptionState_i subscription_core_1__p_state,
+   const t_entier4 subscription_core_1__p_transition);
 extern void subscription_core_1__set_subscription_timer_id(
    const constants__t_subscription_i subscription_core_1__p_subscription,
    const constants__t_timer_id_i subscription_core_1__p_timer_id);

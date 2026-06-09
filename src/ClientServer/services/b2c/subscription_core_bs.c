@@ -270,3 +270,42 @@ void subscription_core_bs__get_next_subscription_sequence_number(
         *subscription_core_bs__p_next_seq_num = subscription_core_bs__p_prev_seq_num + 1;
     }
 }
+
+static const char* subscriptionStateToString(constants__t_subscriptionState_i state)
+{
+    switch (state)
+    {
+    case constants__e_subscriptionState_normal:
+        return "normal";
+    case constants__e_subscriptionState_late:
+        return "late";
+    case constants__e_subscriptionState_keepAlive:
+        return "keepAlive";
+    default:
+        return "indet";
+    }
+}
+
+void subscription_core_bs__trace_subscription_transition(
+    const constants__t_subscription_i subscription_core_bs__p_subscription,
+    const constants__t_subscriptionState_i subscription_core_bs__p_old_state,
+    const constants__t_subscriptionState_i subscription_core_bs__p_new_state,
+    const t_entier4 subscription_core_bs__p_transition,
+    const t_bool subscription_core_bs__p_moreNotifs,
+    const t_entier4 subscription_core_bs__p_lifetimeCounter,
+    const t_entier4 subscription_core_bs__p_keepAliveCounter,
+    const t_bool subscription_core_bs__p_messageSent,
+    const t_bool subscription_core_bs__p_publishingEnabled)
+{
+    SOPC_Logger_TraceDebug(SOPC_LOG_MODULE_CLIENTSERVER,
+                           "SubCore: sub=%" PRIu32 " transition #%" PRId32
+                           " state %s->%s | previous values: "
+                           "MoreNotifs=%s LifeCnt=%" PRId32 " KeepAliveCnt=%" PRId32 " MsgSent=%s PubEnabled=%s",
+                           subscription_core_bs__p_subscription, subscription_core_bs__p_transition,
+                           subscriptionStateToString(subscription_core_bs__p_old_state),
+                           subscriptionStateToString(subscription_core_bs__p_new_state),
+                           subscription_core_bs__p_moreNotifs ? "true" : "false",
+                           subscription_core_bs__p_lifetimeCounter, subscription_core_bs__p_keepAliveCounter,
+                           subscription_core_bs__p_messageSent ? "true" : "false",
+                           subscription_core_bs__p_publishingEnabled ? "true" : "false");
+}

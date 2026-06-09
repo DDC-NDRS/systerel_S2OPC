@@ -779,6 +779,7 @@ OPERATIONS
                     setall_msg_publish_resp_ack_result (p_resp_msg, l_index, e_sc_bad_sequence_number_unknown)
                 END
             ELSE
+                log_subscription_request_received_invalid_on_session (l_sub);
                 setall_msg_publish_resp_ack_result (p_resp_msg, l_index, e_sc_bad_subscription_id_invalid)
             END;
             l_index := l_index + 1
@@ -1403,6 +1404,7 @@ OPERATIONS
                 close_subscription (l_sub);
                 setall_msg_subscription_delete_subscriptions_resp_at_index (p_resp_msg, l_index, TRUE)
             ELSE
+                log_subscription_request_received_invalid_on_session (l_sub);
                 setall_msg_subscription_delete_subscriptions_resp_at_index (p_resp_msg, l_index, FALSE)
             END;
             l_index := l_index + 1
@@ -1427,9 +1429,11 @@ OPERATIONS
             l_is_valid <-- is_valid_subscription_on_session (p_session, l_sub);
             IF l_is_valid = TRUE
             THEN
+                log_subscription_request_received (l_sub, 19);
                 set_subscription_PublishingEnabled (l_sub, p_pub_enabled);
                 setall_msg_subscription_set_publishing_mode_resp_at_index (p_resp_msg, l_index, TRUE)
             ELSE
+                log_subscription_request_received_invalid_on_session (l_sub);
                 setall_msg_subscription_set_publishing_mode_resp_at_index (p_resp_msg, l_index, FALSE)
             END;
             l_index := l_index + 1
@@ -1532,7 +1536,6 @@ OPERATIONS
         l_is_valid <-- is_valid_subscription_on_session (p_session, l_sub);
         IF l_is_valid = TRUE
         THEN
-
             /* Compute revised parameters */
             l_revisedPublishInterval, l_revisedLifetimeCount, l_revisedMaxKeepAlive, l_revisedMaxNotificationsPerPublish
               <-- compute_create_subscription_revised_params (l_reqPublishInterval,
@@ -1557,6 +1560,7 @@ OPERATIONS
 
             StatusCode_service := e_sc_ok
         ELSE
+            log_subscription_request_received_invalid_on_session (l_sub);
             StatusCode_service := e_sc_bad_subscription_id_invalid
         END
     END
@@ -1716,11 +1720,14 @@ OPERATIONS
             reset_subscription_LifetimeCounter (l_sub);
             IF l_bres = TRUE
             THEN
+                log_subscription_request_received (l_sub, 20);
                 StatusCode_service <-- setall_msg_republish_response (p_resp_msg, l_notifMsg)
             ELSE
+                log_subscription_request_received (l_sub, 21);
                 StatusCode_service := e_sc_bad_message_not_available
             END
         ELSE
+            log_subscription_request_received_invalid_on_session (l_sub);
             StatusCode_service := e_sc_bad_subscription_id_invalid
         END
     END
@@ -1743,6 +1750,7 @@ OPERATIONS
             l_valid_subscription <-- is_valid_subscription_on_session (p_session, l_subscription);
             IF l_valid_subscription = TRUE
             THEN
+                log_subscription_request_received (l_subscription, 101); /* Virtual transition for create MI */
                 reset_subscription_LifetimeCounter (l_subscription);
                 l_bres <-- alloc_msg_create_monitored_items_resp_results (p_resp_msg, l_nb_monitored_items);
                 IF l_bres = TRUE
@@ -1755,6 +1763,7 @@ OPERATIONS
                     StatusCode_service := e_sc_bad_out_of_memory
                 END
             ELSE
+                log_subscription_request_received (l_subscription, 26);
                 StatusCode_service := e_sc_bad_subscription_id_invalid
             END
         ELSE
@@ -1778,6 +1787,7 @@ OPERATIONS
             l_valid_subscription <-- is_valid_subscription_on_session (p_session, l_subscription);
             IF l_valid_subscription = TRUE
             THEN
+                log_subscription_request_received (l_subscription, 102); /* Virtual transition for modify MI */
                 reset_subscription_LifetimeCounter (l_subscription);
                 l_bres <-- alloc_msg_modify_monitored_items_resp_results (p_resp_msg, l_nb_monitored_items);
                 IF l_bres = TRUE
@@ -1789,6 +1799,7 @@ OPERATIONS
                     StatusCode_service := e_sc_bad_out_of_memory
                 END
             ELSE
+                log_subscription_request_received (l_subscription, 26);
                 StatusCode_service := e_sc_bad_subscription_id_invalid
             END
         ELSE
@@ -1811,6 +1822,7 @@ OPERATIONS
             l_valid_subscription <-- is_valid_subscription_on_session (p_session, l_subscription);
             IF l_valid_subscription = TRUE
             THEN
+                log_subscription_request_received (l_subscription, 103); /* Virtual transition for delete MI */
                 reset_subscription_LifetimeCounter (l_subscription);
                 l_bres <-- alloc_msg_delete_monitored_items_resp_results (p_resp_msg, l_nb_monitored_items);
                 IF l_bres = TRUE
@@ -1821,6 +1833,7 @@ OPERATIONS
                     StatusCode_service := e_sc_bad_out_of_memory
                 END
             ELSE
+                log_subscription_request_received (l_subscription, 26);
                 StatusCode_service := e_sc_bad_subscription_id_invalid
             END
         ELSE
@@ -1844,6 +1857,7 @@ OPERATIONS
             l_valid_subscription <-- is_valid_subscription_on_session (p_session, l_subscription);
             IF l_valid_subscription = TRUE
             THEN
+                log_subscription_request_received (l_subscription, 104); /* Virtual transition for set monit mode MI */
                 reset_subscription_LifetimeCounter (l_subscription);
                 l_bres <-- alloc_msg_set_monit_mode_monitored_items_resp_results (p_resp_msg, l_nb_monitored_items);
                 IF l_bres = TRUE
@@ -1854,6 +1868,7 @@ OPERATIONS
                     StatusCode_service := e_sc_bad_out_of_memory
                 END
             ELSE
+                log_subscription_request_received (l_subscription, 26);
                 StatusCode_service := e_sc_bad_subscription_id_invalid
             END
         ELSE

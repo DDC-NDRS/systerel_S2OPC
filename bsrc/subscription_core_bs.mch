@@ -139,5 +139,30 @@ OPERATIONS
     THEN
         p_next_seq_num :(p_next_seq_num : t_sub_seq_num_i & p_next_seq_num : t_sub_seq_num)
     END
+    ;
+
+    trace_subscription_transition (p_subscription,
+                                   p_old_state,
+                                   p_new_state,
+                                   p_transition,
+                                   p_moreNotifs,
+                                   p_lifetimeCounter,
+                                   p_keepAliveCounter,
+                                   p_messageSent,
+                                   p_publishingEnabled) =
+    PRE
+        p_subscription : t_subscription_i &
+        p_subscription : t_subscription &
+        p_old_state : t_subscriptionState_i &
+        p_new_state : t_subscriptionState_i &
+        p_transition : NAT &
+        p_moreNotifs : BOOL &
+        p_lifetimeCounter : t_counter &
+        p_keepAliveCounter : t_counter &
+        p_messageSent : BOOL &
+        p_publishingEnabled : BOOL
+    THEN
+        skip
+    END
 
 END

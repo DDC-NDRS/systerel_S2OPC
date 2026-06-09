@@ -29,7 +29,8 @@ SEES
     message_out_bs,
     message_in_bs,
     channel_mgr,
-    constants_statuscodes_bs
+    constants_statuscodes_bs,
+    subscription_core_bs
 
 CONCRETE_VARIABLES
     s_subscription_i,
@@ -219,6 +220,18 @@ LOCAL_OPERATIONS
     THEN
         is_valid := s_subscription_i(p_subscription)
     END
+    ;
+
+    local_log_subscription_transition (p_subscription, p_old_state, p_new_state, p_transition) =
+    PRE
+        p_subscription : t_subscription_i &
+        p_subscription : t_subscription &
+        p_old_state : t_subscriptionState_i &
+        p_new_state : t_subscriptionState_i &
+        p_transition : NAT
+    THEN
+        skip
+    END
 
 
 OPERATIONS
@@ -235,6 +248,31 @@ OPERATIONS
         THEN
             is_valid := s_subscription_i(p_subscription)
         END
+    END
+    ;
+
+    local_log_subscription_transition (p_subscription, p_old_state, p_new_state, p_transition) =
+    VAR
+        l_moreNotifs,
+        l_lifetimeCounter,
+        l_keepAliveCounter,
+        l_messageSent,
+        l_publishingEnabled
+    IN
+        l_moreNotifs := a_MoreNotifications_i(p_subscription);
+        l_lifetimeCounter := a_LifetimeCounter_i(p_subscription);
+        l_keepAliveCounter := a_KeepAliveCounter_i(p_subscription);
+        l_messageSent := a_MessageSent_i(p_subscription);
+        l_publishingEnabled := a_PublishingEnabled_i(p_subscription);
+        trace_subscription_transition (p_subscription,
+                                       p_old_state,
+                                       p_new_state,
+                                       p_transition,
+                                       l_moreNotifs,
+                                       l_lifetimeCounter,
+                                       l_keepAliveCounter,
+                                       l_messageSent,
+                                       l_publishingEnabled)
     END
     ;
 
@@ -361,6 +399,7 @@ OPERATIONS
             a_notifRepublishQueue_i(p_subscription) := p_republishQueue;
             a_monitoredItemQueue_i(p_subscription) := p_monitoredItemQueue;
             a_publishTimer_i(p_subscription) := p_timerId;
+            local_log_subscription_transition (p_subscription, c_subscriptionState_indet, p_state, 3);
 
             l_prio_idx := a_session_priority_idx_i(p_session)(p_priority);
             IF l_prio_idx = 0 THEN
@@ -463,6 +502,7 @@ OPERATIONS
 
     delete_subscription (p_subscription) =
     VAR
+        l_old_state,
         l_prio,
         l_session,
         l_priority,
@@ -478,6 +518,8 @@ OPERATIONS
         l_sub_idx,
         l_sub
     IN
+        l_old_state := a_subscription_state_i(p_subscription);
+        local_log_subscription_transition (p_subscription, l_old_state, c_subscriptionState_indet, 25);
         s_subscription_i(p_subscription) := FALSE;
         a_subscription_state_i(p_subscription) := c_subscriptionState_indet;
 
@@ -606,8 +648,12 @@ OPERATIONS
     END
     ;
 
-    set_subscription_state (p_subscription, p_state) =
-    BEGIN
+    set_subscription_state (p_subscription, p_state, p_transition) =
+    VAR
+        l_old_state
+    IN
+        l_old_state := a_subscription_state_i(p_subscription);
+        local_log_subscription_transition (p_subscription, l_old_state, p_state, p_transition);
         a_subscription_state_i(p_subscription) := p_state
     END
     ;
@@ -751,6 +797,35 @@ OPERATIONS
     p_monitoredItemQueue <-- get_subscription_monitoredItemQueue (p_subscription) =
     BEGIN
         p_monitoredItemQueue := a_monitoredItemQueue_i(p_subscription)
+    END
+    ;
+
+    log_subscription_transition (p_subscription, p_old_state, p_new_state, p_transition) =
+    BEGIN
+        local_log_subscription_transition (p_subscription, p_old_state, p_new_state, p_transition)
+    END
+    ;
+
+    log_subscription_request_received (p_subscription, p_transition) =
+    VAR
+        l_state
+    IN
+        l_state := a_subscription_state_i(p_subscription);
+        local_log_subscription_transition (p_subscription, l_state, l_state, p_transition)
+    END
+    ;
+
+    log_subscription_request_received_invalid_on_session (p_subscription) =
+    BEGIN
+            trace_subscription_transition (p_subscription,
+                                           c_subscriptionState_indet,
+                                           c_subscriptionState_indet,
+                                           26,
+                                           FALSE,
+                                           0,
+                                           0,
+                                           FALSE,
+                                           FALSE)
     END
 
 END

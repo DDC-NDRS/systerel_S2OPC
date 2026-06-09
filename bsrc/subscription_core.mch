@@ -465,6 +465,24 @@ OPERATIONS
     END
     ;
 
+    log_subscription_request_received (p_subscription, p_transition) =
+    PRE
+        p_subscription : t_subscription_i &
+        p_subscription : s_subscription &
+        p_transition : NAT
+    THEN
+        skip
+    END
+    ;
+
+    log_subscription_request_received_invalid_on_session (p_subscription) =
+    PRE
+        p_subscription : t_subscription_i
+    THEN
+        skip
+    END
+    ;
+
     set_subscription_PublishingEnabled (p_subscription, p_pubEnabled) =
     PRE
         p_subscription : t_subscription_i &

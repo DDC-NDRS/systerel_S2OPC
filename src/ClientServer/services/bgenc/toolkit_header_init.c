@@ -21,7 +21,7 @@
 
  File Name            : toolkit_header_init.c
 
- Date                 : 19/02/2026 16:51:30
+ Date                 : 09/06/2026 08:48:11
 
  C Translator Version : tradc Java V1.2 (06/02/2022)
 
@@ -347,9 +347,9 @@ void INITIALISATION(void) {
    translate_browse_path__INITIALISATION();
    translate_browse_path_it__INITIALISATION();
    service_set_view__INITIALISATION();
-   subscription_core_1__INITIALISATION();
    monitored_item_queue_bs__INITIALISATION();
    subscription_core_bs__INITIALISATION();
+   subscription_core_1__INITIALISATION();
    subscription_core_it__INITIALISATION();
    monitored_item_notification_queue_bs__INITIALISATION();
    monitored_item_pointer_bs__INITIALISATION();

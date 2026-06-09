@@ -21,7 +21,7 @@
 
  File Name            : subscription_core_bs.h
 
- Date                 : 15/01/2026 14:05:59
+ Date                 : 09/06/2026 12:57:37
 
  C Translator Version : tradc Java V1.2 (06/02/2022)
 
@@ -78,5 +78,15 @@ extern void subscription_core_bs__modify_publish_timer_period(
    const constants__t_timer_id_i subscription_core_bs__p_timerId,
    const constants__t_opcua_duration_i subscription_core_bs__p_revPublishInterval);
 extern void subscription_core_bs__subscription_core_bs_UNINITIALISATION(void);
+extern void subscription_core_bs__trace_subscription_transition(
+   const constants__t_subscription_i subscription_core_bs__p_subscription,
+   const constants__t_subscriptionState_i subscription_core_bs__p_old_state,
+   const constants__t_subscriptionState_i subscription_core_bs__p_new_state,
+   const t_entier4 subscription_core_bs__p_transition,
+   const t_bool subscription_core_bs__p_moreNotifs,
+   const t_entier4 subscription_core_bs__p_lifetimeCounter,
+   const t_entier4 subscription_core_bs__p_keepAliveCounter,
+   const t_bool subscription_core_bs__p_messageSent,
+   const t_bool subscription_core_bs__p_publishingEnabled);
 
 #endif

@@ -21,7 +21,7 @@
 
  File Name            : subscription_core_1.c
 
- Date                 : 19/03/2026 09:09:37
+ Date                 : 09/06/2026 14:37:47
 
  C Translator Version : tradc Java V1.2 (06/02/2022)
 
@@ -266,6 +266,35 @@ void subscription_core_1__local_is_valid_subscription(
    }
 }
 
+void subscription_core_1__local_log_subscription_transition(
+   const constants__t_subscription_i subscription_core_1__p_subscription,
+   const constants__t_subscriptionState_i subscription_core_1__p_old_state,
+   const constants__t_subscriptionState_i subscription_core_1__p_new_state,
+   const t_entier4 subscription_core_1__p_transition) {
+   {
+      t_bool subscription_core_1__l_moreNotifs;
+      t_entier4 subscription_core_1__l_lifetimeCounter;
+      t_entier4 subscription_core_1__l_keepAliveCounter;
+      t_bool subscription_core_1__l_messageSent;
+      t_bool subscription_core_1__l_publishingEnabled;
+      
+      subscription_core_1__l_moreNotifs = subscription_core_1__a_MoreNotifications_i[subscription_core_1__p_subscription];
+      subscription_core_1__l_lifetimeCounter = subscription_core_1__a_LifetimeCounter_i[subscription_core_1__p_subscription];
+      subscription_core_1__l_keepAliveCounter = subscription_core_1__a_KeepAliveCounter_i[subscription_core_1__p_subscription];
+      subscription_core_1__l_messageSent = subscription_core_1__a_MessageSent_i[subscription_core_1__p_subscription];
+      subscription_core_1__l_publishingEnabled = subscription_core_1__a_PublishingEnabled_i[subscription_core_1__p_subscription];
+      subscription_core_bs__trace_subscription_transition(subscription_core_1__p_subscription,
+         subscription_core_1__p_old_state,
+         subscription_core_1__p_new_state,
+         subscription_core_1__p_transition,
+         subscription_core_1__l_moreNotifs,
+         subscription_core_1__l_lifetimeCounter,
+         subscription_core_1__l_keepAliveCounter,
+         subscription_core_1__l_messageSent,
+         subscription_core_1__l_publishingEnabled);
+   }
+}
+
 void subscription_core_1__is_valid_subscription_on_session(
    const constants__t_session_i subscription_core_1__p_session,
    const constants__t_subscription_i subscription_core_1__p_subscription,
@@ -397,6 +426,10 @@ void subscription_core_1__add_subscription(
          subscription_core_1__a_notifRepublishQueue_i[subscription_core_1__p_subscription] = subscription_core_1__p_republishQueue;
          subscription_core_1__a_monitoredItemQueue_i[subscription_core_1__p_subscription] = subscription_core_1__p_monitoredItemQueue;
          subscription_core_1__a_publishTimer_i[subscription_core_1__p_subscription] = subscription_core_1__p_timerId;
+         subscription_core_1__local_log_subscription_transition(subscription_core_1__p_subscription,
+            constants__c_subscriptionState_indet,
+            subscription_core_1__p_state,
+            3);
          subscription_core_1__l_prio_idx = subscription_core_1__a_session_priority_idx_i[subscription_core_1__p_session][subscription_core_1__p_priority];
          if (subscription_core_1__l_prio_idx == 0) {
             subscription_core_1__l_nb_prio = subscription_core_1__a_session_nb_priorities_i[subscription_core_1__p_session];
@@ -471,6 +504,7 @@ void subscription_core_1__add_subscription(
 void subscription_core_1__delete_subscription(
    const constants__t_subscription_i subscription_core_1__p_subscription) {
    {
+      constants__t_subscriptionState_i subscription_core_1__l_old_state;
       t_entier4 subscription_core_1__l_prio;
       constants__t_session_i subscription_core_1__l_session;
       t_entier4 subscription_core_1__l_priority;
@@ -486,6 +520,11 @@ void subscription_core_1__delete_subscription(
       t_entier4 subscription_core_1__l_sub_idx;
       constants__t_subscription_i subscription_core_1__l_sub;
       
+      subscription_core_1__l_old_state = subscription_core_1__a_subscription_state_i[subscription_core_1__p_subscription];
+      subscription_core_1__local_log_subscription_transition(subscription_core_1__p_subscription,
+         subscription_core_1__l_old_state,
+         constants__c_subscriptionState_indet,
+         25);
       subscription_core_1__s_subscription_i[subscription_core_1__p_subscription] = false;
       subscription_core_1__a_subscription_state_i[subscription_core_1__p_subscription] = constants__c_subscriptionState_indet;
       subscription_core_1__l_session = subscription_core_1__a_subscription_session_i[subscription_core_1__p_subscription];
@@ -605,8 +644,18 @@ void subscription_core_1__get_subscription_timer_id(
 
 void subscription_core_1__set_subscription_state(
    const constants__t_subscription_i subscription_core_1__p_subscription,
-   const constants__t_subscriptionState_i subscription_core_1__p_state) {
-   subscription_core_1__a_subscription_state_i[subscription_core_1__p_subscription] = subscription_core_1__p_state;
+   const constants__t_subscriptionState_i subscription_core_1__p_state,
+   const t_entier4 subscription_core_1__p_transition) {
+   {
+      constants__t_subscriptionState_i subscription_core_1__l_old_state;
+      
+      subscription_core_1__l_old_state = subscription_core_1__a_subscription_state_i[subscription_core_1__p_subscription];
+      subscription_core_1__local_log_subscription_transition(subscription_core_1__p_subscription,
+         subscription_core_1__l_old_state,
+         subscription_core_1__p_state,
+         subscription_core_1__p_transition);
+      subscription_core_1__a_subscription_state_i[subscription_core_1__p_subscription] = subscription_core_1__p_state;
+   }
 }
 
 void subscription_core_1__get_subscription_state(
@@ -747,5 +796,43 @@ void subscription_core_1__get_subscription_monitoredItemQueue(
    const constants__t_subscription_i subscription_core_1__p_subscription,
    constants__t_monitoredItemQueue_i * const subscription_core_1__p_monitoredItemQueue) {
    *subscription_core_1__p_monitoredItemQueue = subscription_core_1__a_monitoredItemQueue_i[subscription_core_1__p_subscription];
+}
+
+void subscription_core_1__log_subscription_transition(
+   const constants__t_subscription_i subscription_core_1__p_subscription,
+   const constants__t_subscriptionState_i subscription_core_1__p_old_state,
+   const constants__t_subscriptionState_i subscription_core_1__p_new_state,
+   const t_entier4 subscription_core_1__p_transition) {
+   subscription_core_1__local_log_subscription_transition(subscription_core_1__p_subscription,
+      subscription_core_1__p_old_state,
+      subscription_core_1__p_new_state,
+      subscription_core_1__p_transition);
+}
+
+void subscription_core_1__log_subscription_request_received(
+   const constants__t_subscription_i subscription_core_1__p_subscription,
+   const t_entier4 subscription_core_1__p_transition) {
+   {
+      constants__t_subscriptionState_i subscription_core_1__l_state;
+      
+      subscription_core_1__l_state = subscription_core_1__a_subscription_state_i[subscription_core_1__p_subscription];
+      subscription_core_1__local_log_subscription_transition(subscription_core_1__p_subscription,
+         subscription_core_1__l_state,
+         subscription_core_1__l_state,
+         subscription_core_1__p_transition);
+   }
+}
+
+void subscription_core_1__log_subscription_request_received_invalid_on_session(
+   const constants__t_subscription_i subscription_core_1__p_subscription) {
+   subscription_core_bs__trace_subscription_transition(subscription_core_1__p_subscription,
+      constants__c_subscriptionState_indet,
+      constants__c_subscriptionState_indet,
+      26,
+      false,
+      0,
+      0,
+      false,
+      false);
 }
 

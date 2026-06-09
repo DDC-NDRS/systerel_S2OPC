@@ -21,7 +21,7 @@
 
  File Name            : subscription_core.h
 
- Date                 : 03/03/2026 16:24:20
+ Date                 : 09/06/2026 14:37:47
 
  C Translator Version : tradc Java V1.2 (06/02/2022)
 
@@ -107,6 +107,8 @@ extern void subscription_core__INITIALISATION(void);
 #define subscription_core__is_notification_triggered monitored_item_pointer_bs__is_notification_triggered
 #define subscription_core__is_valid_subscription subscription_core_1__is_valid_subscription
 #define subscription_core__is_valid_subscription_on_session subscription_core_1__is_valid_subscription_on_session
+#define subscription_core__log_subscription_request_received subscription_core_1__log_subscription_request_received
+#define subscription_core__log_subscription_request_received_invalid_on_session subscription_core_1__log_subscription_request_received_invalid_on_session
 #define subscription_core__reset_subscription_LifetimeCounter subscription_core_1__reset_subscription_LifetimeCounter
 #define subscription_core__set_msg_publish_resp_notificationMsg msg_subscription_publish_bs__set_msg_publish_resp_notificationMsg
 #define subscription_core__set_msg_publish_resp_subscription msg_subscription_publish_bs__set_msg_publish_resp_subscription

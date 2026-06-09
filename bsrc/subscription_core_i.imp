@@ -55,6 +55,8 @@ PROMOTES
     reset_subscription_LifetimeCounter,
     set_subscription_PublishingEnabled,
     get_subscription_notifRepublishQueue,
+    log_subscription_request_received,
+    log_subscription_request_received_invalid_on_session,
     /* subscription_core_bs */
     compute_create_subscription_revised_params,
     get_nodeToMonitoredItemQueue,
@@ -1274,6 +1276,8 @@ OPERATIONS
         l_statusCode
     IN
         l_state := c_subscriptionState_indet; /* Necessary for an issue in B to c translator (undeclared) */
+        l_state <-- get_subscription_state (p_subscription);
+        log_subscription_transition (p_subscription, l_state, l_state, 18);
         l_old_priority <-- get_subscription_priority(p_subscription);
         l_timerId <-- get_subscription_timer_id (p_subscription);
         IF l_old_priority = p_priority
@@ -1291,7 +1295,6 @@ OPERATIONS
             l_republishQueue <-- get_subscription_notifRepublishQueue (p_subscription);
             l_monitoredItemQueue <-- get_subscription_monitoredItemQueue (p_subscription);
             l_seqNum <-- get_subscription_SeqNum (p_subscription);
-            l_state <-- get_subscription_state (p_subscription);
             l_firstMsgSent <-- get_subscription_MessageSent (p_subscription);
             delete_subscription (p_subscription);
             l_statusCode <--
@@ -1369,6 +1372,12 @@ OPERATIONS
            or
            l_subscriptionState = e_subscriptionState_keepAlive
         THEN
+            IF l_subscriptionState = e_subscriptionState_keepAlive
+            THEN
+                log_subscription_transition (p_subscription, e_subscriptionState_keepAlive, e_subscriptionState_keepAlive, 13)
+            ELSE
+                log_subscription_transition (p_subscription, e_subscriptionState_normal, e_subscriptionState_normal, 4)
+            END;
             async_resp_msg := TRUE;
             StatusCode_service := e_sc_ok
         /* #5 transition */
@@ -1377,7 +1386,7 @@ OPERATIONS
         THEN
             /* reset lifetime counter */
             reset_subscription_LifetimeCounter (p_subscription);
-
+            log_subscription_transition (p_subscription, e_subscriptionState_normal, e_subscriptionState_normal, 5);
             d_send_notification_msg (p_subscription, p_resp_msg, l_notifRepublishQueue,
                                      l_nb_avail_data_notifs, l_nb_avail_event_notifs, moreNotifs,
                                      StatusCode_service)
@@ -1387,7 +1396,7 @@ OPERATIONS
               l_PublishingEnabled = TRUE &
               (l_MoreNotifications = TRUE or l_NotificationAvailable = TRUE)
         THEN
-            set_subscription_state (p_subscription, e_subscriptionState_normal);
+            set_subscription_state (p_subscription, e_subscriptionState_normal, 10);
 
             /* Note: Idem previous transition below: */
 
@@ -1407,13 +1416,14 @@ OPERATIONS
                l_MoreNotifications = FALSE)
              )
         THEN
-            set_subscription_state (p_subscription, e_subscriptionState_keepAlive);
+            set_subscription_state (p_subscription, e_subscriptionState_keepAlive, 11);
 
             /* reset lifetime counter */
             reset_subscription_LifetimeCounter (p_subscription);
             reset_subscription_KeepAliveCounter (p_subscription);
             d_send_keepalive_msg (p_subscription, p_resp_msg, StatusCode_service)
         ELSE
+            log_subscription_transition (p_subscription, l_subscriptionState, l_subscriptionState, 0);
             StatusCode_service := e_sc_bad_invalid_state
         END
     END
@@ -1762,8 +1772,11 @@ OPERATIONS
     p_close_sub, p_msg_to_send, p_publish_resp_msg, p_req_handle, p_req_context, p_validPubReqQueued
       <-- server_subscription_core_publish_timeout_check_lifetime (p_session, p_subscription) =
     VAR
+        l_state,
         l_lifetimeCounter
     IN
+        l_state := c_subscriptionState_indet; /* Necessary for an issue in B to c translator (undeclared) */
+        l_state <-- get_subscription_state (p_subscription);
         /* #27 transition evaluation */
         p_close_sub := FALSE;
         p_msg_to_send := FALSE;
@@ -1777,7 +1790,8 @@ OPERATIONS
             l_lifetimeCounter <-- get_subscription_LifetimeCounter (p_subscription);
             IF l_lifetimeCounter <= 1
             THEN
-                p_close_sub := TRUE
+                p_close_sub := TRUE;
+                log_subscription_transition (p_subscription, l_state, l_state, 27)
             ELSE
                 decrement_subscription_LifetimeCounter (p_subscription)
             END
@@ -1835,6 +1849,7 @@ OPERATIONS
             l_PublishingEnabled = TRUE &
             l_NotificationAvailable = TRUE
         THEN
+            log_subscription_transition (p_subscription, e_subscriptionState_normal, e_subscriptionState_normal, 6);
             /* Note: same treatment as #14 below ! */
 
             /* reset lifetime counter */
@@ -1858,6 +1873,7 @@ OPERATIONS
                  l_NotificationAvailable = FALSE)
               )
         THEN
+            log_subscription_transition (p_subscription, e_subscriptionState_normal, e_subscriptionState_normal, 7);
             /* reset lifetime counter */
             reset_subscription_LifetimeCounter (p_subscription);
             /* retrieve a valid publish response */
@@ -1877,7 +1893,7 @@ OPERATIONS
                 l_NotificationAvailable = TRUE)
               )
         THEN
-            set_subscription_state (p_subscription, e_subscriptionState_late)
+            set_subscription_state (p_subscription, e_subscriptionState_late, 8)
 
         /* #9 transition */
         ELSIF l_State = e_subscriptionState_normal &
@@ -1888,14 +1904,15 @@ OPERATIONS
                 l_NotificationAvailable = FALSE)
               )
         THEN
-            set_subscription_state (p_subscription, e_subscriptionState_keepAlive);
+            set_subscription_state (p_subscription, e_subscriptionState_keepAlive, 9);
             reset_subscription_KeepAliveCounter (p_subscription);
             decrement_subscription_KeepAliveCounter (p_subscription)
 
         /* #12 transition */
         ELSIF l_State = e_subscriptionState_late
         THEN
-            skip /* Nothing to do: lifetime already checked */
+            log_subscription_transition (p_subscription, e_subscriptionState_late, e_subscriptionState_late, 12)
+            /* Nothing to do: lifetime already checked */
         /* #14 transition */
         ELSIF l_pubQueueValid = TRUE &
               l_State = e_subscriptionState_keepAlive &
@@ -1903,7 +1920,7 @@ OPERATIONS
               l_NotificationAvailable = TRUE &
               p_validPublishReqQueued = TRUE
         THEN
-            set_subscription_state (p_subscription, e_subscriptionState_normal);
+            set_subscription_state (p_subscription, e_subscriptionState_normal, 14);
 
             /* Note: same treatment as #7 below ! */
             /* reset lifetime counter */
@@ -1929,6 +1946,7 @@ OPERATIONS
                 l_NotificationAvailable = FALSE)
               )
         THEN
+            log_subscription_transition (p_subscription, e_subscriptionState_keepAlive, e_subscriptionState_keepAlive, 15);
             reset_subscription_KeepAliveCounter (p_subscription);
 
             /* Note: same treatment as #7 below ! */
@@ -1949,6 +1967,7 @@ OPERATIONS
                 l_NotificationAvailable = FALSE)
               )
         THEN
+            log_subscription_transition (p_subscription, e_subscriptionState_keepAlive, e_subscriptionState_keepAlive, 16);
             decrement_subscription_KeepAliveCounter (p_subscription)
 
         /* #17 transition */
@@ -1961,10 +1980,10 @@ OPERATIONS
                 l_NotificationAvailable = TRUE)
               )
         THEN
-            set_subscription_state (p_subscription, e_subscriptionState_late)
+            set_subscription_state (p_subscription, e_subscriptionState_late, 17)
         ELSE
+            log_subscription_transition (p_subscription, l_State, l_State, 0);
             skip
-            /* TODO: invalid state evaluation: generate log error trace */
         END
     END
     ;
@@ -1985,11 +2004,15 @@ OPERATIONS
         l_notifMsg,
         l_seq_num,
         l_next_seq_num,
+        l_state,
         l_notifRepublishQueue
     IN
+        l_state := c_subscriptionState_indet; /* Necessary for an issue in B to c translator (undeclared) */
+        l_state <-- get_subscription_state (p_subscription);
         p_moreNotifs := FALSE;
         p_msg_to_send := TRUE;
-
+        /* Trace a transition #5(0) since it is not an expected case in standard, similar to transition #5 */
+        log_subscription_transition (p_subscription, l_state, l_state, 50);
         l_pubQueueValid, l_PublishingReqQueue <-- get_session_publishRequestQueue (p_session);
         l_nb_avail_data_notifs, l_nb_avail_event_notifs <-- local_subscription_nb_available_notifications (p_subscription);
         l_max_configured_notifications <-- get_subscription_MaxNotifsPerPublish (p_subscription);
