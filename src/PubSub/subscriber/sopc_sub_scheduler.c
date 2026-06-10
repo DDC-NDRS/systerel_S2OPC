@@ -294,6 +294,9 @@ static struct
     /* Minimum timeout over all Subscriber DSM. This is used as a sleep parameter which has millisecond resolution */
     uint32_t minTimeoutSubMs;
 
+    /* Clock used to update and check DSM Timeout */
+    SOPC_HighRes_TimeReference* timeoutClockReference;
+
 } schedulerCtx = {.isStarted = false,
                   .processingStartStop = false,
 
@@ -316,7 +319,8 @@ static struct
                   .securityCtx = NULL,
                   .writerCtx = NULL,
                   .dsmSnGapCallback = NULL,
-                  .minTimeoutSubMs = 0};
+                  .minTimeoutSubMs = 0,
+                  .timeoutClockReference = NULL};
 
 // Update the state of a single DSM
 static void SOPC_SubScheduler_UpdateDsmState(SOPC_SubScheduler_Writer_Ctx* ctx, SOPC_PubSubState new)
@@ -528,6 +532,8 @@ static SOPC_ReturnStatus on_message_received(SOPC_PubSubConnection* pDecoderCont
 
 static void uninit_sub_scheduler_ctx(void)
 {
+    SOPC_HighRes_TimeReference_Delete(&schedulerCtx.timeoutClockReference);
+    schedulerCtx.timeoutClockReference = NULL;
     schedulerCtx.config = NULL;
     schedulerCtx.targetConfig = NULL;
     schedulerCtx.pStateCallback = NULL;
@@ -600,15 +606,20 @@ static SOPC_ReturnStatus init_sub_scheduler_ctx(SOPC_PubSubConfiguration* config
     SOPC_ASSERT(nb_connections > 0);
 
     SOPC_ReturnStatus status = SOPC_STATUS_OK;
-    SOPC_HighRes_TimeReference* now = SOPC_HighRes_TimeReference_Create();
+    SOPC_ASSERT(NULL == schedulerCtx.timeoutClockReference);
+    schedulerCtx.timeoutClockReference = SOPC_HighRes_TimeReference_Create();
+    status = (NULL != schedulerCtx.timeoutClockReference ? status : SOPC_STATUS_OUT_OF_MEMORY);
 
-    schedulerCtx.config = config;
-    schedulerCtx.targetConfig = targetConfig;
-    schedulerCtx.pStateCallback = pStateChangedCb;
-    schedulerCtx.dsmSnGapCallback = dsmSnGapCb;
+    if (SOPC_STATUS_OK == status)
+    {
+        schedulerCtx.config = config;
+        schedulerCtx.targetConfig = targetConfig;
+        schedulerCtx.pStateCallback = pStateChangedCb;
+        schedulerCtx.dsmSnGapCallback = dsmSnGapCb;
 
-    schedulerCtx.receptionBufferSockets = SOPC_Buffer_Create(SOPC_PUBSUB_BUFFER_SIZE);
-    status = (NULL != schedulerCtx.receptionBufferSockets ? status : SOPC_STATUS_OUT_OF_MEMORY);
+        schedulerCtx.receptionBufferSockets = SOPC_Buffer_Create(SOPC_PUBSUB_BUFFER_SIZE);
+        status = (NULL != schedulerCtx.receptionBufferSockets ? status : SOPC_STATUS_OUT_OF_MEMORY);
+    }
 
     if (SOPC_STATUS_OK == status)
     {
@@ -805,7 +816,6 @@ static SOPC_ReturnStatus init_sub_scheduler_ctx(SOPC_PubSubConfiguration* config
             }
         }
     }
-    SOPC_HighRes_TimeReference_Delete(&now);
 
     if (SOPC_STATUS_OK != status)
     {
@@ -901,7 +911,7 @@ void SOPC_SubScheduler_Stop(void)
 static uint32_t SOPC_Sub_TimeoutCheck(void* param)
 {
     SOPC_UNUSED_ARG(param);
-    SOPC_HighRes_TimeReference* now = SOPC_HighRes_TimeReference_Create();
+    SOPC_HighRes_TimeReference_GetTime(schedulerCtx.timeoutClockReference);
     uint32_t nextMinTimeoutMs = UINT32_MAX;
 
     const size_t nbCtx = SOPC_Array_Size(schedulerCtx.writerCtx);
@@ -913,7 +923,8 @@ static uint32_t SOPC_Sub_TimeoutCheck(void* param)
         if (ctx->connectionMode == SOPC_PubSubState_Operational)
         {
             // Check timeout for this DSM
-            const int64_t delta_us = SOPC_HighRes_TimeReference_DeltaUs(now, ctx->timeout);
+            const int64_t delta_us =
+                SOPC_HighRes_TimeReference_DeltaUs(schedulerCtx.timeoutClockReference, ctx->timeout);
             if (delta_us <= 0)
             {
                 if (ctx->pubId.type == SOPC_UInteger_PublisherId)
@@ -942,7 +953,8 @@ static uint32_t SOPC_Sub_TimeoutCheck(void* param)
             else
             {
                 int64_t delta_ms = delta_us / 1000;
-                // Check if this the smaller period of time to reach next timeout, then update next timeout evaluation.
+                // Check if this the smaller period of time to reach next timeout, then update next timeout
+                // evaluation.
                 if (delta_ms < UINT32_MAX && (uint32_t) delta_ms < nextMinTimeoutMs)
                 {
                     nextMinTimeoutMs = (uint32_t) delta_ms;
@@ -950,7 +962,6 @@ static uint32_t SOPC_Sub_TimeoutCheck(void* param)
             }
         }
     }
-    SOPC_HighRes_TimeReference_Delete(&now);
     return nextMinTimeoutMs;
 }
 
@@ -1143,20 +1154,21 @@ static void SOPC_UpdateDSMTimeout(const SOPC_Conf_PublisherId* pubId, const uint
     if (NULL != ctx)
     {
         // Create or restart timeout
-        SOPC_HighRes_TimeReference* now = SOPC_HighRes_TimeReference_Create();
-        SOPC_ASSERT(NULL != now);
-        SOPC_HighRes_TimeReference_AddSynchedDuration(now, (uint64_t) ctx->timeoutIntervalMs * 1000, -1);
+        SOPC_ASSERT(NULL != schedulerCtx.timeoutClockReference);
+        SOPC_HighRes_TimeReference_GetTime(schedulerCtx.timeoutClockReference);
+
+        SOPC_HighRes_TimeReference_AddSynchedDuration(schedulerCtx.timeoutClockReference,
+                                                      (uint64_t) ctx->timeoutIntervalMs * 1000, -1);
         if (NULL == ctx->timeout)
         {
             ctx->timeout = SOPC_HighRes_TimeReference_Create();
-            SOPC_HighRes_TimeReference_Copy(ctx->timeout, now);
+            SOPC_HighRes_TimeReference_Copy(ctx->timeout, schedulerCtx.timeoutClockReference);
         }
         else
         {
-            SOPC_HighRes_TimeReference_Copy(ctx->timeout, now);
+            SOPC_HighRes_TimeReference_Copy(ctx->timeout, schedulerCtx.timeoutClockReference);
         }
         SOPC_SubScheduler_UpdateDsmState(ctx, SOPC_PubSubState_Operational);
-        SOPC_HighRes_TimeReference_Delete(&now);
     }
 }
 
