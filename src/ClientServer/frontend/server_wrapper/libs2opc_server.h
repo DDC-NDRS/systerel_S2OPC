@@ -156,6 +156,7 @@ SOPC_ReturnStatus SOPC_ServerHelper_LocalServiceAsyncCustom(SOPC_LocalServiceAsy
  *
  * \param request   An instance of on of the following OPC UA request:
  *                  - ::OpcUa_AddNodesRequest
+ *                  - ::OpcUa_DeleteNodesRequest
  *                  - ::OpcUa_ReadRequest
  *                  - ::OpcUa_WriteRequest
  *                  - ::OpcUa_BrowseRequest
@@ -171,6 +172,7 @@ SOPC_ReturnStatus SOPC_ServerHelper_LocalServiceAsyncCustom(SOPC_LocalServiceAsy
  *
  * \param[out] response  Pointer into which instance of response complying with the OPC UA request is provided:
  *                     \li ::OpcUa_AddNodesResponse
+ *                     \li ::OpcUa_DeleteNodesResponse
  *                     \li ::OpcUa_ReadResponse
  *                     \li ::OpcUa_WriteResponse
  *                     \li ::OpcUa_BrowseResponse
