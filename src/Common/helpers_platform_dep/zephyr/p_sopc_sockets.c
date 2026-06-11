@@ -37,6 +37,7 @@
 #include "p_sopc_multicast.h"
 #include "p_sopc_sockets.h"
 #include "sopc_assert.h"
+#include "sopc_helper_string.h"
 #include "sopc_raw_sockets.h"
 
 // #define SOCKETS_DEBUG printk
@@ -270,6 +271,11 @@ SOPC_ReturnStatus SOPC_SocketAddress_GetNameInfo(const SOPC_Socket_Address* addr
         if (0 != res)
         {
             status = SOPC_STATUS_NOK;
+        }
+        else if (NULL != hostRes)
+        {
+            /* Render IPv4-mapped IPv6 peers (dual-stack sockets) as plain IPv4, uniformly across platforms. */
+            SOPC_StrNormalizeIPv4MappedAddress(hostRes);
         }
     }
     if (SOPC_STATUS_OK != status)

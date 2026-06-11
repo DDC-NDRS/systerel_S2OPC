@@ -494,3 +494,20 @@ int SOPC_memcmp_constantTime(const void* a, const void* b, size_t len)
     return (int) ((diff & 0xffff) | (diff >> 16));
 #endif
 }
+
+void SOPC_StrNormalizeIPv4MappedAddress(char* address)
+{
+    /* IPv4-mapped IPv6 textual prefix, matched case-insensitively ("::ffff:" on glibc/Windows, "::FFFF:" on lwIP). */
+    static const char v4MappedPrefix[] = "::ffff:";
+    const size_t prefixLen = sizeof(v4MappedPrefix) - 1;
+    if (NULL == address)
+    {
+        return;
+    }
+    /* Only "::ffff:" immediately followed by a dotted-decimal IPv4 (hence the '.' check) is an IPv4-mapped address. */
+    if (0 == SOPC_strncmp_ignore_case(address, v4MappedPrefix, prefixLen) && NULL != strchr(&address[prefixLen], '.'))
+    {
+        /* Drop the prefix: shift the trailing IPv4 (including its '\0' terminator) to the start of the buffer. */
+        memmove(address, &address[prefixLen], strlen(&address[prefixLen]) + 1);
+    }
+}

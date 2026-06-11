@@ -5202,6 +5202,58 @@ START_TEST(test_get_random)
 END_TEST
 #endif
 
+START_TEST(test_normalize_ipv4_mapped_address)
+{
+    char buf[64];
+
+    /* An IPv4-mapped IPv6 address is rewritten to plain IPv4, whatever the case of the "ffff" group. */
+    strcpy(buf, "::ffff:192.168.56.1"); /* lowercase prefix: glibc / Windows */
+    SOPC_StrNormalizeIPv4MappedAddress(buf);
+    ck_assert_str_eq("192.168.56.1", buf);
+
+    strcpy(buf, "::FFFF:192.168.0.55"); /* uppercase prefix: lwIP */
+    SOPC_StrNormalizeIPv4MappedAddress(buf);
+    ck_assert_str_eq("192.168.0.55", buf);
+
+    strcpy(buf, "::FfFf:10.0.0.1"); /* mixed case prefix */
+    SOPC_StrNormalizeIPv4MappedAddress(buf);
+    ck_assert_str_eq("10.0.0.1", buf);
+
+    strcpy(buf, "::ffff:0.0.0.0"); /* edge values */
+    SOPC_StrNormalizeIPv4MappedAddress(buf);
+    ck_assert_str_eq("0.0.0.0", buf);
+
+    /* Genuine IPv4 and IPv6 addresses are left untouched. */
+    strcpy(buf, "192.168.0.55");
+    SOPC_StrNormalizeIPv4MappedAddress(buf);
+    ck_assert_str_eq("192.168.0.55", buf);
+
+    strcpy(buf, "fe80::1");
+    SOPC_StrNormalizeIPv4MappedAddress(buf);
+    ck_assert_str_eq("fe80::1", buf);
+
+    strcpy(buf, "::1");
+    SOPC_StrNormalizeIPv4MappedAddress(buf);
+    ck_assert_str_eq("::1", buf);
+
+    /* "::ffff:" not immediately followed by a dotted-decimal IPv4 is not an IPv4-mapped address: left untouched. */
+    strcpy(buf, "::ffff:");
+    SOPC_StrNormalizeIPv4MappedAddress(buf);
+    ck_assert_str_eq("::ffff:", buf);
+
+    strcpy(buf, "::ffff:1:2"); /* hexadecimal tail, no '.' */
+    SOPC_StrNormalizeIPv4MappedAddress(buf);
+    ck_assert_str_eq("::ffff:1:2", buf);
+
+    /* Strings shorter than the prefix and NULL must be handled safely. */
+    strcpy(buf, "::");
+    SOPC_StrNormalizeIPv4MappedAddress(buf);
+    ck_assert_str_eq("::", buf);
+
+    SOPC_StrNormalizeIPv4MappedAddress(NULL); /* must not crash */
+}
+END_TEST
+
 Suite* tests_make_suite_tools(void)
 {
     Suite* s;
@@ -5213,6 +5265,7 @@ Suite* tests_make_suite_tools(void)
     tcase_add_test(tc_basetools, test_strncmp_ignore_case);
     tcase_add_test(tc_basetools, test_strcmp_ignore_case);
     tcase_add_test(tc_basetools, test_strcmp_ignore_case_alt_end);
+    tcase_add_test(tc_basetools, test_normalize_ipv4_mapped_address);
     tcase_add_test(tc_basetools, test_strtrim);
     tcase_add_test(tc_basetools, test_helper_uri);
     tcase_add_test(tc_basetools, test_strtouint);

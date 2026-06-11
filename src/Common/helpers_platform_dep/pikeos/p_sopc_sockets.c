@@ -19,11 +19,14 @@
 
 #include <errno.h>
 #include <stdbool.h>
+#include <stdint.h>
+#include <string.h>
 
 #include <lwip/netdb.h>
 
 #include "p_sopc_sockets.h"
 #include "sopc_assert.h"
+#include "sopc_helper_string.h"
 #include "sopc_mem_alloc.h"
 
 #define NI_MAXHOST 1025
@@ -155,46 +158,41 @@ SOPC_ReturnStatus SOPC_SocketAddress_GetNameInfo(const SOPC_Socket_Address* addr
     }
     if (SOPC_STATUS_OK == status)
     {
-        switch (addr->address.ai_family)
+        /* lwip has no getnameinfo: render the address with inet_ntop, then normalize the textual form. */
+        const struct sockaddr* sa = addr->address.ai_addr;
+        const void* inAddr = NULL; /* points to the in_addr / in6_addr bytes to render */
+        uint16_t inPortNet = 0;    /* port in network byte order */
+        if (NULL != sa && AF_INET == sa->sa_family)
         {
-        case AF_INET:
-            if (NULL != hostRes)
-            {
-                const char* res =
-                    inet_ntop(AF_INET, &((struct sockaddr_in*) addr->address.ai_addr)->sin_addr, hostRes, NI_MAXHOST);
-                if (NULL == res)
-                {
-                    status = SOPC_STATUS_NOK;
-                }
-            }
-            if (NULL != serviceRes && SOPC_STATUS_OK == status)
-            {
-                status = snprintf(serviceRes, NI_MAXSERV, "%d",
-                                  htons(((struct sockaddr_in*) addr->address.ai_addr)->sin_port)) != -1
-                             ? SOPC_STATUS_OK
-                             : SOPC_STATUS_NOK;
-            }
-            break;
-        case AF_INET6:
-            if (NULL != hostRes)
-            {
-                const char* res = inet_ntop(AF_INET6, &((struct sockaddr_in6*) addr->address.ai_addr)->sin6_addr,
-                                            hostRes, NI_MAXHOST);
-                if (NULL == res)
-                {
-                    status = SOPC_STATUS_NOK;
-                }
-            }
-            if (NULL != serviceRes && SOPC_STATUS_OK == status)
-            {
-                status = snprintf(serviceRes, NI_MAXSERV, "%d",
-                                  htons(((struct sockaddr_in6*) addr->address.ai_addr)->sin6_port)) != -1
-                             ? SOPC_STATUS_OK
-                             : SOPC_STATUS_NOK;
-            }
-            break;
-        default:
+            const struct sockaddr_in* sin = (const struct sockaddr_in*) (const void*) sa;
+            inAddr = &sin->sin_addr;
+            inPortNet = sin->sin_port;
+        }
+        else if (NULL != sa && AF_INET6 == sa->sa_family)
+        {
+            const struct sockaddr_in6* sin6 = (const struct sockaddr_in6*) (const void*) sa;
+            inAddr = &sin6->sin6_addr;
+            inPortNet = sin6->sin6_port;
+        }
+        else
+        {
             status = SOPC_STATUS_NOK;
+        }
+        if (SOPC_STATUS_OK == status && NULL != hostRes)
+        {
+            if (NULL == inet_ntop(sa->sa_family, inAddr, hostRes, NI_MAXHOST))
+            {
+                status = SOPC_STATUS_NOK;
+            }
+            else
+            {
+                /* Render IPv4-mapped IPv6 peers (dual-stack sockets) as plain IPv4, uniformly across platforms. */
+                SOPC_StrNormalizeIPv4MappedAddress(hostRes);
+            }
+        }
+        if (SOPC_STATUS_OK == status && NULL != serviceRes)
+        {
+            status = snprintf(serviceRes, NI_MAXSERV, "%d", htons(inPortNet)) != -1 ? SOPC_STATUS_OK : SOPC_STATUS_NOK;
         }
     }
     if (SOPC_STATUS_OK != status)

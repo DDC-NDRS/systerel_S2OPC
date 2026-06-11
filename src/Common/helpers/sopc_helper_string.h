@@ -192,4 +192,21 @@ SOPC_ReturnStatus SOPC_StrConcat(const char* left, const char* right, char** str
  */
 int SOPC_memcmp_constantTime(const void* a, const void* b, size_t len);
 
+/**
+ * \brief    Normalizes an IPv4-mapped IPv6 textual address into a plain IPv4 address, in place.
+ *
+ *           When a dual-stack IPv6 socket accepts an IPv4 peer, the numeric host string produced by the platform
+ *           (getnameinfo / inet_ntop) is the IPv4-mapped IPv6 form "::ffff:a.b.c.d" (the "ffff" hexadecimal group is
+ *           lowercase on glibc/Windows, uppercase on lwIP). This function rewrites such a string to the plain IPv4
+ *           "a.b.c.d" so the representation is identical across hosts and platforms. Any other string (genuine IPv4,
+ *           genuine IPv6, hostname, NULL) is left unchanged.
+ *
+ *           The result is never longer than the input, so the rewrite is done in place.
+ *
+ * \param[in,out] address  A '\0'-terminated, writable C string holding a numeric IPv4 or IPv6 address (typically as
+ *                         produced by getnameinfo / inet_ntop). Rewritten in place when it is an IPv4-mapped IPv6
+ *                         address; left unchanged otherwise (including when NULL).
+ */
+void SOPC_StrNormalizeIPv4MappedAddress(char* address);
+
 #endif /* SOPC_HELPER_STRING_H_ */

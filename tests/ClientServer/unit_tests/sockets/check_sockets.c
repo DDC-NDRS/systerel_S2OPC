@@ -38,6 +38,7 @@
 #include "sopc_logger.h"
 #include "sopc_macros.h"
 #include "sopc_mem_alloc.h"
+#include "sopc_raw_sockets.h"
 #include "sopc_sockets_api.h"
 #include "sopc_toolkit_config_constants.h"
 
@@ -346,15 +347,68 @@ START_TEST(test_sockets)
 }
 END_TEST
 
+/* Non-regression test for the cross-platform uniformization of display of IPv4-mapped addresses into IPv6 addresses */
+START_TEST(test_socket_address_getnameinfo_ipv4_mapped)
+{
+    static const struct
+    {
+        const char* input;        /* numeric address parsed by getaddrinfo */
+        const char* port;         /* numeric service */
+        const char* expectedHost; /* expected rendered host (after normalization) */
+    } cases[] = {
+        {"::ffff:192.168.56.1", "55218", "192.168.56.1"}, /* IPv4-mapped IPv6 -> plain IPv4 (the case being fixed) */
+        {"192.168.0.55", "55524", "192.168.0.55"},        /* genuine IPv4 -> unchanged */
+        {"fe80::1", "4840", "fe80::1"},                   /* genuine IPv6 -> unchanged */
+    };
+
+    /* getaddrinfo() (used by SOPC_Socket_AddrInfo_Get) requires the network stack to be initialized: on Windows this
+       performs the mandatory WSAStartup, without which getaddrinfo fails with WSANOTINITIALISED. It is a no-op on POSIX
+       platforms. */
+    ck_assert(SOPC_Socket_Network_Initialize());
+
+    for (size_t i = 0; i < sizeof(cases) / sizeof(cases[0]); i++)
+    {
+        SOPC_Socket_AddressInfo* ai = NULL;
+        SOPC_ReturnStatus status = SOPC_Socket_AddrInfo_Get(cases[i].input, cases[i].port, &ai);
+        ck_assert_int_eq(SOPC_STATUS_OK, status);
+        ck_assert_ptr_nonnull(ai);
+
+        SOPC_Socket_Address* addr = SOPC_Socket_CopyAddress(ai);
+        ck_assert_ptr_nonnull(addr);
+
+        char* host = NULL;
+        char* serv = NULL;
+        status = SOPC_SocketAddress_GetNameInfo(addr, &host, &serv);
+        ck_assert_int_eq(SOPC_STATUS_OK, status);
+        ck_assert_ptr_nonnull(host);
+        ck_assert_ptr_nonnull(serv);
+        ck_assert_str_eq(cases[i].expectedHost, host);
+        ck_assert_str_eq(cases[i].port, serv);
+
+        SOPC_Free(host);
+        SOPC_Free(serv);
+        SOPC_SocketAddress_Delete(&addr);
+        SOPC_Socket_AddrInfoDelete(&ai);
+    }
+
+    SOPC_Socket_Network_Clear();
+}
+END_TEST
+
 static Suite* tests_make_suite_sockets(void)
 {
     Suite* s;
     TCase* tc_sockets;
+    TCase* tc_socket_address;
 
     s = suite_create("Sockets");
     tc_sockets = tcase_create("Sockets");
     tcase_add_test(tc_sockets, test_sockets);
     suite_add_tcase(s, tc_sockets);
+
+    tc_socket_address = tcase_create("SocketAddress");
+    tcase_add_test(tc_socket_address, test_socket_address_getnameinfo_ipv4_mapped);
+    suite_add_tcase(s, tc_socket_address);
 
     return s;
 }
