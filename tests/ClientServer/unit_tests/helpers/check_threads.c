@@ -179,7 +179,7 @@ static void* test_thread_condvar_fct(void* args)
     SOPC_ReturnStatus status = SOPC_STATUS_NOK;
     status = SOPC_Mutex_Lock(&gmutex);
     ck_assert(SOPC_STATUS_OK == status);
-    condRes->waitingThreadStarted = 1;
+    SOPC_Atomic_Int_Set((int32_t*) &condRes->waitingThreadStarted, 1);
     while (condRes->protectedCondition == 0)
     {
         status = SOPC_Mutex_UnlockAndWaitCond(&gcond, &gmutex);
@@ -199,7 +199,7 @@ static void* test_thread_condvar_timed_fct(void* args)
     CondRes* condRes = (CondRes*) args;
     SOPC_ReturnStatus status = SOPC_STATUS_NOK;
     status = SOPC_Mutex_Lock(&gmutex);
-    condRes->waitingThreadStarted = 1;
+    SOPC_Atomic_Int_Set((int32_t*) &condRes->waitingThreadStarted, 1);
     status = SOPC_STATUS_NOK;
     while (condRes->protectedCondition == 0 && SOPC_STATUS_TIMEOUT != status)
     {
@@ -234,7 +234,9 @@ START_TEST(test_thread_condvar)
     ck_assert(status == SOPC_STATUS_OK);
     status = SOPC_Thread_Create(&thread, test_thread_condvar_fct, &condRes, "Condvar_fct");
     ck_assert(status == SOPC_STATUS_OK);
-    SOPC_Sleep(10);
+    /* Wait for the thread to have started and be about to wait on the condition
+     * (avoids a race on loaded machines where a fixed sleep is not enough) */
+    ck_assert(wait_value((int32_t*) &condRes.waitingThreadStarted, 1));
     status = SOPC_Mutex_Lock(&gmutex);
     ck_assert(status == SOPC_STATUS_OK);
     // Check thread is waiting and mutex is released since we locked it !
@@ -270,7 +272,7 @@ START_TEST(test_thread_condvar)
     ck_assert(status == SOPC_STATUS_OK);
     status = SOPC_Thread_Create(&thread, test_thread_condvar_timed_fct, &condRes, "Condvar_fct");
     ck_assert(status == SOPC_STATUS_OK);
-    SOPC_Sleep(10);
+    ck_assert(wait_value((int32_t*) &condRes.waitingThreadStarted, 1));
     status = SOPC_Mutex_Lock(&gmutex);
     ck_assert(status == SOPC_STATUS_OK);
     // Check thread is waiting and mutex is released since we locked it !
@@ -306,7 +308,7 @@ START_TEST(test_thread_condvar)
     ck_assert(status == SOPC_STATUS_OK);
     status = SOPC_Thread_Create(&thread, test_thread_condvar_timed_fct, &condRes, "Condvar_fct");
     ck_assert(status == SOPC_STATUS_OK);
-    SOPC_Sleep(10);
+    ck_assert(wait_value((int32_t*) &condRes.waitingThreadStarted, 1));
     status = SOPC_Mutex_Lock(&gmutex);
     ck_assert(status == SOPC_STATUS_OK);
     // Check thread is waiting and mutex is released since we locked it !
