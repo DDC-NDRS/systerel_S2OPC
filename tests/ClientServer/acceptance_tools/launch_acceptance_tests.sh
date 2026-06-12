@@ -32,6 +32,12 @@ TAP_FILE=server_acceptance_tests.tap
 UACTT_ERROR_FILE=uactt_error.log
 SERVER_ERROR=server_error.log
 
+# Maximum duration of the UACTT run: kill it from inside the script so that logs
+# can still be collected and analyzed afterwards. Must remain below the CI caps
+# (RUNNER_SCRIPT_TIMEOUT=50m / job timeout=1h), otherwise the runner kills the
+# whole script and no artifact is uploaded at all.
+UACTT_TIMEOUT=${UACTT_TIMEOUT:-45m}
+
 
 SKIPPED_TESTS_FILE=skipped_tests.cfg
 KNOWN_BUGS_FILES=known_bugs.cfg
@@ -133,6 +139,23 @@ SERVER_PID=$!
 ${ROOT_DIR}/tests/ClientServer/scripts/wait_server.py
 popd
 
+# Heartbeat in CI trace: the UACTT only writes its result file at the end of the
+# run, so without this the job trace stays silent for the whole run and a killed
+# job gives no clue of where it was stuck (nor whether the server died meanwhile).
+(
+    while sleep 60
+    do
+        if kill -0 $SERVER_PID 2> /dev/null
+        then
+            server_state="alive"
+        else
+            server_state="DEAD"
+        fi
+        echo "[heartbeat] $(date '+%Y-%m-%d %H:%M:%S') server: $server_state - UACTT stderr: $(wc -c 2> /dev/null < $UACTT_ERROR_FILE || echo 0) bytes - last line: $(tail -n 1 $UACTT_ERROR_FILE 2> /dev/null)"
+    done
+) &
+HEARTBEAT_PID=$!
+
 if [[ -z "$LINUX_UACTT" ]] || [[ "$LINUX_UACTT" -eq 0 ]]
 then
     mkdir -p /tmp/wineprefix
@@ -140,16 +163,23 @@ then
     export WINEARCH="win32"
     # Run windows UACTT with wine: see <uactt>/help/index.htm#t=command_line_interface.htm for parameters
     echo "Launching Acceptance Test Tool: wine /opt/uactt/uacompliancetest.exe --settings $(winepath -w $CONFIGURATION) --selection $(winepath -w $SELECTION) --hidden --close --result $(winepath -w ./$LOG_FILE) 2>$UACTT_ERROR_FILE"
-    wine /opt/uactt/uacompliancetest.exe --settings $(winepath -w $CONFIGURATION) --selection $(winepath -w $SELECTION) --hidden --close --result $(winepath -w ./$LOG_FILE) 2>$UACTT_ERROR_FILE
+    timeout --signal=TERM --kill-after=30s $UACTT_TIMEOUT wine /opt/uactt/uacompliancetest.exe --settings $(winepath -w $CONFIGURATION) --selection $(winepath -w $SELECTION) --hidden --close --result $(winepath -w ./$LOG_FILE) 2>$UACTT_ERROR_FILE
 else
     # Run linux UACTT
     echo "Launching Acceptance Test Tool: uacompliancetest -s $CONFIGURATION --selection $SELECTION -h -c -r ./$LOG_FILE 2>$UACTT_ERROR_FILE"
-    /opt/opcfoundation/uactt/bin/uacompliancetest -s $CONFIGURATION --selection $SELECTION -h -c -r ./$LOG_FILE 2>$UACTT_ERROR_FILE
+    timeout --signal=TERM --kill-after=30s $UACTT_TIMEOUT /opt/opcfoundation/uactt/bin/uacompliancetest -s $CONFIGURATION --selection $SELECTION -h -c -r ./$LOG_FILE 2>$UACTT_ERROR_FILE
+fi
+UACTT_STATUS=$?
+
+echo "Closing Acceptance Test Tool (exit status: $UACTT_STATUS)"
+# timeout(1) exits with 124 on timeout, 137 (128+SIGKILL) if --kill-after was needed
+if [ $UACTT_STATUS -eq 124 ] || [ $UACTT_STATUS -eq 137 ]
+then
+    echo "ERROR: UACTT did not terminate within $UACTT_TIMEOUT and was killed"
 fi
 
-echo "Closing Acceptance Test Tool"
-
-# kill virtual display since not necessary anymore
+# kill heartbeat and virtual display since not necessary anymore
+kill $HEARTBEAT_PID 2> /dev/null
 kill -9 $XVFB_PID
 # kill server not necessary anymore (2 times to avoid OPCUA shutdown phase)
 kill $SERVER_PID
@@ -157,9 +187,17 @@ kill $SERVER_PID
 wait $SERVER_PID
 mv ${ROOT_DIR}/build/bin/$SERVER_ERROR .
 
-# test that log file is available
+# test that log file is available: the UACTT only writes it on normal termination,
+# so it is missing when the UACTT was killed on timeout or crashed
 if [ ! -f $LOG_FILE ];then
-    echo "UACTT log file hasn't been written."
+    echo "ERROR: UACTT log file hasn't been written: no test report can be generated."
+    echo "Last lines of $UACTT_ERROR_FILE:"
+    tail -n 20 $UACTT_ERROR_FILE
+    if grep -q '==' $SERVER_ERROR; then
+        echo "ERROR: Asan issues detected"
+        exit 2
+    fi
+    exit 3
 fi
 
 
