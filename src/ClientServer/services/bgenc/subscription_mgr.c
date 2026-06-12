@@ -21,7 +21,7 @@
 
  File Name            : subscription_mgr.c
 
- Date                 : 09/06/2026 14:37:48
+ Date                 : 12/06/2026 16:27:40
 
  C Translator Version : tradc Java V1.2 (06/02/2022)
 
@@ -1328,8 +1328,7 @@ void subscription_mgr__treat_subscription_create_monitored_items_req(
             }
          }
          else {
-            subscription_core__log_subscription_request_received(subscription_mgr__l_subscription,
-               26);
+            subscription_core__log_subscription_request_received_invalid_on_session(subscription_mgr__l_subscription);
             *subscription_mgr__StatusCode_service = constants_statuscodes_bs__e_sc_bad_subscription_id_invalid;
          }
       }
@@ -1381,8 +1380,7 @@ void subscription_mgr__treat_subscription_modify_monitored_items_req(
             }
          }
          else {
-            subscription_core__log_subscription_request_received(subscription_mgr__l_subscription,
-               26);
+            subscription_core__log_subscription_request_received_invalid_on_session(subscription_mgr__l_subscription);
             *subscription_mgr__StatusCode_service = constants_statuscodes_bs__e_sc_bad_subscription_id_invalid;
          }
       }
@@ -1431,8 +1429,7 @@ void subscription_mgr__treat_subscription_delete_monitored_items_req(
             }
          }
          else {
-            subscription_core__log_subscription_request_received(subscription_mgr__l_subscription,
-               26);
+            subscription_core__log_subscription_request_received_invalid_on_session(subscription_mgr__l_subscription);
             *subscription_mgr__StatusCode_service = constants_statuscodes_bs__e_sc_bad_subscription_id_invalid;
          }
       }
@@ -1484,8 +1481,7 @@ void subscription_mgr__treat_subscription_set_monit_mode_monitored_items_req(
             }
          }
          else {
-            subscription_core__log_subscription_request_received(subscription_mgr__l_subscription,
-               26);
+            subscription_core__log_subscription_request_received_invalid_on_session(subscription_mgr__l_subscription);
             *subscription_mgr__StatusCode_service = constants_statuscodes_bs__e_sc_bad_subscription_id_invalid;
          }
       }

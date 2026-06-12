@@ -1763,7 +1763,7 @@ OPERATIONS
                     StatusCode_service := e_sc_bad_out_of_memory
                 END
             ELSE
-                log_subscription_request_received (l_subscription, 26);
+                log_subscription_request_received_invalid_on_session (l_subscription);
                 StatusCode_service := e_sc_bad_subscription_id_invalid
             END
         ELSE
@@ -1799,7 +1799,7 @@ OPERATIONS
                     StatusCode_service := e_sc_bad_out_of_memory
                 END
             ELSE
-                log_subscription_request_received (l_subscription, 26);
+                log_subscription_request_received_invalid_on_session (l_subscription);
                 StatusCode_service := e_sc_bad_subscription_id_invalid
             END
         ELSE
@@ -1833,7 +1833,7 @@ OPERATIONS
                     StatusCode_service := e_sc_bad_out_of_memory
                 END
             ELSE
-                log_subscription_request_received (l_subscription, 26);
+                log_subscription_request_received_invalid_on_session (l_subscription);
                 StatusCode_service := e_sc_bad_subscription_id_invalid
             END
         ELSE
@@ -1868,7 +1868,7 @@ OPERATIONS
                     StatusCode_service := e_sc_bad_out_of_memory
                 END
             ELSE
-                log_subscription_request_received (l_subscription, 26);
+                log_subscription_request_received_invalid_on_session (l_subscription);
                 StatusCode_service := e_sc_bad_subscription_id_invalid
             END
         ELSE
