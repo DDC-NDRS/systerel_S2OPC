@@ -120,6 +120,10 @@ function check_test {
 
 }
 
+function server_has_sanitizer_error {
+    grep -Eq "ERROR: (Address|Leak|Memory|Thread|UndefinedBehavior)Sanitizer|runtime error:|SUMMARY: .*Sanitizer" "$SERVER_ERROR"
+}
+
 # check if all known bugs and skipped tests are disjoint
 both_skipped_known_bugs=$(cat <(cut -d "|" -f 2- $KNOWN_BUGS_FILES) <(cut -d "|" -f 2- $SKIPPED_TESTS_FILE) | sort | uniq -d)
 if [[ $both_skipped_known_bugs ]]
@@ -193,8 +197,8 @@ if [ ! -f $LOG_FILE ];then
     echo "ERROR: UACTT log file hasn't been written: no test report can be generated."
     echo "Last lines of $UACTT_ERROR_FILE:"
     tail -n 20 $UACTT_ERROR_FILE
-    if grep -q '==' $SERVER_ERROR; then
-        echo "ERROR: Asan issues detected"
+    if server_has_sanitizer_error; then
+        echo "ERROR: sanitizer issue detected in server stderr ($SERVER_ERROR)"
         exit 2
     fi
     exit 3
@@ -330,7 +334,7 @@ echo "-----------------------------------"
 mv $TAP_FILE ${ROOT_DIR}/build/bin/
 ${ROOT_DIR}/tests/scripts/check-tap.py ${ROOT_DIR}/build/bin/$TAP_FILE && echo "TAP file is well formed and free of failed tests" || exit 1
 
-if grep -q '==' $SERVER_ERROR; then
-    echo "ERROR: Asan issues detected"
+if server_has_sanitizer_error; then
+    echo "ERROR: sanitizer issue detected in server stderr ($SERVER_ERROR)"
     exit 2
 fi
