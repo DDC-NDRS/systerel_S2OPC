@@ -21,7 +21,7 @@
 
  File Name            : address_space_authorization.h
 
- Date                 : 20/08/2025 12:48:56
+ Date                 : 24/06/2026 15:32:05
 
  C Translator Version : tradc Java V1.2 (06/02/2022)
 
@@ -156,6 +156,7 @@ extern void address_space_authorization__has_access_level_write(
    const constants__t_Node_i address_space_authorization__node,
    const constants__t_RawStatusCode address_space_authorization__raw_sc,
    const constants__t_Timestamp address_space_authorization__source_ts,
+   const constants__t_WriteByPassMask_i address_space_authorization__bypass_masks,
    t_bool * const address_space_authorization__bres);
 extern void address_space_authorization__set_user_roles(
    const constants__t_user_i address_space_authorization__p_user,

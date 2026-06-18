@@ -31,7 +31,8 @@ DEFINITIONS
         WriteValue_NodeId,
         WriteValue_AttributeId,
         WriteValue_DataValue, /* The field value of the DataValue */
-        WriteValue_IndexRange
+        WriteValue_IndexRange,
+        WriteValue_ByPass
         /* TODO: StatusCode, SourceTimestamp (determine if ServerTimestamp is useful) */
     ;
     d_inv ==
@@ -40,14 +41,16 @@ DEFINITIONS
         WriteValue_NodeId : t_WriteValue +-> t_NodeId &
         WriteValue_AttributeId : t_WriteValue +-> t_AttributeId_i &
         WriteValue_DataValue : t_WriteValue +-> t_DataValue_i &
-        WriteValue_IndexRange : t_WriteValue +-> t_IndexRange_i
+        WriteValue_IndexRange : t_WriteValue +-> t_IndexRange_i &
+        WriteValue_ByPass : t_WriteValue +-> t_WriteByPassMask_i
     ;
     d_init ==
         nb_WriteValue := 0 ||
         WriteValue_NodeId :: {{}} ||
         WriteValue_AttributeId :: {{}} ||
         WriteValue_DataValue :: {{}} ||
-        WriteValue_IndexRange :: {{}}
+        WriteValue_IndexRange :: {{}} ||
+        WriteValue_ByPass :: {{}}
 
 ABSTRACT_VARIABLES
     d_variables
@@ -78,7 +81,8 @@ OPERATIONS
               WriteValue_NodeId : cast_t_WriteValue[1..nb_WriteValue] --> t_NodeId &
               WriteValue_AttributeId : cast_t_WriteValue[1..nb_WriteValue] --> t_AttributeId_i &
               WriteValue_DataValue : cast_t_WriteValue[1..nb_WriteValue] --> t_DataValue &
-              WriteValue_IndexRange : cast_t_WriteValue[1..nb_WriteValue] --> t_IndexRange_i) &
+              WriteValue_IndexRange : cast_t_WriteValue[1..nb_WriteValue] --> t_IndexRange_i &
+              WriteValue_ByPass : cast_t_WriteValue[1..nb_WriteValue] --> t_WriteByPassMask_i) &
             (StatusCode_service /= e_sc_ok =>
                 nb_WriteValue = 0 &
                 WriteValue_NodeId = {} &
@@ -103,7 +107,7 @@ OPERATIONS
     END
     ;
 
-    isvalid, status, nid, aid, dataValue, index_range <-- getall_WriteValue(wvi) =
+    isvalid, status, nid, aid, dataValue, index_range, bypass_masks <-- getall_WriteValue(wvi) =
     PRE
         nb_WriteValue > 0 &
         wvi : t_WriteValue_i &
@@ -119,18 +123,22 @@ OPERATIONS
             nid,
             aid,
             dataValue,
-            index_range
+            index_range,
+            bypass_masks
             :(nid : t_NodeId_i  & nid = WriteValue_NodeId(wvi) &
-                aid : t_AttributeId_i & aid : {e_aid_NodeId, e_aid_NodeClass, e_aid_Value} &
-                dataValue : t_DataValue_i & dataValue = WriteValue_DataValue(wvi) &
-                index_range : t_IndexRange_i & index_range = WriteValue_IndexRange(wvi))
+              aid : t_AttributeId_i & aid : {e_aid_NodeId, e_aid_NodeClass, e_aid_Value} &
+              dataValue : t_DataValue_i & dataValue = WriteValue_DataValue(wvi) &
+              index_range : t_IndexRange_i & index_range = WriteValue_IndexRange(wvi) &
+              bypass_masks : t_WriteByPassMask_i & bypass_masks = WriteValue_ByPass(wvi)
+            )
         ELSE
             isvalid := FALSE ||
             nid := c_NodeId_indet ||
             aid := c_AttributeId_indet ||
             dataValue := c_DataValue_indet ||
             index_range := c_IndexRange_indet ||
-            status := e_sc_bad_attribute_id_invalid
+            status := e_sc_bad_attribute_id_invalid ||
+            bypass_masks := c_WriteByPassMask_none
         END
     END
     ;

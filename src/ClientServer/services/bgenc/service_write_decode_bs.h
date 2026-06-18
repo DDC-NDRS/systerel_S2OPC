@@ -21,7 +21,7 @@
 
  File Name            : service_write_decode_bs.h
 
- Date                 : 04/08/2022 14:53:46
+ Date                 : 24/06/2026 15:32:34
 
  C Translator Version : tradc Java V1.2 (06/02/2022)
 
@@ -63,7 +63,8 @@ extern void service_write_decode_bs__getall_WriteValue(
    constants__t_NodeId_i * const service_write_decode_bs__nid,
    constants__t_AttributeId_i * const service_write_decode_bs__aid,
    constants__t_DataValue_i * const service_write_decode_bs__dataValue,
-   constants__t_IndexRange_i * const service_write_decode_bs__index_range);
+   constants__t_IndexRange_i * const service_write_decode_bs__index_range,
+   constants__t_WriteByPassMask_i * const service_write_decode_bs__bypass_masks);
 extern void service_write_decode_bs__getall_WriteValuePointer(
    const constants__t_WriteValue_i service_write_decode_bs__wvi,
    constants__t_WriteValuePointer_i * const service_write_decode_bs__wvPointer);

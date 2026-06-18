@@ -21,7 +21,7 @@
 
  File Name            : address_space_authorization.c
 
- Date                 : 20/08/2025 12:48:57
+ Date                 : 24/06/2026 15:32:05
 
  C Translator Version : tradc Java V1.2 (06/02/2022)
 
@@ -73,6 +73,7 @@ void address_space_authorization__has_access_level_write(
    const constants__t_Node_i address_space_authorization__node,
    const constants__t_RawStatusCode address_space_authorization__raw_sc,
    const constants__t_Timestamp address_space_authorization__source_ts,
+   const constants__t_WriteByPassMask_i address_space_authorization__bypass_masks,
    t_bool * const address_space_authorization__bres) {
    {
       constants__t_access_level address_space_authorization__l_access_level;
@@ -80,6 +81,7 @@ void address_space_authorization__has_access_level_write(
       t_bool address_space_authorization__l_access_write_status;
       t_bool address_space_authorization__l_access_write_timestamp;
       constants_statuscodes_bs__t_StatusCode_i address_space_authorization__l_sc;
+      t_bool address_space_authorization__l_bypass;
       t_bool address_space_authorization__l_local_service_treatment;
       
       address_space_local__is_local_service_treatment(&address_space_authorization__l_local_service_treatment);
@@ -98,11 +100,18 @@ void address_space_authorization__has_access_level_write(
          if (address_space_authorization__l_access_write_status == false) {
             constants_statuscodes_bs__getall_conv_RawStatusCode_To_StatusCode(address_space_authorization__raw_sc,
                &address_space_authorization__l_sc);
-            address_space_authorization__l_access_write_status = (address_space_authorization__l_sc == constants_statuscodes_bs__e_sc_ok);
+            constants__is_t_WriteByPassMask_statusWrite(address_space_authorization__bypass_masks,
+               &address_space_authorization__l_bypass);
+            address_space_authorization__l_access_write_status = ((address_space_authorization__l_sc == constants_statuscodes_bs__e_sc_ok) ||
+               (address_space_authorization__l_bypass == true));
          }
          if (address_space_authorization__l_access_write_timestamp == false) {
             constants__is_Timestamps_Null(address_space_authorization__source_ts,
                &address_space_authorization__l_access_write_timestamp);
+            constants__is_t_WriteByPassMask_timestampWrite(address_space_authorization__bypass_masks,
+               &address_space_authorization__l_bypass);
+            address_space_authorization__l_access_write_timestamp = ((address_space_authorization__l_access_write_timestamp == true) ||
+               (address_space_authorization__l_bypass == true));
          }
          *address_space_authorization__bres = (((address_space_authorization__l_access_write == true) &&
             (address_space_authorization__l_access_write_status == true)) &&

@@ -60,11 +60,12 @@ OPERATIONS
         p_wvi : t_WriteValue_i &
         p_wvi : t_WriteValue
     THEN
-        LET dataValue, index_range, nid, aid BE
+        LET dataValue, index_range, nid, aid, bypass_masks BE
             dataValue = WriteValue_DataValue(p_wvi) &
             index_range = WriteValue_IndexRange(p_wvi) &
             nid = WriteValue_NodeId(p_wvi) &
-            aid = WriteValue_AttributeId(p_wvi)
+            aid = WriteValue_AttributeId(p_wvi) &
+            bypass_masks = WriteValue_ByPass(p_wvi)
         IN
         p_status,
         a_Value,
@@ -94,14 +95,14 @@ OPERATIONS
             ) &
             (p_status = e_sc_ok =>
                 a_Value = a_Value$0 <+ {a_NodeId~(nid) |-> DataValue_Variant(dataValue)} &
-                (a_NodeId~(nid) |-> DataValue_StatusCode(dataValue) |-> DataValue_SourceTimestamp(dataValue) : s_access_write
+                (a_NodeId~(nid) |-> DataValue_StatusCode(dataValue) |-> DataValue_SourceTimestamp(dataValue) |-> bypass_masks : s_access_write
                  =>
                      a_Value_StatusCode = a_Value_StatusCode$0
                                              <+ {a_NodeId~(nid) |-> DataValue_StatusCode(dataValue)} &
                      a_Value_SourceTimestamp = a_Value_SourceTimestamp$0
                                               <+ {a_NodeId~(nid) |-> DataValue_SourceTimestamp(dataValue)}
                  ) &
-                 (a_NodeId~(nid) |-> DataValue_StatusCode(dataValue) |-> DataValue_SourceTimestamp(dataValue) /: s_access_write
+                 (a_NodeId~(nid) |-> DataValue_StatusCode(dataValue) |-> DataValue_SourceTimestamp(dataValue) |-> bypass_masks /: s_access_write
                  =>
                      a_Value_StatusCode = a_Value_StatusCode$0 &
                      a_Value_SourceTimestamp = a_Value_SourceTimestamp$0

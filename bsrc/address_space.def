@@ -234,7 +234,7 @@ DEFINITIONS
 
         /* Node authorizations (includes local treatment) */
         s_access_read <: t_Node_i &
-        s_access_write <: t_Node_i * t_RawStatusCode * t_Timestamp &
+        s_access_write <: t_Node_i * t_RawStatusCode * t_Timestamp * t_WriteByPassMask_i &
         s_access_histRead <: t_Node_i &
         s_executable <: t_Node_i &
 

@@ -89,6 +89,7 @@ SETS
     /* A WriteValue of a WriteRequest. */
     t_WriteValue_i;
     t_WriteValuePointer_i; /* (OpcUa_WriteValue*) */
+    t_WriteByPassMask_i; /* (SOPC_ByPassWritePermissionMask) */
 
     /* A BrowseValue of a BrowseRequest. */
     t_BrowseValue_i;
@@ -419,6 +420,7 @@ CONCRETE_CONSTANTS
     c_ReadValue_indet,
     c_WriteValue_indet,
     c_WriteValuePointer_indet,
+    c_WriteByPassMask_none,
     c_BrowseValue_indet,
     c_BrowseResultReferences_indet,
     c_BrowseNodeClassMask_indet,
@@ -534,6 +536,9 @@ ABSTRACT_CONSTANTS
     conv_AccessLevel_HistRead,
     conv_AccessLevel_StatusWrite,
     conv_AccessLevel_TimestampWrite,
+
+    conv_WriteByPass_StatusWrite,
+    conv_WriteByPass_TimestampWrite,
 
     conv_ExpandedNodeId_NodeId,
     conv_NodeId_ExpandedNodeId,
@@ -962,6 +967,8 @@ PROPERTIES
     t_WriteValuePointer <: t_WriteValuePointer_i &
     c_WriteValuePointer_indet : t_WriteValuePointer_i &
     c_WriteValuePointer_indet /: t_WriteValuePointer &
+
+    c_WriteByPassMask_none : t_WriteByPassMask_i &
 
     t_BrowseValue <: t_BrowseValue_i &
     c_BrowseValue_indet : t_BrowseValue_i &
@@ -1446,6 +1453,9 @@ PROPERTIES
     conv_AccessLevel_StatusWrite : t_access_level --> BOOL &
     conv_AccessLevel_TimestampWrite : t_access_level --> BOOL &
 
+    conv_WriteByPass_StatusWrite : t_WriteByPassMask_i --> BOOL &
+    conv_WriteByPass_TimestampWrite : t_WriteByPassMask_i --> BOOL &
+
     conv_ExpandedNodeId_NodeId : t_ExpandedNodeId +-> t_NodeId &
     conv_NodeId_ExpandedNodeId : t_NodeId >-> t_ExpandedNodeId &
     conv_NodeId_NamespaceIdx : t_NodeId --> t_NamespaceIdx &
@@ -1733,6 +1743,22 @@ OPERATIONS
         p_access_lvl : t_access_level
     THEN
         bres := conv_AccessLevel_TimestampWrite(p_access_lvl)
+    END
+    ;
+
+    bres <-- is_t_WriteByPassMask_statusWrite(p_bypass_masks) =
+    PRE
+        p_bypass_masks : t_WriteByPassMask_i
+    THEN
+        bres := conv_WriteByPass_StatusWrite(p_bypass_masks)
+    END
+    ;
+
+    bres <-- is_t_WriteByPassMask_timestampWrite(p_bypass_masks) =
+    PRE
+        p_bypass_masks : t_WriteByPassMask_i
+    THEN
+        bres := conv_WriteByPass_TimestampWrite(p_bypass_masks)
     END
     ;
 

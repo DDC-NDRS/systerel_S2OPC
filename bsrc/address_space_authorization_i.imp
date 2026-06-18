@@ -70,16 +70,17 @@ INVARIANT
         (local_service_treatment = TRUE or d_access_level_read)}
     &
     s_access_write =
-         { node, raw_sc, source_ts |
+         { node, raw_sc, source_ts, bypass_masks |
         node : t_Node_i &
         node : s_Node   &
         a_NodeClass(node) = e_ncl_Variable &
         raw_sc : t_RawStatusCode &
         source_ts : t_Timestamp &
+        bypass_masks : t_WriteByPassMask_i &
         ((local_service_treatment = TRUE) or
          (d_access_level_CurrentWrite &
-             (d_access_level_StatusWrite or conv_RawStatusCode_To_StatusCode(raw_sc) = e_sc_ok) &
-             (d_access_level_TimestampWrite or source_ts = c_Timestamp_null)))
+             (d_access_level_StatusWrite or conv_RawStatusCode_To_StatusCode(raw_sc) = e_sc_ok or conv_WriteByPass_StatusWrite(bypass_masks) = TRUE) &
+             (d_access_level_TimestampWrite or source_ts = c_Timestamp_null or conv_WriteByPass_TimestampWrite(bypass_masks) = TRUE)))
          }
     &
     s_access_histRead = { node |
@@ -142,13 +143,14 @@ OPERATIONS
     END
     ;
 
-    bres <-- has_access_level_write(node, raw_sc, source_ts) =
+    bres <-- has_access_level_write(node, raw_sc, source_ts, bypass_masks) =
     VAR
         l_access_level,
         l_access_write,
         l_access_write_status,
         l_access_write_timestamp,
         l_sc,
+        l_bypass,
         l_local_service_treatment
     IN
         l_local_service_treatment <-- is_local_service_treatment;
@@ -161,13 +163,18 @@ OPERATIONS
             l_access_write_timestamp <-- is_t_access_level_timestampWrite(l_access_level);
             IF l_access_write_status = FALSE THEN
                 l_sc <-- getall_conv_RawStatusCode_To_StatusCode(raw_sc);
+                /* Check bypass in case of overwritten request write value */
+                l_bypass <-- is_t_WriteByPassMask_statusWrite(bypass_masks);
                 /* From part 3 table 40 v1.04: 0 means only StatusCode Good is writable */
-                l_access_write_status := bool(l_sc = e_sc_ok)
+                l_access_write_status := bool(l_sc = e_sc_ok or l_bypass = TRUE)
             END
             ;
             IF l_access_write_timestamp = FALSE THEN
                 /* From part 3 table 40 v1.04: 0 means only null timestamps are writable */
-                l_access_write_timestamp <-- is_Timestamps_Null(source_ts)
+                l_access_write_timestamp <-- is_Timestamps_Null(source_ts);
+                /* Check bypass in case of overwritten request write value */
+                l_bypass <-- is_t_WriteByPassMask_timestampWrite(bypass_masks);
+                l_access_write_timestamp := bool(l_access_write_timestamp = TRUE or l_bypass = TRUE)
             END
             ;
             bres := bool(l_access_write = TRUE & l_access_write_status = TRUE & l_access_write_timestamp = TRUE)

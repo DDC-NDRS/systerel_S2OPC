@@ -104,7 +104,7 @@ DEFINITIONS
         }(IsValid_VariantIndex(DataValue_Variant(dVal) |-> idxRange)))
     ;
 
-    d_treat_write (dVal, idxRange, nid, aid, user, locale) ==
+    d_treat_write (dVal, idxRange, nid, aid, user, locale, bypass_masks) ==
        ({FALSE |-> e_sc_bad_node_id_unknown,
          TRUE  |-> {FALSE |-> e_sc_bad_not_writable,
                     TRUE  |-> {FALSE |-> e_sc_bad_type_mismatch,
@@ -113,7 +113,7 @@ DEFINITIONS
                                                     TRUE |-> {FALSE |-> e_sc_bad_user_access_denied,
                                                               TRUE |-> d_VariantIndex_HasRange_Valid(dVal, idxRange, locale)
                                                              }(bool(e_operation_type_write |-> nid |-> aid |-> user : s_AuthorizedOperations))
-                                                   }(bool(a_NodeId~(nid) |-> DataValue_StatusCode(dVal) |-> DataValue_SourceTimestamp(dVal): s_access_write))
+                                                   }(bool(a_NodeId~(nid) |-> DataValue_StatusCode(dVal) |-> DataValue_SourceTimestamp(dVal) |-> bypass_masks: s_access_write or local_service_treatment = TRUE))
                                         }(bool(DataValue_ServerTimestamp(dVal) = c_Timestamp_null or local_service_treatment = TRUE))
                                }(bool(d_Type_IsVariableSubtype
                                      (DataValue_LocalDataType(dVal), DataValue_ValueRank(dVal),
@@ -134,7 +134,7 @@ LOCAL_OPERATIONS
     ;
 
     /* Outer treat operation. Validates isvalid, validates user, records the write. */
-    serviceStatusCode, prev_dataValue, node <-- treat_write_1(isvalid, status, p_user, p_locales, nid, aid, dataValue, index_range) =
+    serviceStatusCode, prev_dataValue, node <-- treat_write_1(isvalid, status, p_user, p_locales, nid, aid, dataValue, index_range, bypass_masks) =
     PRE
         isvalid : BOOL &
         status : t_StatusCode_i &
@@ -156,7 +156,8 @@ LOCAL_OPERATIONS
          status : {e_sc_bad_attribute_id_invalid, e_sc_bad_index_range_invalid}) &
         a_NodeId : s_Node >-> t_NodeId &
         a_Value : s_Node +-> t_Variant &
-        index_range : t_IndexRange_i
+        index_range : t_IndexRange_i &
+        bypass_masks : t_WriteByPassMask_i
     THEN
         serviceStatusCode,
         prev_dataValue,
@@ -172,7 +173,7 @@ LOCAL_OPERATIONS
 
             (isvalid = TRUE
             =>
-                (serviceStatusCode = d_treat_write (dataValue, index_range, nid, aid, p_user, p_locales)
+                (serviceStatusCode = d_treat_write (dataValue, index_range, nid, aid, p_user, p_locales, bypass_masks)
                 or /* out of memory */
                 serviceStatusCode = e_sc_bad_out_of_memory) &
 
@@ -423,6 +424,7 @@ OPERATIONS
         l_nid,
         l_dataValue,
         l_index_range,
+        l_bypass_masks,
         l_status1,
         l_prev_dataValue,
         l_node,
@@ -438,9 +440,9 @@ OPERATIONS
         l_new_val_ts_src,
         l_new_val_ts_srv
     IN
-        l_isvalid, l_status1, l_nid, l_aid, l_dataValue, l_index_range <-- getall_WriteValue(p_wvi);
+        l_isvalid, l_status1, l_nid, l_aid, l_dataValue, l_index_range, l_bypass_masks <-- getall_WriteValue(p_wvi);
         /* Avoids the IFs with a local operation. */
-        p_status, l_prev_dataValue, l_node <-- treat_write_1(l_isvalid, l_status1, p_user, p_locales, l_nid, l_aid, l_dataValue, l_index_range);
+        p_status, l_prev_dataValue, l_node <-- treat_write_1(l_isvalid, l_status1, p_user, p_locales, l_nid, l_aid, l_dataValue, l_index_range, l_bypass_masks);
         l_new_val := c_Variant_indet;
         l_wv <-- getall_WriteValuePointer(p_wvi);
         /* If write succeeded, generates a data change event for subscriptions */
@@ -481,7 +483,7 @@ OPERATIONS
     END
     ;
 
-    serviceStatusCode, prev_dataValue, node <-- treat_write_1(isvalid, status, p_user, p_locales, nid, aid, dataValue, index_range) =
+    serviceStatusCode, prev_dataValue, node <-- treat_write_1(isvalid, status, p_user, p_locales, nid, aid, dataValue, index_range, bypass_masks) =
     VAR
         l_isvalid,
         l_ncl,
@@ -522,7 +524,7 @@ OPERATIONS
                     IF l_compatible_type = TRUE & (l_server_ts_null = TRUE or l_local_treatment = TRUE) THEN
                         l_source_ts <-- get_conv_DataValue_SourceTimestamp(dataValue);
                         l_raw_sc <-- get_conv_DataValue_Status(dataValue);
-                        l_access_write <-- has_access_level_write(node, l_raw_sc, l_source_ts);
+                        l_access_write <-- has_access_level_write(node, l_raw_sc, l_source_ts, bypass_masks);
                         IF l_access_write = TRUE THEN
                             /* Access authorized */
                             l_roles <-- get_user_roles(p_user);

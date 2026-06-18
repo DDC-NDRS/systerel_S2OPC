@@ -21,7 +21,7 @@
 
  File Name            : address_space.c
 
- Date                 : 17/02/2026 11:16:47
+ Date                 : 24/06/2026 15:32:05
 
  C Translator Version : tradc Java V1.2 (06/02/2022)
 
@@ -114,6 +114,7 @@ void address_space__treat_write_request_WriteValue(
       constants__t_NodeId_i address_space__l_nid;
       constants__t_DataValue_i address_space__l_dataValue;
       constants__t_IndexRange_i address_space__l_index_range;
+      constants__t_WriteByPassMask_i address_space__l_bypass_masks;
       constants_statuscodes_bs__t_StatusCode_i address_space__l_status1;
       constants__t_DataValue_i address_space__l_prev_dataValue;
       constants__t_Node_i address_space__l_node;
@@ -135,7 +136,8 @@ void address_space__treat_write_request_WriteValue(
          &address_space__l_nid,
          &address_space__l_aid,
          &address_space__l_dataValue,
-         &address_space__l_index_range);
+         &address_space__l_index_range,
+         &address_space__l_bypass_masks);
       address_space__treat_write_1(address_space__l_isvalid,
          address_space__l_status1,
          address_space__p_user,
@@ -144,6 +146,7 @@ void address_space__treat_write_request_WriteValue(
          address_space__l_aid,
          address_space__l_dataValue,
          address_space__l_index_range,
+         address_space__l_bypass_masks,
          address_space__p_status,
          &address_space__l_prev_dataValue,
          &address_space__l_node);
@@ -203,6 +206,7 @@ void address_space__treat_write_1(
    const constants__t_AttributeId_i address_space__aid,
    const constants__t_DataValue_i address_space__dataValue,
    const constants__t_IndexRange_i address_space__index_range,
+   const constants__t_WriteByPassMask_i address_space__bypass_masks,
    constants_statuscodes_bs__t_StatusCode_i * const address_space__serviceStatusCode,
    constants__t_DataValue_i * const address_space__prev_dataValue,
    constants__t_Node_i * const address_space__node) {
@@ -267,6 +271,7 @@ void address_space__treat_write_1(
                   address_space_authorization__has_access_level_write(*address_space__node,
                      address_space__l_raw_sc,
                      address_space__l_source_ts,
+                     address_space__bypass_masks,
                      &address_space__l_access_write);
                   if (address_space__l_access_write == true) {
                      address_space_authorization__get_user_roles(address_space__p_user,

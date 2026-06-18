@@ -122,15 +122,16 @@ OPERATIONS
     END
     ;
 
-    bres <-- has_access_level_write(node, raw_sc, source_ts) =
+    bres <-- has_access_level_write(node, raw_sc, source_ts, bypass_masks) =
     PRE
         node : t_Node_i &
         node : s_Node &
         a_NodeClass(node) = e_ncl_Variable &
         raw_sc : t_RawStatusCode &
-        source_ts : t_Timestamp
+        source_ts : t_Timestamp &
+        bypass_masks : t_WriteByPassMask_i
     THEN
-        bres := bool(node |-> raw_sc |-> source_ts : s_access_write)
+        bres := bool(node |-> raw_sc |-> source_ts |-> bypass_masks : s_access_write)
     END
     ;
 

@@ -21,7 +21,7 @@
 
  File Name            : constants.h
 
- Date                 : 25/02/2026 11:31:30
+ Date                 : 24/06/2026 15:32:09
 
  C Translator Version : tradc Java V1.2 (06/02/2022)
 
@@ -91,6 +91,7 @@
 #define constants__t_SignatureData_i constants_bs__t_SignatureData_i
 #define constants__t_Timestamp constants_bs__t_Timestamp
 #define constants__t_Variant_i constants_bs__t_Variant_i
+#define constants__t_WriteByPassMask_i constants_bs__t_WriteByPassMask_i
 #define constants__t_WriteValuePointer_i constants_bs__t_WriteValuePointer_i
 #define constants__t_access_level constants_bs__t_access_level
 #define constants__t_access_level_ex constants_bs__t_access_level_ex
@@ -406,6 +407,7 @@ typedef enum {
 #define constants__t_SignatureData_i_max constants_bs__t_SignatureData_i_max
 #define constants__t_Timestamp_max constants_bs__t_Timestamp_max
 #define constants__t_Variant_i_max constants_bs__t_Variant_i_max
+#define constants__t_WriteByPassMask_i_max constants_bs__t_WriteByPassMask_i_max
 #define constants__t_WriteValuePointer_i_max constants_bs__t_WriteValuePointer_i_max
 #define constants__t_access_level_max constants_bs__t_access_level_max
 #define constants__t_access_level_ex_max constants_bs__t_access_level_ex_max
@@ -523,6 +525,7 @@ typedef enum {
 #define constants__c_SignatureData_indet constants_bs__c_SignatureData_indet
 #define constants__c_Timestamp_null constants_bs__c_Timestamp_null
 #define constants__c_Variant_indet constants_bs__c_Variant_indet
+#define constants__c_WriteByPassMask_none constants_bs__c_WriteByPassMask_none
 #define constants__c_WriteValuePointer_indet constants_bs__c_WriteValuePointer_indet
 #define constants__c_browsePath_indet constants_bs__c_browsePath_indet
 #define constants__c_byte_buffer_indet constants_bs__c_byte_buffer_indet
@@ -640,6 +643,8 @@ extern void constants__INITIALISATION(void);
 #define constants__is_QualifiedNames_Empty constants_bs__is_QualifiedNames_Empty
 #define constants__is_QualifiedNames_Equal constants_bs__is_QualifiedNames_Equal
 #define constants__is_Timestamps_Null constants_bs__is_Timestamps_Null
+#define constants__is_t_WriteByPassMask_statusWrite constants_bs__is_t_WriteByPassMask_statusWrite
+#define constants__is_t_WriteByPassMask_timestampWrite constants_bs__is_t_WriteByPassMask_timestampWrite
 #define constants__is_t_access_level_currentRead constants_bs__is_t_access_level_currentRead
 #define constants__is_t_access_level_currentWrite constants_bs__is_t_access_level_currentWrite
 #define constants__is_t_access_level_histRead constants_bs__is_t_access_level_histRead

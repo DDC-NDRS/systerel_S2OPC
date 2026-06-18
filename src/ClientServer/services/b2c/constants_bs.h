@@ -106,6 +106,7 @@ typedef char* constants_bs__t_SessionName_i;
 typedef OpcUa_SignatureData* constants_bs__t_SignatureData_i;
 typedef SOPC_Value_Timestamp constants_bs__t_Timestamp;
 typedef SOPC_Variant* constants_bs__t_Variant_i;
+typedef uint8_t constants_bs__t_WriteByPassMask_i;
 typedef OpcUa_WriteValue* constants_bs__t_WriteValuePointer_i;
 typedef SOPC_Byte constants_bs__t_access_level;
 typedef uintptr_t constants_bs__t_application_context_i;
@@ -231,6 +232,7 @@ extern const constants_bs__t_NodeId_i constants_bs__c_Server_ServerCapabilities_
 #define constants_bs__c_Timestamp_null \
     (SOPC_Value_Timestamp) { 0, 0 }
 #define constants_bs__c_Variant_indet 0
+#define constants_bs__c_WriteByPassMask_none SOPC_ByPassWritePermissionMask_None
 #define constants_bs__c_WriteValuePointer_indet 0
 #define constants_bs__c_browsePath_indet 0
 #define constants_bs__c_byte_buffer_indet 0
@@ -365,6 +367,12 @@ extern void constants_bs__is_QualifiedNames_Equal(const constants_bs__t_Qualifie
                                                   t_bool* const constants_bs__p_bool);
 extern void constants_bs__is_Timestamps_Null(const constants_bs__t_Timestamp constants_bs__p_ts,
                                              t_bool* const constants_bs__bres);
+extern void constants_bs__is_t_WriteByPassMask_statusWrite(
+    const constants_bs__t_WriteByPassMask_i constants_bs__p_bypass_masks,
+    t_bool* const constants_bs__bres);
+extern void constants_bs__is_t_WriteByPassMask_timestampWrite(
+    const constants_bs__t_WriteByPassMask_i constants_bs__p_bypass_masks,
+    t_bool* const constants_bs__bres);
 extern void constants_bs__is_t_access_level_currentRead(const constants_bs__t_access_level constants_bs__p_access_lvl,
                                                         t_bool* const constants_bs__bres);
 extern void constants_bs__is_t_access_level_currentWrite(const constants_bs__t_access_level constants_bs__p_access_lvl,

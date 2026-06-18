@@ -27,6 +27,7 @@
 #include "sopc_assert.h"
 #include "sopc_builtintypes.h"
 #include "sopc_date_time.h"
+#include "sopc_enum_types.h"
 #include "sopc_logger.h"
 #include "sopc_macros.h"
 #include "sopc_mem_alloc.h"
@@ -141,6 +142,20 @@ void constants_bs__is_EventNotifier_SubscribeToEvents(const constants_bs__t_Byte
                                                       t_bool* const constants_bs__bres)
 {
     *constants_bs__bres = (0 != (OpcUa_EventNotifierType_SubscribeToEvents & constants_bs__p_eventNotifierByte));
+}
+
+void constants_bs__is_t_WriteByPassMask_statusWrite(
+    const constants_bs__t_WriteByPassMask_i constants_bs__p_bypass_masks,
+    t_bool* const constants_bs__bres)
+{
+    *constants_bs__bres = (constants_bs__p_bypass_masks & SOPC_ByPassWritePermissionMask_AccessLevelStatus) != 0;
+}
+
+void constants_bs__is_t_WriteByPassMask_timestampWrite(
+    const constants_bs__t_WriteByPassMask_i constants_bs__p_bypass_masks,
+    t_bool* const constants_bs__bres)
+{
+    *constants_bs__bres = (constants_bs__p_bypass_masks & SOPC_ByPassWritePermissionMask_AccessLevelSourceTs) != 0;
 }
 
 void constants_bs__is_t_access_level_currentRead(const constants_bs__t_access_level constants_bs__p_access_lvl,

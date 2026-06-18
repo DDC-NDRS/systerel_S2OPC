@@ -94,7 +94,8 @@ void service_write_decode_bs__getall_WriteValue(
     constants__t_NodeId_i* const service_write_decode_bs__nid,
     constants__t_AttributeId_i* const service_write_decode_bs__aid,
     constants__t_DataValue_i* const service_write_decode_bs__dataValue,
-    constants__t_IndexRange_i* const service_write_decode_bs__index_range)
+    constants__t_IndexRange_i* const service_write_decode_bs__index_range,
+    constants__t_WriteByPassMask_i* const service_write_decode_bs__bypass_masks)
 {
     *service_write_decode_bs__nid = constants__c_NodeId_indet;
     *service_write_decode_bs__dataValue = constants__c_DataValue_indet;
@@ -111,6 +112,7 @@ void service_write_decode_bs__getall_WriteValue(
     *service_write_decode_bs__nid = &wv->NodeId;
     *service_write_decode_bs__dataValue = &wv->Value;
     *service_write_decode_bs__index_range = &wv->IndexRange;
+    *service_write_decode_bs__bypass_masks = wv->writeByPassPermissionMask;
     *service_write_decode_bs__isvalid = true;
     *service_write_decode_bs__status = constants_statuscodes_bs__e_sc_ok;
 }
