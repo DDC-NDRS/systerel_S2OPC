@@ -51,17 +51,17 @@ function usage()
 }
 
 # First argument should match one of following parameters
-if [ $1 == "measure" ]; then
+if [[ "$1" == "measure" ]]; then
   BENCH_ROLE="measure"
   shift
-elif [ $1 == "analysis" ]; then
+elif [[ "$1" == "analysis" ]]; then
   BENCH_ROLE="analysis"
   shift
-elif [ $1 == "h" -o $1 == "help" -o $1 == "-h" -o "--help" ]; then
+elif [[ "$1" == "h" || "$1" == "help" || "$1" == "-h" || "$1" == "--help" ]]; then
   usage
   exit 0
 else
-  echo "First postional argument must be equal to: \"measure\" or \"analysis\""
+  echo "First positional argument must be equal to: \"measure\" or \"analysis\""
   exit 1
 fi
 
@@ -128,7 +128,6 @@ while [[ $# -gt 0 ]]; do
       shift
       ;;
     --save-images)
-      shift
       SAVE_IMAGES=true
       shift
       ;;
@@ -141,11 +140,11 @@ while [[ $# -gt 0 ]]; do
 done
 
 # Functions to which attach the probes
-T1_PUB_FUNC=(SOPC_UADP_NetworkMessage_Get_PreencodedBuffer MessageCtx_send_publish_message)
+T1_PUB_FUNC=(SOPC_UADP_NetworkMessage_Get_PreencodedBuffer MessageCtx_Send_Publish_Message)
 T2_PUB_FUNC=(SOPC_PubSourceVariable_GetVariables SOPC_PubSourceVariable_GetVariables%return)
 T3_PUB_FUNC=(sendto SOPC_UADP_NetworkMessage_Get_PreencodedBuffer)
-T4_PUB_FUNC=(sendto MessageCtx_send_publish_message)
-T5_PUB_FUNC=(MessageCtx_send_publish_message MessageCtx_send_publish_message%return)
+T4_PUB_FUNC=(sendto MessageCtx_Send_Publish_Message)
+T5_PUB_FUNC=(MessageCtx_Send_Publish_Message MessageCtx_Send_Publish_Message%return)
 
 T1_SUB_FUNC=(Cache_SetTargetVariables Cache_SetTargetVariables%return)
 T2_SUB_FUNC=(SOPC_Reader_Read_UADP SOPC_Reader_Read_UADP%return)
@@ -168,22 +167,50 @@ function set_probe()
 {
   PROGPATH=$1
   FUNCTION_NAME=$2
+  PROGNAME="$(basename -- $PROGPATH)"
   if [ ${FUNCTION_NAME} == "sendto" ]; then
-    perf probe -x /lib/x86_64-linux-gnu/libc.so.6 sendto
+    LIBC_PATH=$(ldconfig -p 2>/dev/null | awk '/libc\.so\.6/{print $NF; exit}')
+    [ -z "$LIBC_PATH" ] && LIBC_PATH=$(find /lib /lib64 -name "libc.so.6" 2>/dev/null | head -1)
+    perf probe -x "$LIBC_PATH" sendto 2>/dev/null || true
   else
-    perf probe -x $PROGPATH $FUNCTION_NAME
-    test_set_probe $? $FUNCTION_NAME
+  # Don't delete probe here. If a probe is already set then it would mean that you hasn't called  del_probe before which you should
+
+    # # Force-delete first to avoid "already exists" errors.
+    # # Stale probes can come from: (1) a previous del_probe that failed with
+    # # "Device or resource busy"; (2) another tool registering the same name in
+    # # the "uprobes:" group (e.g. OPCUA_FX test binaries on this board).
+    # # Disabling the ftrace event in sysfs first releases the busy lock.
+    # local fname="${FUNCTION_NAME//\%return/__return}"
+    # local sysfs_base="/sys/kernel/debug/tracing/events/probe_${PROGNAME}"
+    # echo 0 > "${sysfs_base}/${fname}/enable" 2>/dev/null || true
+    # perf probe --del "probe_${PROGNAME}:${fname}" 2>/dev/null || true
+    # perf probe --del "uprobes:${fname}" 2>/dev/null || true
+    perf probe -x "$PROGPATH" "$FUNCTION_NAME"
+    test_set_probe $? "$FUNCTION_NAME"
   fi
 }
 
 function del_probe()
 {
-  # First argument path to program which delete the probes
+  # First argument path to program which delete the probes
   PROGPATH=$1
   PROGNAME="$(basename -- $PROGPATH)"
 
-  perf probe --del probe_$PROGNAME:*
-  perf probe --del probe_libc:*
+  # Disable all ftrace events for this probe group in sysfs before deleting.
+  # This releases any "Device or resource busy" lock held by trace-cmd or the
+  # kernel, allowing perf probe --del to succeed on the first attempt.
+  local sysfs_events="/sys/kernel/debug/tracing/events/probe_${PROGNAME}"
+  if [[ -d "${sysfs_events}" ]]; then
+    find "${sysfs_events}" -name enable | while read -r f; do echo 0 > "$f" 2>/dev/null || true; done
+  fi
+  local attempt
+  for attempt in 1 2 3; do
+    perf probe -l 2>/dev/null | grep -qF "probe_${PROGNAME}:" || break
+    perf probe --del "probe_${PROGNAME}:*" 2>/dev/null && break || sleep 1
+  done
+  if perf probe -l 2>/dev/null | grep -qF "probe_libc:"; then
+    perf probe --del "probe_libc:*" 2>/dev/null || true
+  fi
 }
 
 function set_probe_pub()
@@ -350,14 +377,14 @@ function trace_analysis()
   # First parameter defines if it is a publisher or subscriber analysis (pub|sub)
   # Second parameter defines which process is analysed
   # Third parameter optional, Set to save the results as images format "--save-images NAME_IMAGE.png"
-  PUSBUB_KIND=$1
+  PUBSUB_KIND=$1
   DELTA_TIME=$2
   SAVE_PNG=$3
 
-  if [ $PUSBUB_KIND == "pub" ]; then
-    ./parse_trace.py trace_config/traceconfig_publisher_${DELTA_TIME}.yaml ${SAVE_PNG}
-  elif [ $PUSBUB_KIND == "sub" ]; then
-    ./parse_trace.py trace_config/traceconfig_subscriber_${DELTA_TIME}.yaml ${SAVE_PNG}
+  if [[ "$PUBSUB_KIND" == "pub" ]]; then
+    ${SCRIPT_DIR}/parse_trace.py ${SCRIPT_DIR}/trace_config/traceconfig_publisher_${DELTA_TIME}.yaml ${SAVE_PNG}
+  elif [[ "$PUBSUB_KIND" == "sub" ]]; then
+    ${SCRIPT_DIR}/parse_trace.py ${SCRIPT_DIR}/trace_config/traceconfig_subscriber_${DELTA_TIME}.yaml ${SAVE_PNG}
   else
     echo "unrecognized PUBSUB_KIND option $PUBSUB_KIND"
     exit 1
