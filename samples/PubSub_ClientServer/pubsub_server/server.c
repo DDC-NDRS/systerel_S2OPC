@@ -149,18 +149,13 @@ static SOPC_StatusCode Server_Method_Func_AcyclicSend(const SOPC_CallContext* ca
         return OpcUa_BadInvalidArgument;
     }
 
-    static SOPC_NodeId* nidSendStatus = NULL;
-    if (NULL == nidSendStatus)
-    {
-        nidSendStatus = SOPC_NodeId_FromCString(NODEID_ACYCLICPUB_SEND_STATUS);
-    }
-
-    SOPC_ASSERT(NULL != nidSendStatus);
+    SOPC_NodeId nidSendStatus =
+        SOPC_NODEID_STRING(NODEID_NS_ACYCLICPUB_SEND_STATUS, NODEID_STRING_ACYCLICPUB_SEND_STATUS);
 
     // Check that acyclic send status is not in progress
     SOPC_AddressSpaceAccess* addSpAccess = SOPC_CallContext_GetAddressSpaceAccess(callContextPtr);
     SOPC_DataValue* dv = NULL;
-    SOPC_StatusCode code = SOPC_AddressSpaceAccess_ReadValue(addSpAccess, nidSendStatus, NULL, &dv);
+    SOPC_StatusCode code = SOPC_AddressSpaceAccess_ReadValue(addSpAccess, &nidSendStatus, NULL, &dv);
     if (!SOPC_IsGoodStatus(code) || SOPC_Int32_Id != dv->Value.BuiltInTypeId ||
         SOPC_VariantArrayType_SingleValue != dv->Value.ArrayType || dv->Value.Value.Int32 == PUBSUB_METHOD_IN_PROGRESS)
     {
@@ -171,7 +166,7 @@ static SOPC_StatusCode Server_Method_Func_AcyclicSend(const SOPC_CallContext* ca
         // Update acyclic send status
         dv->Value.Value.Int32 = PUBSUB_METHOD_IN_PROGRESS;
         SOPC_DateTime ts = 0;
-        code = SOPC_AddressSpaceAccess_WriteValue(addSpAccess, nidSendStatus, NULL, &dv->Value, NULL, &ts, NULL);
+        code = SOPC_AddressSpaceAccess_WriteValue(addSpAccess, &nidSendStatus, NULL, &dv->Value, NULL, &ts, NULL);
 
         // If Status is different to IN PROGRESS request flags shall false
         int32_t acyclicSendRequested = SOPC_Atomic_Int_Get(&pubAcyclicSendRequest);
@@ -188,9 +183,6 @@ static SOPC_StatusCode Server_Method_Func_AcyclicSend(const SOPC_CallContext* ca
     }
     SOPC_DataValue_Clear(dv);
     SOPC_Free(dv);
-    SOPC_NodeId_Clear(nidSendStatus);
-    SOPC_Free(nidSendStatus);
-    nidSendStatus = NULL;
     return code;
 }
 
@@ -220,18 +212,13 @@ static SOPC_StatusCode Server_Method_Func_DataSetMessageFiltering(const SOPC_Cal
         return OpcUa_BadInvalidArgument;
     }
 
-    static SOPC_NodeId* nidDataSetMessageFilteringStatus = NULL;
-    if (NULL == nidDataSetMessageFilteringStatus)
-    {
-        nidDataSetMessageFilteringStatus = SOPC_NodeId_FromCString(NODEID_DSM_FILTERING_STATUS);
-    }
-
-    SOPC_ASSERT(NULL != nidDataSetMessageFilteringStatus);
+    SOPC_NodeId nidDataSetMessageFilteringStatus =
+        SOPC_NODEID_STRING(NODEID_NS_DSM_FILTERING_STATUS, NODEID_STRING_DSM_FILTERING_STATUS);
 
     // Check that DatasetMessage filtering status is not in progress
     SOPC_AddressSpaceAccess* addSpAccess = SOPC_CallContext_GetAddressSpaceAccess(callContextPtr);
     SOPC_DataValue* dv = NULL;
-    SOPC_StatusCode code = SOPC_AddressSpaceAccess_ReadValue(addSpAccess, nidDataSetMessageFilteringStatus, NULL, &dv);
+    SOPC_StatusCode code = SOPC_AddressSpaceAccess_ReadValue(addSpAccess, &nidDataSetMessageFilteringStatus, NULL, &dv);
     if (!SOPC_IsGoodStatus(code) || SOPC_Int32_Id != dv->Value.BuiltInTypeId ||
         SOPC_VariantArrayType_SingleValue != dv->Value.ArrayType || dv->Value.Value.Int32 == PUBSUB_METHOD_IN_PROGRESS)
     {
@@ -242,8 +229,8 @@ static SOPC_StatusCode Server_Method_Func_DataSetMessageFiltering(const SOPC_Cal
         // Update dsm filtering status
         dv->Value.Value.Int32 = PUBSUB_METHOD_IN_PROGRESS;
         SOPC_DateTime ts = 0;
-        code = SOPC_AddressSpaceAccess_WriteValue(addSpAccess, nidDataSetMessageFilteringStatus, NULL, &dv->Value, NULL,
-                                                  &ts, NULL);
+        code = SOPC_AddressSpaceAccess_WriteValue(addSpAccess, &nidDataSetMessageFilteringStatus, NULL, &dv->Value,
+                                                  NULL, &ts, NULL);
 
         // If Status is different to IN PROGRESS request flags shall false
         int32_t filteringRequested = SOPC_Atomic_Int_Get(&pubFilteringDsmEmissionRequest);
@@ -264,9 +251,6 @@ static SOPC_StatusCode Server_Method_Func_DataSetMessageFiltering(const SOPC_Cal
     }
     SOPC_DataValue_Clear(dv);
     SOPC_Free(dv);
-    SOPC_NodeId_Clear(nidDataSetMessageFilteringStatus);
-    SOPC_Free(nidDataSetMessageFilteringStatus);
-    nidDataSetMessageFilteringStatus = NULL;
     return code;
 }
 
@@ -295,18 +279,13 @@ static SOPC_StatusCode Server_Method_Func_ResetDataSetMessageSequenceNumber(cons
         return OpcUa_BadInvalidArgument;
     }
 
-    static SOPC_NodeId* nidResetDataSetMessageSnStatus = NULL;
-    if (NULL == nidResetDataSetMessageSnStatus)
-    {
-        nidResetDataSetMessageSnStatus = SOPC_NodeId_FromCString(NODEID_RESET_DSM_SN_STATUS);
-    }
-
-    SOPC_ASSERT(NULL != nidResetDataSetMessageSnStatus);
+    SOPC_NodeId nidResetDataSetMessageSnStatus =
+        SOPC_NODEID_STRING(NODEID_NS_RESET_DSM_SN_STATUS, NODEID_STRING_RESET_DSM_SN_STATUS);
 
     // Check that DatasetMessage filtering status is not in progress
     SOPC_AddressSpaceAccess* addSpAccess = SOPC_CallContext_GetAddressSpaceAccess(callContextPtr);
     SOPC_DataValue* dv = NULL;
-    SOPC_StatusCode code = SOPC_AddressSpaceAccess_ReadValue(addSpAccess, nidResetDataSetMessageSnStatus, NULL, &dv);
+    SOPC_StatusCode code = SOPC_AddressSpaceAccess_ReadValue(addSpAccess, &nidResetDataSetMessageSnStatus, NULL, &dv);
     if (!SOPC_IsGoodStatus(code) || SOPC_Int32_Id != dv->Value.BuiltInTypeId ||
         SOPC_VariantArrayType_SingleValue != dv->Value.ArrayType || dv->Value.Value.Int32 == PUBSUB_METHOD_IN_PROGRESS)
     {
@@ -317,7 +296,7 @@ static SOPC_StatusCode Server_Method_Func_ResetDataSetMessageSequenceNumber(cons
         // Update reset dsm sequence number status
         dv->Value.Value.Int32 = PUBSUB_METHOD_IN_PROGRESS;
         SOPC_DateTime ts = 0;
-        code = SOPC_AddressSpaceAccess_WriteValue(addSpAccess, nidResetDataSetMessageSnStatus, NULL, &dv->Value, NULL,
+        code = SOPC_AddressSpaceAccess_WriteValue(addSpAccess, &nidResetDataSetMessageSnStatus, NULL, &dv->Value, NULL,
                                                   &ts, NULL);
 
         // If Status is different to IN PROGRESS request flags shall false
@@ -337,9 +316,6 @@ static SOPC_StatusCode Server_Method_Func_ResetDataSetMessageSequenceNumber(cons
     }
     SOPC_DataValue_Clear(dv);
     SOPC_Free(dv);
-    SOPC_NodeId_Clear(nidResetDataSetMessageSnStatus);
-    SOPC_Free(nidResetDataSetMessageSnStatus);
-    nidResetDataSetMessageSnStatus = NULL;
     return code;
 }
 
@@ -762,18 +738,14 @@ struct dsmIdentifier Server_SubResetDataSetMessage_Requested(void)
 
 SOPC_ReturnStatus Server_WritePubSubNodes(void)
 {
-    SOPC_NodeId* nidConfig = SOPC_NodeId_FromCString(NODEID_PUBSUB_CONFIG);
-    SOPC_NodeId* nidCommand = SOPC_NodeId_FromCString(NODEID_PUBSUB_COMMAND);
+    SOPC_NodeId nidConfig = SOPC_NODEID_STRING(NODEID_NS_PUBSUB_CONFIG, NODEID_STRING_PUBSUB_CONFIG);
+    SOPC_NodeId nidCommand = SOPC_NODEID_STRING(NODEID_NS_PUBSUB_COMMAND, NODEID_STRING_PUBSUB_COMMAND);
     SOPC_DataValue* dvConfig = SOPC_Calloc(1, sizeof(SOPC_DataValue));
     SOPC_DataValue* dvCommand = SOPC_Calloc(1, sizeof(SOPC_DataValue));
-    if (NULL == nidConfig || NULL == nidCommand || NULL == dvConfig || NULL == dvCommand)
+    if (NULL == dvConfig || NULL == dvCommand)
     {
         SOPC_Free(dvConfig);
         SOPC_Free(dvCommand);
-        SOPC_NodeId_Clear(nidConfig);
-        SOPC_Free(nidConfig);
-        SOPC_NodeId_Clear(nidCommand);
-        SOPC_Free(nidCommand);
         return SOPC_STATUS_OUT_OF_MEMORY;
     }
 
@@ -876,7 +848,7 @@ SOPC_ReturnStatus Server_WritePubSubNodes(void)
     if (SOPC_STATUS_OK == status)
     {
         /* Config must be set before the command is issued */
-        SOPC_NodeId* lpNid[2] = {nidConfig, nidCommand};
+        SOPC_NodeId* lpNid[2] = {&nidConfig, &nidCommand};
         uint32_t lAttrId[2] = {13, 13};
         SOPC_DataValue* lpDv[2] = {dvConfig, dvCommand};
 
@@ -889,10 +861,6 @@ SOPC_ReturnStatus Server_WritePubSubNodes(void)
     }
 
     /* Clean */
-    SOPC_NodeId_Clear(nidConfig);
-    SOPC_Free(nidConfig);
-    SOPC_NodeId_Clear(nidCommand);
-    SOPC_Free(nidCommand);
     SOPC_DataValue_Clear(dvConfig);
     SOPC_Free(dvConfig);
     SOPC_DataValue_Clear(dvCommand);
@@ -1008,17 +976,12 @@ static void Server_request_change_sendAcyclicStatus(PubSubMethodStatus state)
     SOPC_ASSERT(SOPC_STATUS_OK == status);
     OpcUa_WriteValue* wv = SOPC_Calloc(1, sizeof(OpcUa_WriteValue));
 
-    /* Avoid the creation of the NodeId each call of the function */
-    static SOPC_NodeId* nidSendStatus = NULL;
-    if (NULL == nidSendStatus)
-    {
-        nidSendStatus = SOPC_NodeId_FromCString(NODEID_ACYCLICPUB_SEND_STATUS);
-    }
+    SOPC_NodeId nidSendStatus =
+        SOPC_NODEID_STRING(NODEID_NS_ACYCLICPUB_SEND_STATUS, NODEID_STRING_ACYCLICPUB_SEND_STATUS);
 
-    if (NULL == request || NULL == wv || NULL == nidSendStatus)
+    if (NULL == request || NULL == wv)
     {
         SOPC_Free(wv);
-        SOPC_Free(nidSendStatus);
     }
     else
     {
@@ -1034,10 +997,7 @@ static void Server_request_change_sendAcyclicStatus(PubSubMethodStatus state)
         val->ArrayType = SOPC_VariantArrayType_SingleValue;
         val->Value.Int32 = (int32_t) state;
 
-        status = SOPC_NodeId_Copy(&wv->NodeId, nidSendStatus);
-        SOPC_NodeId_Clear(nidSendStatus);
-        SOPC_Free(nidSendStatus);
-        nidSendStatus = NULL;
+        status = SOPC_NodeId_Copy(&wv->NodeId, &nidSendStatus);
 
         if (SOPC_STATUS_OK == status)
         {
@@ -1061,17 +1021,12 @@ static void Server_request_change_DsmFilteringStatus(PubSubMethodStatus state)
     SOPC_ASSERT(SOPC_STATUS_OK == status);
     OpcUa_WriteValue* wv = SOPC_Calloc(1, sizeof(OpcUa_WriteValue));
 
-    /* Avoid the creation of the NodeId each call of the function */
-    static SOPC_NodeId* nidDsmFilteringStatus = NULL;
-    if (NULL == nidDsmFilteringStatus)
-    {
-        nidDsmFilteringStatus = SOPC_NodeId_FromCString(NODEID_DSM_FILTERING_STATUS);
-    }
+    SOPC_NodeId nidDsmFilteringStatus =
+        SOPC_NODEID_STRING(NODEID_NS_DSM_FILTERING_STATUS, NODEID_STRING_DSM_FILTERING_STATUS);
 
-    if (NULL == request || NULL == wv || NULL == nidDsmFilteringStatus)
+    if (NULL == request || NULL == wv)
     {
         SOPC_Free(wv);
-        SOPC_Free(nidDsmFilteringStatus);
     }
     else
     {
@@ -1087,10 +1042,7 @@ static void Server_request_change_DsmFilteringStatus(PubSubMethodStatus state)
         val->ArrayType = SOPC_VariantArrayType_SingleValue;
         val->Value.Int32 = (int32_t) state;
 
-        status = SOPC_NodeId_Copy(&wv->NodeId, nidDsmFilteringStatus);
-        SOPC_NodeId_Clear(nidDsmFilteringStatus);
-        SOPC_Free(nidDsmFilteringStatus);
-        nidDsmFilteringStatus = NULL;
+        status = SOPC_NodeId_Copy(&wv->NodeId, &nidDsmFilteringStatus);
 
         if (SOPC_STATUS_OK == status)
         {
@@ -1114,17 +1066,12 @@ static void Server_request_change_resetDsmSequenceNumberStatus(PubSubMethodStatu
     SOPC_ASSERT(SOPC_STATUS_OK == status);
     OpcUa_WriteValue* wv = SOPC_Calloc(1, sizeof(OpcUa_WriteValue));
 
-    /* Avoid the creation of the NodeId each call of the function */
-    static SOPC_NodeId* nidResetDsmSnStatus = NULL;
-    if (NULL == nidResetDsmSnStatus)
-    {
-        nidResetDsmSnStatus = SOPC_NodeId_FromCString(NODEID_RESET_DSM_SN_STATUS);
-    }
+    SOPC_NodeId nidResetDsmSnStatus =
+        SOPC_NODEID_STRING(NODEID_NS_RESET_DSM_SN_STATUS, NODEID_STRING_RESET_DSM_SN_STATUS);
 
-    if (NULL == request || NULL == wv || NULL == nidResetDsmSnStatus)
+    if (NULL == request || NULL == wv)
     {
         SOPC_Free(wv);
-        SOPC_Free(nidResetDsmSnStatus);
     }
     else
     {
@@ -1140,10 +1087,7 @@ static void Server_request_change_resetDsmSequenceNumberStatus(PubSubMethodStatu
         val->ArrayType = SOPC_VariantArrayType_SingleValue;
         val->Value.Int32 = (int32_t) state;
 
-        status = SOPC_NodeId_Copy(&wv->NodeId, nidResetDsmSnStatus);
-        SOPC_NodeId_Clear(nidResetDsmSnStatus);
-        SOPC_Free(nidResetDsmSnStatus);
-        nidResetDsmSnStatus = NULL;
+        status = SOPC_NodeId_Copy(&wv->NodeId, &nidResetDsmSnStatus);
 
         if (SOPC_STATUS_OK == status)
         {
@@ -1182,30 +1126,18 @@ static void Server_Event_Write(OpcUa_WriteValue* pwv)
         return;
     }
 
-    /* It's easier to create the NodeIds once and for all than converting the event's NodeId to a string each time */
-    static SOPC_NodeId* nidConfig = NULL;
-    static SOPC_NodeId* nidCommand = NULL;
-    if (NULL == nidConfig || NULL == nidCommand)
-    {
-        nidConfig = SOPC_NodeId_FromCString(NODEID_PUBSUB_CONFIG);
-        nidCommand = SOPC_NodeId_FromCString(NODEID_PUBSUB_COMMAND);
-    }
+    SOPC_NodeId nidConfig = SOPC_NODEID_STRING(NODEID_NS_PUBSUB_CONFIG, NODEID_STRING_PUBSUB_CONFIG);
+    SOPC_NodeId nidCommand = SOPC_NODEID_STRING(NODEID_NS_PUBSUB_COMMAND, NODEID_STRING_PUBSUB_COMMAND);
 
     /* If config changes, store the new configuration path in global cache */
     int32_t cmpConfig = -1;
-    SOPC_ReturnStatus status = SOPC_NodeId_Compare(nidConfig, &pwv->NodeId, &cmpConfig);
+    SOPC_ReturnStatus status = SOPC_NodeId_Compare(&nidConfig, &pwv->NodeId, &cmpConfig);
     SOPC_ASSERT(SOPC_STATUS_OK == status);
-    SOPC_NodeId_Clear(nidConfig);
-    SOPC_Free(nidConfig);
-    nidConfig = NULL;
 
     /* If command changes, start, stop, or restart the PubSub module */
     int32_t cmpCommand = -1;
-    status = SOPC_NodeId_Compare(nidCommand, &pwv->NodeId, &cmpCommand);
+    status = SOPC_NodeId_Compare(&nidCommand, &pwv->NodeId, &cmpCommand);
     SOPC_ASSERT(SOPC_STATUS_OK == status);
-    SOPC_NodeId_Clear(nidCommand);
-    SOPC_Free(nidCommand);
-    nidCommand = NULL;
 
     if (0 == cmpConfig)
     {
@@ -1315,16 +1247,11 @@ static void Server_SetSubStatus(bool sync, SOPC_PubSubState state)
     OpcUa_WriteValue* wv = SOPC_Calloc(1, sizeof(OpcUa_WriteValue));
 
     /* Avoid the creation of the NodeId each call of the function */
-    static SOPC_NodeId* nidStatus = NULL;
-    if (NULL == nidStatus)
-    {
-        nidStatus = SOPC_NodeId_FromCString(NODEID_PUBSUB_STATUS);
-    }
+    SOPC_NodeId nidStatus = SOPC_NODEID_STRING(NODEID_NS_PUBSUB_STATUS, NODEID_STRING_PUBSUB_STATUS);
 
-    if (NULL == request || NULL == wv || NULL == nidStatus)
+    if (NULL == request || NULL == wv)
     {
         SOPC_Free(wv);
-        SOPC_Free(nidStatus);
         return;
     }
 
@@ -1340,10 +1267,7 @@ static void Server_SetSubStatus(bool sync, SOPC_PubSubState state)
     val->ArrayType = SOPC_VariantArrayType_SingleValue;
     val->Value.Byte = (SOPC_Byte) state;
 
-    status = SOPC_NodeId_Copy(&wv->NodeId, nidStatus);
-    SOPC_NodeId_Clear(nidStatus);
-    SOPC_Free(nidStatus);
-    nidStatus = NULL;
+    status = SOPC_NodeId_Copy(&wv->NodeId, &nidStatus);
 
     if (SOPC_STATUS_OK == status)
     {

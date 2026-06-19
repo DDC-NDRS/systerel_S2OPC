@@ -46,12 +46,24 @@
 #define ADDRESS_SPACE_PATH "./s2opc_pubsub_nodeset.xml"
 #define SLEEP_TIMEOUT 100
 #define WAIT_STOP_START 2000
-#define NODEID_PUBSUB_STATUS "ns=1;s=PubSubStatus"
-#define NODEID_PUBSUB_CONFIG "ns=1;s=PubSubConfiguration"
-#define NODEID_PUBSUB_COMMAND "ns=1;s=PubSubStartStop"
-#define NODEID_ACYCLICPUB_SEND_STATUS "ns=1;s=AcyclicPubSendStatus"
-#define NODEID_DSM_FILTERING_STATUS "ns=1;s=DataSetMessageFilteringStatus"
-#define NODEID_RESET_DSM_SN_STATUS "ns=1;s=ResetDataSetMessageSequenceNumberStatus"
+// ns=1;s=PubSubStatus
+#define NODEID_NS_PUBSUB_STATUS 1
+#define NODEID_STRING_PUBSUB_STATUS "PubSubStatus"
+// ns=1;s=PubSubConfiguration
+#define NODEID_NS_PUBSUB_CONFIG 1
+#define NODEID_STRING_PUBSUB_CONFIG "PubSubConfiguration"
+// ns=1;s=PubSubStartStop
+#define NODEID_NS_PUBSUB_COMMAND 1
+#define NODEID_STRING_PUBSUB_COMMAND "PubSubStartStop"
+// ns=1;s=AcyclicPubSendStatus
+#define NODEID_NS_ACYCLICPUB_SEND_STATUS 1
+#define NODEID_STRING_ACYCLICPUB_SEND_STATUS "AcyclicPubSendStatus"
+// ns=1;s=DataSetMessageFilteringStatus
+#define NODEID_NS_DSM_FILTERING_STATUS 1
+#define NODEID_STRING_DSM_FILTERING_STATUS "DataSetMessageFilteringStatus"
+// ns=1;s=ResetDataSetMessageSequenceNumberStatus
+#define NODEID_NS_RESET_DSM_SN_STATUS 1
+#define NODEID_STRING_RESET_DSM_SN_STATUS "ResetDataSetMessageSequenceNumberStatus"
 #define SYNCHRONOUS_READ_TIMEOUT 10000
 #define PUBSUB_SKS_SIGNING_KEY "./signingKey.key"
 #define PUBSUB_SKS_ENCRYPT_KEY "./encryptKey.key"
