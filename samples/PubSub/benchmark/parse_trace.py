@@ -53,7 +53,7 @@ class Trace:
     # (seen on iMX93 where trace-cmd outputs e.g. "dNHff212919476255110:" instead
     # of "dNHff 11269.867295:").  \s* handles both variants.
     _LINE_RE = re.compile(
-        r'^\s*(.+?)-(\d+)\s+\[\d+\]\s+[^\d\s]+\s*([\d.]+):\s+(\S+?):\s'
+        r'^\s*(.+?)-(\d+)\s+\[\d+\](?:\s+[^\d\s]+)?\s*([\d.]+):\s+(\S+?):\s'
     )
 
     # Nanosecond timestamps have no decimal point and are very large integers.
