@@ -654,12 +654,12 @@ static SOPC_ReturnStatus pki_create_from_store(
         if (!bDefaultBuild)
         {
             SOPC_Logger_TraceWarning(SOPC_LOG_MODULE_COMMON, "> PKI creation warning: certificate store is empty (%s).",
-                                     path);
+                                     basePath);
         }
         else
         {
             SOPC_Logger_TraceError(SOPC_LOG_MODULE_COMMON, "> PKI creation error: certificate store is empty (%s).",
-                                   path);
+                                   basePath);
         }
     }
     if (SOPC_STATUS_OK == status)
