@@ -4990,6 +4990,8 @@ typedef struct _OpcUa_WriteValue
     uint32_t AttributeId;
     SOPC_String IndexRange;
     SOPC_DataValue Value;
+    uint8_t writeByPassPermissionMask; /* :: SOPC_ByPassWritePermissionMask unencoded mask to bypass write restrictions
+                                          when using overwrite request callback ::SOPC_OverwriteSessionRequest_Fct */
 } OpcUa_WriteValue;
 
 void OpcUa_WriteValue_Initialize(void* pValue);

@@ -19217,6 +19217,16 @@ static const SOPC_EncodeableType_FieldDescriptor WriteValue_Fields[] = {
         (uint32_t) SOPC_DataValue_Id,                // typeIndex
         (uint32_t) offsetof(OpcUa_WriteValue, Value) // offset
     },
+    {
+        false,                                                           // isOptional
+        true,                                                            // isBuiltIn
+        false,                                                           // isArrayLength
+        false,                                                           // isToEncode
+        true,                                                            // isSameNs
+        (uint16_t) SOPC_OPCUA_NS_INDEX,                                  // nsIndex
+        (uint32_t) SOPC_Byte_Id,                                         // typeIndex
+        (uint32_t) offsetof(OpcUa_WriteValue, writeByPassPermissionMask) // offset
+    },
 };
 
 /*============================================================================
