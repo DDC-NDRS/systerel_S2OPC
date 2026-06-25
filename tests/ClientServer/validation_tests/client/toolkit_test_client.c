@@ -927,6 +927,159 @@ static SOPC_ReturnStatus test_request_overwrite(SOPC_ClientConnection* connectio
     return status;
 }
 
+#define TEST_OVERWRITE_BYPASS_TRIGGER_BOOL true
+#define TEST_OVERWRITE_BYPASS_STATUS OpcUa_GoodCompletesAsynchronously
+#define TEST_OVERWRITE_BYPASS_SOURCE_TS 121622976000000000LL
+#define TEST_OVERWRITE_BYPASS_NODE_WITH_MASK SOPC_NODEID_NUMERIC(1, 1049)
+#define TEST_OVERWRITE_BYPASS_NODE_WITHOUT_MASK SOPC_NODEID_NUMERIC(1, 1060)
+
+static SOPC_ReturnStatus test_overwrite_bypass_write_boolean_value(SOPC_ClientConnection* connection,
+                                                                   const SOPC_NodeId* nodeId,
+                                                                   bool value,
+                                                                   bool expectWriteSuccess)
+{
+    SOPC_DataValue dv;
+    SOPC_DataValue_Initialize(&dv);
+    dv.Value.BuiltInTypeId = SOPC_Boolean_Id;
+    dv.Value.Value.Boolean = value;
+    dv.Status = SOPC_GoodGenericStatus;
+
+    OpcUa_WriteResponse* pWriteResp = NULL;
+    OpcUa_WriteRequest* pWriteReq = SOPC_WriteRequest_Create(1);
+    SOPC_ASSERT(NULL != pWriteReq);
+    SOPC_ReturnStatus status = SOPC_WriteRequest_SetWriteValue(pWriteReq, 0, nodeId, SOPC_AttributeId_Value, NULL, &dv);
+    if (SOPC_STATUS_OK == status)
+    {
+        status = SOPC_ClientHelper_ServiceSync(connection, (void*) pWriteReq, (void**) &pWriteResp);
+    }
+    if (SOPC_STATUS_OK == status)
+    {
+        if (pWriteResp->NoOfResults != 1)
+        {
+            status = SOPC_STATUS_NOK;
+        }
+        else if (expectWriteSuccess && !SOPC_IsGoodStatus(pWriteResp->Results[0]))
+        {
+            status = SOPC_STATUS_NOK;
+        }
+        else if (!expectWriteSuccess && OpcUa_BadNotWritable != pWriteResp->Results[0])
+        {
+            status = SOPC_STATUS_NOK;
+        }
+    }
+    if (NULL != pWriteResp)
+    {
+        SOPC_EncodeableObject_Delete(pWriteResp->encodeableType, (void**) &pWriteResp);
+    }
+    return status;
+}
+
+static SOPC_ReturnStatus test_overwrite_bypass_write_boolean(SOPC_ClientConnection* connection,
+                                                             const SOPC_NodeId* nodeId,
+                                                             bool expectWriteSuccess)
+{
+    return test_overwrite_bypass_write_boolean_value(connection, nodeId, TEST_OVERWRITE_BYPASS_TRIGGER_BOOL,
+                                                     expectWriteSuccess);
+}
+
+static SOPC_ReturnStatus test_overwrite_bypass_read_boolean_value(SOPC_ClientConnection* connection,
+                                                                  const SOPC_NodeId* nodeId,
+                                                                  bool* outValue)
+{
+    OpcUa_ReadResponse* pReadResp = NULL;
+    OpcUa_ReadRequest* pReadReq = SOPC_ReadRequest_Create(1, OpcUa_TimestampsToReturn_Neither);
+    SOPC_ASSERT(NULL != pReadReq);
+    SOPC_ReturnStatus status = SOPC_ReadRequest_SetReadValue(pReadReq, 0, nodeId, SOPC_AttributeId_Value, NULL);
+    if (SOPC_STATUS_OK == status)
+    {
+        status = SOPC_ClientHelper_ServiceSync(connection, (void*) pReadReq, (void**) &pReadResp);
+    }
+    if (SOPC_STATUS_OK == status)
+    {
+        if (pReadResp->NoOfResults != 1 || !SOPC_IsGoodStatus(pReadResp->Results[0].Status) ||
+            SOPC_Boolean_Id != pReadResp->Results[0].Value.BuiltInTypeId)
+        {
+            status = SOPC_STATUS_NOK;
+        }
+        else
+        {
+            *outValue = pReadResp->Results[0].Value.Value.Boolean;
+        }
+    }
+    if (NULL != pReadResp)
+    {
+        SOPC_EncodeableObject_Delete(pReadResp->encodeableType, (void**) &pReadResp);
+    }
+    return status;
+}
+
+static SOPC_ReturnStatus test_overwrite_bypass_read_boolean(SOPC_ClientConnection* connection,
+                                                            const SOPC_NodeId* nodeId,
+                                                            bool verifyOverwrittenStatusAndSourceTs)
+{
+    OpcUa_ReadResponse* pReadResp = NULL;
+    OpcUa_ReadRequest* pReadReq = SOPC_ReadRequest_Create(1, OpcUa_TimestampsToReturn_Both);
+    SOPC_ASSERT(NULL != pReadReq);
+    SOPC_ReturnStatus status = SOPC_ReadRequest_SetReadValue(pReadReq, 0, nodeId, SOPC_AttributeId_Value, NULL);
+    if (SOPC_STATUS_OK == status)
+    {
+        status = SOPC_ClientHelper_ServiceSync(connection, (void*) pReadReq, (void**) &pReadResp);
+    }
+    if (SOPC_STATUS_OK == status)
+    {
+        if (pReadResp->NoOfResults != 1 || !SOPC_IsGoodStatus(pReadResp->Results[0].Status))
+        {
+            status = SOPC_STATUS_NOK;
+        }
+        else if (TEST_OVERWRITE_BYPASS_TRIGGER_BOOL != pReadResp->Results[0].Value.Value.Boolean)
+        {
+            status = SOPC_STATUS_INVALID_STATE;
+        }
+#ifndef WITH_CONST_ADDSPACE
+        else if (verifyOverwrittenStatusAndSourceTs)
+        {
+            if (TEST_OVERWRITE_BYPASS_STATUS != pReadResp->Results[0].Status ||
+                TEST_OVERWRITE_BYPASS_SOURCE_TS != pReadResp->Results[0].SourceTimestamp)
+            {
+                status = SOPC_STATUS_INVALID_STATE;
+            }
+        }
+#endif
+    }
+    if (NULL != pReadResp)
+    {
+        SOPC_EncodeableObject_Delete(pReadResp->encodeableType, (void**) &pReadResp);
+    }
+    return status;
+}
+
+static SOPC_ReturnStatus test_request_overwrite_bypass_masks(SOPC_ClientConnection* connection)
+{
+    const SOPC_NodeId nodeWithBypass = TEST_OVERWRITE_BYPASS_NODE_WITH_MASK;
+    const SOPC_NodeId nodeWithoutBypass = TEST_OVERWRITE_BYPASS_NODE_WITHOUT_MASK;
+    bool initialWithBypass = false;
+
+    SOPC_ReturnStatus status =
+        test_overwrite_bypass_read_boolean_value(connection, &nodeWithBypass, &initialWithBypass);
+    if (SOPC_STATUS_OK == status)
+    {
+        status = test_overwrite_bypass_write_boolean(connection, &nodeWithBypass, true);
+    }
+    if (SOPC_STATUS_OK == status)
+    {
+        status = test_overwrite_bypass_read_boolean(connection, &nodeWithBypass, true);
+    }
+    if (SOPC_STATUS_OK == status)
+    {
+        status = test_overwrite_bypass_write_boolean(connection, &nodeWithoutBypass, false);
+    }
+    if (SOPC_STATUS_OK == status)
+    {
+        status = test_overwrite_bypass_write_boolean_value(connection, &nodeWithBypass, initialWithBypass, true);
+    }
+    return status;
+}
+
 static SOPC_ReturnStatus test_request_overwrite2(SOPC_ClientConnection* connection)
 {
     // Build the write request
@@ -1151,6 +1304,20 @@ int main(void)
         else
         {
             printf(">>Test_Client_Toolkit: request overwrite (expected) global failure test OK\n");
+        }
+    }
+
+    /* Test request overwrite bypass masks for Status and SourceTimestamp writes */
+    if (SOPC_STATUS_OK == status)
+    {
+        status = test_request_overwrite_bypass_masks(secureConnections[1]);
+        if (SOPC_STATUS_OK != status)
+        {
+            printf(">>Test_Client_Toolkit: request overwrite bypass masks test NOK\n");
+        }
+        else
+        {
+            printf(">>Test_Client_Toolkit: request overwrite bypass masks test OK\n");
         }
     }
 

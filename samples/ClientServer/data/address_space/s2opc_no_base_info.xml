@@ -3542,6 +3542,8 @@
       <Reference ReferenceType="HasComponent">ns=1;i=1033</Reference>
       <Reference ReferenceType="HasComponent">ns=1;i=1034</Reference>
       <Reference ReferenceType="HasComponent">ns=1;i=1035</Reference>
+      <Reference ReferenceType="HasComponent">ns=1;i=1049</Reference>
+      <Reference ReferenceType="HasComponent">ns=1;i=1060</Reference>
       <Reference ReferenceType="HasComponent">ns=1;s=AnalogItemArrayInt32</Reference>
       <Reference ReferenceType="HasComponent">ns=1;s=AnalogItemInt16</Reference>
       <Reference ReferenceType="HasComponent">ns=1;s=AnalogItemInt32</Reference>
@@ -4007,6 +4009,26 @@
           <uax:Name>testName5</uax:Name>
         </uax:QualifiedName>
       </uax:ListOfQualifiedName>
+    </Value>
+  </UAVariable>
+  <UAVariable NodeId="ns=1;i=1049" BrowseName="1:ReadWriteOnlyAccessBoolVar" DataType="Boolean" ValueRank="-1" AccessLevel="3">
+    <DisplayName>ReadWriteOnlyAccessBoolVar</DisplayName>
+    <Description>ReadWriteOnlyAccessBoolVar description</Description>
+    <References>
+      <Reference ReferenceType="HasTypeDefinition">i=63</Reference>
+    </References>
+    <Value>
+      <uax:Boolean>false</uax:Boolean>
+    </Value>
+  </UAVariable>
+  <UAVariable NodeId="ns=1;i=1060" BrowseName="1:ReadWriteOnlyAccessBoolVar2" DataType="Boolean" ValueRank="-1" AccessLevel="3">
+    <DisplayName>ReadWriteOnlyAccessBoolVar2</DisplayName>
+    <Description>ReadWriteOnlyAccessBoolVar2 description</Description>
+    <References>
+      <Reference ReferenceType="HasTypeDefinition">i=63</Reference>
+    </References>
+    <Value>
+      <uax:Boolean>false</uax:Boolean>
     </Value>
   </UAVariable>
   <UAObject BrowseName="1:15361" NodeId="ns=1;i=15361" ParentNodeId="i=85">

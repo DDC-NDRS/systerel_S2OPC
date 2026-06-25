@@ -1040,12 +1040,43 @@ static SOPC_ReturnStatus Server_LoadServerConfiguration(void)
     return status;
 }
 
+#define TEST_OVERWRITE_BYPASS_TRIGGER_BOOL true
+#define TEST_OVERWRITE_BYPASS_STATUS OpcUa_GoodCompletesAsynchronously
+#define TEST_OVERWRITE_BYPASS_SOURCE_TS 121622976000000000LL
+#define TEST_OVERWRITE_BYPASS_NODE_NS 1
+#define TEST_OVERWRITE_BYPASS_NODE_WITH_MASK_ID 1049
+#define TEST_OVERWRITE_BYPASS_NODE_WITHOUT_MASK_ID 1060
+
+static bool Test_IsOverwriteBypassTriggerWrite(const OpcUa_WriteValue* nodeToWrite,
+                                               uint16_t namespaceIndex,
+                                               uint32_t numericId)
+{
+    return namespaceIndex == nodeToWrite->NodeId.Namespace &&
+           SOPC_IdentifierType_Numeric == nodeToWrite->NodeId.IdentifierType &&
+           numericId == nodeToWrite->NodeId.Data.Numeric && SOPC_AttributeId_Value == nodeToWrite->AttributeId &&
+           SOPC_Boolean_Id == nodeToWrite->Value.Value.BuiltInTypeId &&
+           SOPC_VariantArrayType_SingleValue == nodeToWrite->Value.Value.ArrayType &&
+           TEST_OVERWRITE_BYPASS_TRIGGER_BOOL == nodeToWrite->Value.Value.Value.Boolean;
+}
+
+static void Test_ApplyOverwriteBypassStatusAndSourceTs(OpcUa_WriteValue* nodeToWrite)
+{
+    nodeToWrite->Value.Status = TEST_OVERWRITE_BYPASS_STATUS;
+    nodeToWrite->Value.SourceTimestamp = TEST_OVERWRITE_BYPASS_SOURCE_TS;
+    nodeToWrite->Value.SourcePicoSeconds = 0;
+}
+
 /*
  * Test the overwrite client request callback:
  * - Change the written StatusCode to GoodCompletesAsynchronously and value to 9998 for the write of the node
  * ns=1;s=1012 with value 9999 when user is authenticated with username/password.
  * - Change the global request treatment result status code to Bad_ServerTooBusy if 666 write operations are
  * intended when user is authenticated with username/password.
+ * - For ns=1;i=1049 (ReadWriteOnlyAccessBoolVar) with boolean trigger value: add Status and SourceTimestamp
+ *   writes and activate SOPC_ByPassWritePermissionMask_AccessLevelStatus and
+ *   SOPC_ByPassWritePermissionMask_AccessLevelSourceTs bypass masks.
+ * - For ns=1;i=1060 (ReadWriteOnlyAccessBoolVar2) with the same trigger: add Status and SourceTimestamp
+ *   writes without bypass masks (write shall fail on access level restrictions).
  */
 static SOPC_StatusCode Test_OverwriteClientRequestCallback(const SOPC_CallContext* callCtxPtr,
                                                            SOPC_EncodeableType* type,
@@ -1078,6 +1109,20 @@ static SOPC_StatusCode Test_OverwriteClientRequestCallback(const SOPC_CallContex
 #endif
                 // Change value to (value - 1) (allows test with const addspace)
                 writeRequest->NodesToWrite[i].Value.Value.Value.Uint64 = nodeToWrite->Value.Value.Value.Uint64 - 1;
+            }
+            else if (Test_IsOverwriteBypassTriggerWrite(nodeToWrite, TEST_OVERWRITE_BYPASS_NODE_NS,
+                                                        TEST_OVERWRITE_BYPASS_NODE_WITH_MASK_ID))
+            {
+                Test_ApplyOverwriteBypassStatusAndSourceTs(&writeRequest->NodesToWrite[i]);
+                writeRequest->NodesToWrite[i].writeByPassPermissionMask =
+                    SOPC_ByPassWritePermissionMask_AccessLevelStatus |
+                    SOPC_ByPassWritePermissionMask_AccessLevelSourceTs;
+            }
+            else if (Test_IsOverwriteBypassTriggerWrite(nodeToWrite, TEST_OVERWRITE_BYPASS_NODE_NS,
+                                                        TEST_OVERWRITE_BYPASS_NODE_WITHOUT_MASK_ID))
+            {
+                Test_ApplyOverwriteBypassStatusAndSourceTs(&writeRequest->NodesToWrite[i]);
+                writeRequest->NodesToWrite[i].writeByPassPermissionMask = SOPC_ByPassWritePermissionMask_None;
             }
         }
     }
