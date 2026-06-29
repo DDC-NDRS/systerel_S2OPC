@@ -66,23 +66,109 @@ fi
 
 IFS=$ifs_save
 
+# Prepare a C source file for grep-based CERT checks:
+# - mask string literals (so "continue" in a string is not matched)
+# - remove comments (so continue in a comment is not matched)
+# Output has the same number of lines as the input (required for grep -n line numbers).
+strip_c_comments_for_grep()
+{
+	# Step 1 (sed): mask string literals before touching comments.
+	#   s/\\"//g              remove escaped quotes (simplifies the next substitution)
+	#   s/"[^"]*"/"..."/g     replace "...." contents with a placeholder
+	# Without this step, a string like "/* not a comment */" would be mangled by the
+	# comment stripper, and words inside strings would false-trigger grep.
+	sed 's/\\"//g; s/"[^"]*"/"..."/g' "$1" |
+	# Step 2 (perl): strip // and /* */ comments line by line.
+	perl -ne '
+		# -n  : read stdin line by line into $_, do not auto-print
+		# -e  : inline program (as opposed to a .pl file)
+		# chomp: remove the trailing newline from $_ (we add it back explicitly below)
+		chomp;
+
+		# $in: true while we are inside an unclosed /* ... */ block spanning several lines.
+		if ($in) {
+			# Look for the closing */ on this line (.*? = non-greedy; /s = . matches newlines).
+			if (s/.*?\*\///s) { $in = 0; }
+			# Still inside the block: blank the line (comment text must not reach grep).
+			else { $_ = ""; }
+		}
+
+		# Remove a // comment and everything after it on this line.
+		s/\/\/.*$//;
+
+		# Remove all complete /* ... */ blocks on this line (handles several on one line).
+		while (s/\/\*.*?\*\///s) {}
+
+		# If /* remains without a closing */ on this line, start a multiline block.
+		if (s/\/\*.*//s) { $in = 1; }
+
+		# Always print one output line per input line, even when $_ is empty.
+		# Do not use perl -p here: -p skips printing when $_ is "", which drops lines and
+		# shifts grep -n line numbers.
+		print "$_\n";
+	'
+}
+
+# Prepare stdin (already comment-stripped) for the break-outside-switch grep check:
+# erase every switch (expr) { ... } block so that break inside switch/case is ignored.
+# Loop break; and other break outside switch remain visible to grep.
+# Line count is preserved (newlines in blanked regions are kept) for grep -n.
+strip_c_switch_blocks_for_grep()
+{
+	perl -0777 -e '
+		# -0777: slurp the entire stdin into a single string (switch bodies span many lines).
+		# $_   : the whole file content; <> reads from stdin when no file argument is given.
+		$_ = do { local $/; <> };
+
+		# Process every switch statement in the file, one after another.
+		while (1) {
+			# Stop when no more "switch" word remains.
+			# \b = word boundary (matches switch but not myswitch); /s = . matches newlines.
+			last unless $_ =~ /\bswitch\b/s;
+
+			# Byte offset in $_ where this switch starts ($-[0] = start of regex match).
+			my $start = $-[0];
+			# Text from the switch keyword to the end of the file.
+			my $rest = substr($_, $start);
+
+			# Match "switch" then any characters except { up to the opening brace of the body.
+			# Example: "switch (x)\n    {" — the { that opens the switch body, not earlier ones.
+			unless ($rest =~ /\bswitch\b[^{]*\{/s) { last; }
+
+			# $+[0] = position in $rest just after that opening { (length relative to $rest).
+			# Must be $+[0] alone, not $+[0]-$start ($start is an offset in $_, not in $rest).
+			my $pos = $+[0];
+
+			# Brace counting from the switch body opening { (depth 1 = inside the switch block).
+			my $depth = 1;
+			while ($pos < length($rest) && $depth > 0) {
+				my $c = substr($rest, $pos, 1);
+				$depth++ if $c eq "{";   # nested block (e.g. if { } inside a case)
+				$depth-- if $c eq "}";   # closing brace
+				$pos++;
+			}
+			# When $depth returns to 0, $pos points just after the switch closing }.
+
+			# Replace the whole switch block with spaces, but keep newline characters.
+			# Replacing newlines with spaces would merge lines and break grep -n.
+			my $blank = substr($_, $start, $pos);
+			$blank =~ s/[^\n]/ /g;
+			substr($_, $start, $pos) = $blank;
+		}
+
+		print;
+	'
+}
+
 #### Check absence of functions / includes ####
 echo "Checking specific functions or headers not used in code" | tee -a $LOGPATH
 EXLUDE_CERT_VERIFIED_MANUALLY="*\/linux\/p_sopc_askpass.c"
 CHECK_CERT_RULE_ABSENCE_FAILED=false
 
-CHECK_CERT_RULE_ABSENCE="(restrict|fgets|fgetws|getc|putc|getwc|putwc|fsetpos|rand|readlink|vfork|putenv|lstat|setuid|setgid|getuid|getgid|seteuid|geteuid|fork|pthread_kill|pthread_cancel|pthread_exit)"
+CHECK_CERT_RULE_ABSENCE="(goto|continue|restrict|fgets|fgetws|getc|putc|getwc|putwc|fsetpos|rand|readlink|vfork|putenv|lstat|setuid|setgid|getuid|getgid|seteuid|geteuid|fork|pthread_kill|pthread_cancel|pthread_exit)"
 for FILE in $(find $CSRC -not -path $EXLUDE_CERT_VERIFIED_MANUALLY -not -path "*/pikeos/time/*" -name "*.c" -or -not -path "*/pikeos/time/*" -not -path "*/pikeos/p_time_c99.h" -name "*.h") ;
 do
-	# We choose to remove:
-	# - (L1) comments inside /* .. */
-	# - (L2) comments after //
-	# - (L3) : - remove sequence \" to avoid interpreting that as a string ending
-	#          - replace all string content by "..." to avoid false detection in strings
-	RESULT=$(sed 's/\/\/.*$//g'  ${FILE} | \
-		sed 's/\/\*.*\*\///g'  | \
-		sed 's/\\"//g' | sed 's/"[^"]*"/"..."/g'  | \
-		grep -nwiE $CHECK_CERT_RULE_ABSENCE)
+	RESULT=$(strip_c_comments_for_grep "${FILE}" | grep -nwiE $CHECK_CERT_RULE_ABSENCE)
 	if ! [[ -z ${RESULT} ]] ; then
 		echo "${FILE}:${RESULT}" | tee -a $LOGPATH
 		CHECK_CERT_RULE_ABSENCE_FAILED=true
@@ -94,21 +180,30 @@ if $CHECK_CERT_RULE_ABSENCE_FAILED; then
     echo "ERROR: checking absence of functions or headers: $CHECK_CERT_RULE_ABSENCE" | tee -a $LOGPATH
 fi
 
+#### Check absence of break outside switch ####
+echo "Checking break keyword used only inside switch" | tee -a $LOGPATH
+CHECK_BREAK_OUTSIDE_SWITCH_FAILED=false
+CHECK_BREAK_ABSENCE='\bbreak\b'
+for FILE in $(find $CSRC -name "*.c" -or -name "*.h") ;
+do
+	RESULT=$(strip_c_comments_for_grep "${FILE}" | strip_c_switch_blocks_for_grep | grep -nwiE $CHECK_BREAK_ABSENCE)
+	if ! [[ -z ${RESULT} ]] ; then
+		echo "${FILE}:${RESULT}" | tee -a $LOGPATH
+		CHECK_BREAK_OUTSIDE_SWITCH_FAILED=true
+	fi
+done
+if $CHECK_BREAK_OUTSIDE_SWITCH_FAILED; then
+    EXITCODE=1
+    FAILURES+=("Forbidden break outside switch found in sources")
+    echo "ERROR: checking absence of break outside switch" | tee -a $LOGPATH
+fi
+
 CHECK_DIRECT_ABSENCE_FAILED=false
 CHECK_DIRECT_ABSENCE="(printf)"
 for FILE in $(find $CSRC -name "*.c" -or -name "*.h") ;
 do
-	# We choose to remove:
-	# - (L1) comments inside /* .. */
-	# - (L2) comments after //
-	# - (L3) : - remove sequence \" to avoid interpreting that as a string ending
-	#          - replace all string content by "..." to avoid false detection in strings
-	# - (L4) preprocessor lines (this allow explicit overrides)
-	RESULT=$(sed 's/\/\/.*$//g'  ${FILE} | \
-		sed 's/\/\*.*\*\///g'  | \
-		sed 's/\\"//g' | sed 's/"[^"]*"/"..."/g'  | \
-		sed 's/^ *#.*$//g'  | \
-		grep -nwiE $CHECK_DIRECT_ABSENCE )
+	# Preprocessor lines are kept to allow explicit overrides (e.g. #define printf ...)
+	RESULT=$(strip_c_comments_for_grep "${FILE}" | sed 's/^ *#.*$//g' | grep -nwiE $CHECK_DIRECT_ABSENCE )
 	if ! [[ -z "${RESULT}" ]] ; then
 		echo "${FILE}:${RESULT}" | tee -a $LOGPATH
 		CHECK_DIRECT_ABSENCE_FAILED=true
