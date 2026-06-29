@@ -2034,22 +2034,21 @@ static bool SC_Server_GenerateFreshSecureChannelAndTokenId(SOPC_SecureConnection
         uint8_t attempts = 5; // attempts to find a non conflicting secure Id
         while ((resultSecureChannelId == 0 || resultTokenId == 0) && attempts > 0)
         {
+            SOPC_ReturnStatus localStatus = SOPC_STATUS_OK;
             attempts--;
-            if (resultSecureChannelId == 0 && SOPC_CryptoProvider_GenerateRandomID(
-                                                  scConnection->cryptoProvider, &newSecureChannelId) != SOPC_STATUS_OK)
+            if (resultSecureChannelId == 0)
             {
-                continue;
+                localStatus = SOPC_CryptoProvider_GenerateRandomID(scConnection->cryptoProvider, &newSecureChannelId);
             }
-            if (resultTokenId == 0 &&
-                SOPC_CryptoProvider_GenerateRandomID(scConnection->cryptoProvider, &newTokenId) != SOPC_STATUS_OK)
+            if (resultTokenId == 0)
             {
-                continue;
+                localStatus = SOPC_CryptoProvider_GenerateRandomID(scConnection->cryptoProvider, &newTokenId);
             }
             occupiedScId = false;
             occupiedTokenId = false;
             // A server cannot attribute 0 as secure channel id:
             //  not so clear but implied by 6.7.6 part 6: "may be 0 if the Message is an OPN"
-            if (newSecureChannelId != 0 && newTokenId != 0)
+            if (SOPC_STATUS_OK == localStatus && newSecureChannelId != 0 && newTokenId != 0)
             {
                 // Check if other channels already use the random id in existing connections
                 for (idx = 0; idx < SOPC_MAX_SOCKETS_CONNECTIONS && (!occupiedScId || !occupiedTokenId); idx++)
@@ -2116,13 +2115,9 @@ static uint32_t SC_Server_GenerateFreshTokenId(SOPC_SecureConnection* scConnecti
         {
             attempts--;
 
-            if (SOPC_CryptoProvider_GenerateRandomID(scConnection->cryptoProvider, &newTokenId) != SOPC_STATUS_OK)
-            {
-                continue;
-            }
-
             occupiedId = false;
-            if (newTokenId != 0)
+            if (SOPC_CryptoProvider_GenerateRandomID(scConnection->cryptoProvider, &newTokenId) == SOPC_STATUS_OK &&
+                newTokenId != 0)
             {
                 // Check if other channels already use the random id in existing connections
                 for (idx = 0; idx < SOPC_MAX_SOCKETS_CONNECTIONS && !occupiedId; idx++)

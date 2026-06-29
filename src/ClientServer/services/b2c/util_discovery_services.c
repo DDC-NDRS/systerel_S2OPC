@@ -313,7 +313,7 @@ constants_statuscodes_bs__t_StatusCode_i SOPC_Discovery_GetEndPointsDescriptions
             {
                 SOPC_SecurityPolicy currentSecurityPolicy = tabSecurityPolicy[iSecuConfig];
                 uint16_t securityModes = currentSecurityPolicy.securityModes;
-
+                SOPC_ReturnStatus localStatus = SOPC_STATUS_OK;
                 if (0 == currentSecurityPolicy.nbOfUserTokenPolicies)
                 {
                     /*
@@ -323,11 +323,11 @@ constants_statuscodes_bs__t_StatusCode_i SOPC_Discovery_GetEndPointsDescriptions
                      * activation are allowed.
                      *
                      */
-                    continue;
+                    localStatus = SOPC_STATUS_NOK;
                 }
 
                 // Add an EndpointDescription per security mode
-                if ((SOPC_SECURITY_MODE_NONE_MASK & securityModes) != 0)
+                if (SOPC_STATUS_OK == localStatus && (SOPC_SECURITY_MODE_NONE_MASK & securityModes) != 0)
                 {
                     OpcUa_EndpointDescription* newEndPointDescription =
                         &currentConfig_EndpointDescription[nbEndpointDescription];
@@ -400,7 +400,7 @@ constants_statuscodes_bs__t_StatusCode_i SOPC_Discovery_GetEndPointsDescriptions
                     nbEndpointDescription++;
                 }
 
-                if ((SOPC_SECURITY_MODE_SIGN_MASK & securityModes) != 0)
+                if (SOPC_STATUS_OK == localStatus && (SOPC_SECURITY_MODE_SIGN_MASK & securityModes) != 0)
                 {
                     OpcUa_EndpointDescription* newEndPointDescription =
                         &currentConfig_EndpointDescription[nbEndpointDescription];
@@ -446,7 +446,7 @@ constants_statuscodes_bs__t_StatusCode_i SOPC_Discovery_GetEndPointsDescriptions
                     nbEndpointDescription++;
                 }
 
-                if ((SOPC_SECURITY_MODE_SIGNANDENCRYPT_MASK & securityModes) != 0)
+                if (SOPC_STATUS_OK == localStatus && (SOPC_SECURITY_MODE_SIGNANDENCRYPT_MASK & securityModes) != 0)
                 {
                     OpcUa_EndpointDescription* newEndPointDescription =
                         &currentConfig_EndpointDescription[nbEndpointDescription];

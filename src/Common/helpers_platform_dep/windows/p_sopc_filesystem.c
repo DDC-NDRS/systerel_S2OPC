@@ -153,28 +153,25 @@ static SOPC_FileSystem_GetDirResult get_dir_files_infos(const char* directoryPat
         /* We don't want sub folders! Is it a regular file? */
         bIsRegular = is_regular_file(fileData);
         /* Only keep regular file */
-        if (!bIsRegular)
+        if (bIsRegular)
         {
-            /* Next iteration */
-            res = FindNextFile(fd, &fileData);
-            continue;
-        }
-        /* Prepare the C string to store in the array */
-        if (bIsName)
-        {
-            /* FILE NAME */
-            pFileInfo = SOPC_strdup(fileData.cFileName);
-        }
-        else
-        {
-            /* FILE PATH */
-            status = get_file_path(directoryPath, fileData.cFileName, &pFileInfo);
-        }
-        /* Append the fileName or the filePath to the array */
-        if (SOPC_STATUS_OK == status)
-        {
-            bResAppend = SOPC_Array_Append(pFileInfos, pFileInfo);
-            status = bResAppend ? SOPC_STATUS_OK : SOPC_STATUS_NOK;
+            /* Prepare the C string to store in the array */
+            if (bIsName)
+            {
+                /* FILE NAME */
+                pFileInfo = SOPC_strdup(fileData.cFileName);
+            }
+            else
+            {
+                /* FILE PATH */
+                status = get_file_path(directoryPath, fileData.cFileName, &pFileInfo);
+            }
+            /* Append the fileName or the filePath to the array */
+            if (SOPC_STATUS_OK == status)
+            {
+                bResAppend = SOPC_Array_Append(pFileInfos, pFileInfo);
+                status = bResAppend ? SOPC_STATUS_OK : SOPC_STATUS_NOK;
+            }
         }
         /* Next iteration */
         res = FindNextFile(fd, &fileData);

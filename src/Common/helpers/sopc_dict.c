@@ -140,24 +140,18 @@ static bool dict_resize(SOPC_Dict* d, size_t size)
 
     bool ok = true;
 
-    for (size_t i = 0; i < dict_backup.size; ++i)
+    for (size_t i = 0; i < dict_backup.size && ok; ++i)
     {
         SOPC_DictBucket* b = &dict_backup.buckets[i];
-
-        if ((b->key == d->empty_key) || (b->key == d->tombstone_key))
+        if ((b->key != d->empty_key) && (b->key != d->tombstone_key))
         {
-            continue;
-        }
-
-        uint64_t hash = d->hash_func(b->key);
-
-        if (!insert_item(d, hash, b->key, b->value, false))
-        {
-            ok = false;
-            break;
+            uint64_t hash = d->hash_func(b->key);
+            if (!insert_item(d, hash, b->key, b->value, false))
+            {
+                ok = false;
+            }
         }
     }
-
     if (ok)
     {
         SOPC_Free(dict_backup.buckets);
@@ -317,32 +311,32 @@ static SOPC_DictBucket* get_internal(const SOPC_Dict* d, const uintptr_t key)
         return NULL;
     }
 
+    SOPC_DictBucket* resBucket = NULL;
     uint64_t hash = d->hash_func(key);
 
-    for (size_t i = 0; i < d->size; ++i)
+    bool stopOrFound = false;
+    for (size_t i = 0; i < d->size && !stopOrFound; ++i)
     {
         uint64_t idx = HASH_I(hash, i) & d->sizemask;
         const uintptr_t bucket_key = d->buckets[idx].key;
 
         if (bucket_key == d->empty_key)
         {
-            break;
+            stopOrFound = true;
         }
-
         // If removals are not supported, we have empty_key == tombstone_key, so
         // this if never matches.
-        if (bucket_key == d->tombstone_key)
+        else if (bucket_key != d->tombstone_key)
         {
-            continue;
-        }
-
-        if (d->equal_func(key, bucket_key))
-        {
-            return &d->buckets[idx];
+            if (d->equal_func(key, bucket_key))
+            {
+                resBucket = &d->buckets[idx];
+                stopOrFound = true;
+            }
         }
     }
 
-    return NULL;
+    return resBucket;
 }
 
 uintptr_t SOPC_Dict_Get(const SOPC_Dict* d, const uintptr_t key, bool* found)
