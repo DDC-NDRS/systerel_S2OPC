@@ -75,14 +75,15 @@ static SOPC_ReturnStatus SOPC_SKProvider_GetKeys_TryList(SOPC_SKProvider* skp,
     SOPC_SKProvider_TryList* data = (SOPC_SKProvider_TryList*) skp->data;
     SOPC_ASSERT(NULL != data);
     SOPC_ASSERT(NULL != data->providers);
-    for (uint32_t i = 0; i < data->nbProviders; i++)
+    bool keysFound = false;
+    for (uint32_t i = 0; i < data->nbProviders && !keysFound; i++)
     {
         SOPC_Logger_TraceInfo(SOPC_LOG_MODULE_COMMON, "Try GetKeys with provider %" PRIu32, i + 1);
         status = SOPC_SKProvider_GetKeys(data->providers[i], securityGroupId, StartingTokenId, NbRequestedToken,
                                          SecurityPolicyUri, FirstTokenId, Keys, NbToken, TimeToNextKey, KeyLifetime);
         if (SOPC_STATUS_OK == status && 0 < *NbToken)
         {
-            break;
+            keysFound = true;
         }
     }
 

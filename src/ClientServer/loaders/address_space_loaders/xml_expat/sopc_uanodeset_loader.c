@@ -174,7 +174,8 @@ static bool start_alias(struct parse_context_t* ctx, const XML_Char** attrs)
 {
     SOPC_ASSERT(ctx->current_alias_alias == NULL);
 
-    for (size_t i = 0; NULL != attrs[i]; i++)
+    bool aliasFound = false;
+    for (size_t i = 0; NULL != attrs[i] && !aliasFound; i++)
     {
         const char* attr = attrs[i];
 
@@ -189,7 +190,7 @@ static bool start_alias(struct parse_context_t* ctx, const XML_Char** attrs)
                 return false;
             }
 
-            break; // We ignore other attributes so far
+            aliasFound = true;
         }
     }
 

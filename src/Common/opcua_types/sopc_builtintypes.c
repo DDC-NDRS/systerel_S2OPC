@@ -5832,20 +5832,24 @@ static SOPC_ReturnStatus get_range_matrix(SOPC_Variant* dst, const SOPC_Variant*
         {
             /* Start index shall be valid in the source variant matrix */
             status = SOPC_STATUS_INVALID_PARAMETERS;
-            break;
         }
-        SOPC_Dimension* truncatedDim = &truncatedRange.dimensions[i];
-        truncatedDim->start = dim->start;
-        // Truncate range end if origin end index is not in the source variant matrix
-        truncatedDim->end = SOPC_MIN_INDEX(dim->end, (uint32_t) array_length - 1);
-        const uint32_t length_in_dim = truncatedDim->end - truncatedDim->start + 1;
-        if (length_in_dim > INT32_MAX)
+        else
         {
-            status = SOPC_STATUS_INVALID_PARAMETERS;
-            break;
+            SOPC_Dimension* truncatedDim = &truncatedRange.dimensions[i];
+            truncatedDim->start = dim->start;
+            // Truncate range end if origin end index is not in the source variant matrix
+            truncatedDim->end = SOPC_MIN_INDEX(dim->end, (uint32_t) array_length - 1);
+            const uint32_t length_in_dim = truncatedDim->end - truncatedDim->start + 1;
+            if (length_in_dim > INT32_MAX)
+            {
+                status = SOPC_STATUS_INVALID_PARAMETERS;
+            }
+            else
+            {
+                dst->Value.Matrix.ArrayDimensions[i] = (int32_t) length_in_dim;
+                total_dst_len *= length_in_dim;
+            }
         }
-        dst->Value.Matrix.ArrayDimensions[i] = (int32_t) length_in_dim;
-        total_dst_len *= length_in_dim;
     }
     if (SOPC_STATUS_OK == status && total_dst_len > INT32_MAX)
     {

@@ -498,17 +498,17 @@ SOPC_ReturnStatus AsymEncrypt_RSA_OAEP(const SOPC_CryptoProvider* pProvider,
         if (0 != res)
         {
             status = SOPC_STATUS_NOK;
-            break;
         }
-
-        // Advance pointers
-        lenPlainText -= lenToCiph;
-        if (0 == lenPlainText)
+        else
         {
-            break;
+            // Advance pointers
+            lenPlainText -= lenToCiph;
+            if (lenPlainText > 0)
+            {
+                pInput += lenMsgPlain;
+                pOutput += lenMsgCiph;
+            }
         }
-        pInput += lenMsgPlain;
-        pOutput += lenMsgCiph;
     }
 
     return status;
@@ -563,26 +563,26 @@ SOPC_ReturnStatus AsymDecrypt_RSA_OAEP(const SOPC_CryptoProvider* pProvider,
         if (0 != res)
         {
             status = SOPC_STATUS_NOK;
-            break;
         }
-
-        if (NULL != pLenWritten)
+        else
         {
-            if (lenDeciphed > UINT32_MAX)
+            if (NULL != pLenWritten)
             {
-                return SOPC_STATUS_NOK;
+                if (lenDeciphed > UINT32_MAX)
+                {
+                    return SOPC_STATUS_NOK;
+                }
+                *pLenWritten += (uint32_t) lenDeciphed;
             }
-            *pLenWritten += (uint32_t) lenDeciphed;
-        }
 
-        // Advance pointers
-        lenCipherText -= lenMsgCiph;
-        if (0 == lenCipherText)
-        {
-            break;
+            // Advance pointers
+            lenCipherText -= lenMsgCiph;
+            if (lenCipherText > 0)
+            {
+                pInput += lenMsgCiph;
+                pOutput += lenDeciphed;
+            }
         }
-        pInput += lenMsgCiph;
-        pOutput += lenDeciphed;
     }
 
     return status;

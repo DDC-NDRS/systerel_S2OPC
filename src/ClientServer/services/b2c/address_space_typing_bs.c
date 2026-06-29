@@ -186,7 +186,7 @@ static bool is_component_of(const SOPC_NodeId* component, const constants_bs__t_
     OpcUa_ReferenceNode** refs = SOPC_AddressSpace_Get_References(address_space_bs__nodes, node);
     bool res = false;
 
-    for (int32_t i = 0; i < *n_refs; ++i)
+    for (int32_t i = 0; i < *n_refs && !res; ++i)
     {
         OpcUa_ReferenceNode* ref = &(*refs)[i];
 
@@ -197,7 +197,6 @@ static bool is_component_of(const SOPC_NodeId* component, const constants_bs__t_
                 if (SOPC_NodeId_Equal(&ref->TargetId.NodeId, component))
                 {
                     res = true;
-                    break;
                 }
             }
         }

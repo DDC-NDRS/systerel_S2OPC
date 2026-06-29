@@ -186,7 +186,7 @@ const SOPC_NodeId* SOPC_AddressSpaceUtil_GetDirectParentTypeOfNode(SOPC_AddressS
     SOPC_NodeId* directParent = NULL;
     int32_t* n_refs = SOPC_AddressSpace_Get_NoOfReferences(addSpace, child);
     OpcUa_ReferenceNode** refs = SOPC_AddressSpace_Get_References(addSpace, child);
-    for (int32_t i = 0; i < *n_refs; ++i)
+    for (int32_t i = 0; i < *n_refs && NULL == directParent; ++i)
     {
         OpcUa_ReferenceNode* ref = &(*refs)[i];
 
@@ -195,7 +195,6 @@ const SOPC_NodeId* SOPC_AddressSpaceUtil_GetDirectParentTypeOfNode(SOPC_AddressS
             if (ref->TargetId.ServerIndex == 0 && ref->TargetId.NamespaceUri.Length <= 0)
             { // Shall be on same server and shall use only NodeId
                 directParent = &ref->TargetId.NodeId;
-                break;
             }
             else
             {

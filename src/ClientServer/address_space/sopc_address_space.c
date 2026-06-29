@@ -30,14 +30,10 @@
 #include "sopc_types.h"
 
 #define ELEMENT_ATTRIBUTE_INITIALIZE_CASE(val, field, extra) \
-    case OpcUa_NodeClass_##val:                              \
-        OpcUa_##val##Node_Initialize(&node->data.field);     \
-        break;
+    else if (node_class == OpcUa_NodeClass_##val) { OpcUa_##val##Node_Initialize(&node->data.field); }
 
 #define ELEMENT_ATTRIBUTE_CLEAR_CASE(val, field, extra) \
-    case OpcUa_NodeClass_##val:                         \
-        OpcUa_##val##Node_Clear(&node->data.field);     \
-        break;
+    else if (node->node_class == OpcUa_NodeClass_##val) { OpcUa_##val##Node_Clear(&node->data.field); }
 
 struct _SOPC_AddressSpace
 {
@@ -67,12 +63,12 @@ void SOPC_AddressSpace_Node_Initialize(SOPC_AddressSpace* space,
 {
     SOPC_ASSERT(space != NULL);
 
-    switch (node_class)
+    if (false)
     {
-        FOR_EACH_ELEMENT_TYPE(ELEMENT_ATTRIBUTE_INITIALIZE_CASE, NULL)
-    default:
-        SOPC_ASSERT(false && "Unknown element type");
+        // Necessary to use the following macro that generates "else if"
     }
+    FOR_EACH_ELEMENT_TYPE(ELEMENT_ATTRIBUTE_INITIALIZE_CASE, NULL)
+    else { SOPC_ASSERT(false && "Unknown element type"); }
 
     node->node_class = node_class;
     OpcUa_NodeClass* nodeClass = SOPC_AddressSpace_Get_NodeClass(space, node);
@@ -532,12 +528,12 @@ static void SOPC_AddressSpace_Node_Clear_Local(SOPC_AddressSpace_Node* node)
     SOPC_ASSERT(NULL != node);
     SOPC_ASSERT(node->node_class > 0);
 
-    switch (node->node_class)
+    if (false)
     {
-        FOR_EACH_ELEMENT_TYPE(ELEMENT_ATTRIBUTE_CLEAR_CASE, NULL)
-    default:
-        SOPC_ASSERT(false && "Unknown element type");
+        // Necessary to use the following macro that generates "else if"
     }
+    FOR_EACH_ELEMENT_TYPE(ELEMENT_ATTRIBUTE_CLEAR_CASE, NULL)
+    else { SOPC_ASSERT(false && "Unknown element type"); }
 }
 
 void SOPC_AddressSpace_Node_Clear(SOPC_AddressSpace* space, SOPC_AddressSpace_Node* node)

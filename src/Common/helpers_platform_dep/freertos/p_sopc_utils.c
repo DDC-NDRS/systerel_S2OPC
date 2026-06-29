@@ -366,13 +366,14 @@ uint16_t P_UTILS_LIST_GetEltIndex(tUtilsList* ptr, TaskHandle_t taskNotified, ui
     uint16_t wCurrentSlotId = UINT16_MAX;
     if ((ptr != NULL) && (ptr->list != NULL) && (taskNotified != NULL))
     {
+        bool slotFound = false;
         wCurrentSlotId = ptr->firstValid;
-        while (wCurrentSlotId < ptr->wMaxWaitingTasks)
+        while (wCurrentSlotId < ptr->wMaxWaitingTasks && !slotFound)
         {
             if ((ptr->list[wCurrentSlotId].value == taskNotified) &&
                 (ptr->list[wCurrentSlotId].infosField1 == infos1) && (ptr->list[wCurrentSlotId].infosField2 == infos2))
             {
-                break;
+                slotFound = true;
             }
             else
             {

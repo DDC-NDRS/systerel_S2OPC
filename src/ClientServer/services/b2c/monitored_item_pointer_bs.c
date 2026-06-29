@@ -412,7 +412,8 @@ void monitored_item_pointer_bs__getall_monitoredItemPointer(
 
 // Note: both < and > operators always return False with NaN, testing both allow to consider NaN values equal
 #define COMPARE_DEADBAND_ABSOLUTE_NUMERIC_VALUE(sopcTypeid, ntype, tmpVarType) \
-    case sopcTypeid:                                                           \
+    else if (builtInTypeId == sopcTypeid)                                      \
+    {                                                                          \
         left##tmpVarType = *(const ntype*) left;                               \
         right##tmpVarType = *(const ntype*) right;                             \
         if (left##tmpVarType > right##tmpVarType)                              \
@@ -429,7 +430,7 @@ void monitored_item_pointer_bs__getall_monitoredItemPointer(
         {                                                                      \
             compareValue = 0;                                                  \
         }                                                                      \
-        break;
+    }
 
 #define FOR_EACH_NUMERIC_TYPE(x)                                                                                       \
     x(SOPC_Byte_Id, SOPC_Byte, uint64_t) x(SOPC_UInt16_Id, uint16_t, uint64_t) x(SOPC_UInt32_Id, uint32_t, uint64_t)   \
@@ -455,12 +456,12 @@ static SOPC_ReturnStatus compare_deadband_absolute(const void* customContext,
     double leftdouble = 0;
     double rightdouble = 0;
     double diff = 0.0;
-    switch (builtInTypeId)
+    if (false)
     {
-        FOR_EACH_NUMERIC_TYPE(COMPARE_DEADBAND_ABSOLUTE_NUMERIC_VALUE)
-    default:
-        return SOPC_STATUS_INVALID_PARAMETERS;
+        // Necessary to use the following macro that generates "else if"
     }
+    FOR_EACH_NUMERIC_TYPE(COMPARE_DEADBAND_ABSOLUTE_NUMERIC_VALUE)
+    else { return SOPC_STATUS_INVALID_PARAMETERS; }
     if (compareValue != 0)
     {
         // Check absolute value of the difference

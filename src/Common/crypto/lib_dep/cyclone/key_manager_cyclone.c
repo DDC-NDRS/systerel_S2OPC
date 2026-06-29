@@ -2119,70 +2119,68 @@ static SOPC_ReturnStatus sopc_parse_subject_name(const char* subjectName, X509Na
             p++;
         }
 
-        if (*p == '\0')
+        if (*p != '\0')
         {
-            break;
-        }
+            const char* tokenStart = p;
+            while (*p != '\0' && *p != ',' && *p != '/')
+            {
+                p++;
+            }
 
-        const char* tokenStart = p;
-        while (*p != '\0' && *p != ',' && *p != '/')
-        {
-            p++;
-        }
+            const char* tokenEnd = p;
+            while (tokenEnd > tokenStart && isspace((unsigned char) tokenEnd[-1]))
+            {
+                tokenEnd--;
+            }
 
-        const char* tokenEnd = p;
-        while (tokenEnd > tokenStart && isspace((unsigned char) tokenEnd[-1]))
-        {
-            tokenEnd--;
-        }
+            const char* eq = tokenStart;
+            while (eq < tokenEnd && *eq != '=')
+            {
+                eq++;
+            }
 
-        const char* eq = tokenStart;
-        while (eq < tokenEnd && *eq != '=')
-        {
-            eq++;
-        }
+            if (eq == tokenEnd)
+            {
+                return SOPC_STATUS_INVALID_PARAMETERS;
+            }
 
-        if (eq == tokenEnd)
-        {
-            return SOPC_STATUS_INVALID_PARAMETERS;
-        }
+            const char* key = tokenStart;
+            size_t keyLen = (size_t)(eq - tokenStart);
+            SOPC_strtrim(&key, &keyLen);
 
-        const char* key = tokenStart;
-        size_t keyLen = (size_t)(eq - tokenStart);
-        SOPC_strtrim(&key, &keyLen);
+            const char* val = eq + 1;
+            size_t valLen = (size_t)(tokenEnd - val);
+            SOPC_strtrim(&val, &valLen);
 
-        const char* val = eq + 1;
-        size_t valLen = (size_t)(tokenEnd - val);
-        SOPC_strtrim(&val, &valLen);
+            if (0 == valLen || 0 == keyLen)
+            {
+                return SOPC_STATUS_INVALID_PARAMETERS;
+            }
 
-        if (0 == valLen || 0 == keyLen)
-        {
-            return SOPC_STATUS_INVALID_PARAMETERS;
-        }
-
-        if (keyLen == 2 && 0 == SOPC_strncmp_ignore_case(key, "CN", 2))
-        {
-            sopc_set_x509_string(&name->commonName, val, valLen);
-        }
-        else if (keyLen == 1 && 0 == SOPC_strncmp_ignore_case(key, "O", 1))
-        {
-            sopc_set_x509_string(&name->organizationName, val, valLen);
-        }
-        else if (keyLen == 2 && 0 == SOPC_strncmp_ignore_case(key, "OU", 2))
-        {
-            sopc_set_x509_string(&name->organizationalUnitName, val, valLen);
-        }
-        else if (keyLen == 1 && 0 == SOPC_strncmp_ignore_case(key, "C", 1))
-        {
-            sopc_set_x509_string(&name->countryName, val, valLen);
-        }
-        else if (keyLen == 1 && 0 == SOPC_strncmp_ignore_case(key, "L", 1))
-        {
-            sopc_set_x509_string(&name->localityName, val, valLen);
-        }
-        else if (keyLen == 2 && 0 == SOPC_strncmp_ignore_case(key, "ST", 2))
-        {
-            sopc_set_x509_string(&name->stateOrProvinceName, val, valLen);
+            if (keyLen == 2 && 0 == SOPC_strncmp_ignore_case(key, "CN", 2))
+            {
+                sopc_set_x509_string(&name->commonName, val, valLen);
+            }
+            else if (keyLen == 1 && 0 == SOPC_strncmp_ignore_case(key, "O", 1))
+            {
+                sopc_set_x509_string(&name->organizationName, val, valLen);
+            }
+            else if (keyLen == 2 && 0 == SOPC_strncmp_ignore_case(key, "OU", 2))
+            {
+                sopc_set_x509_string(&name->organizationalUnitName, val, valLen);
+            }
+            else if (keyLen == 1 && 0 == SOPC_strncmp_ignore_case(key, "C", 1))
+            {
+                sopc_set_x509_string(&name->countryName, val, valLen);
+            }
+            else if (keyLen == 1 && 0 == SOPC_strncmp_ignore_case(key, "L", 1))
+            {
+                sopc_set_x509_string(&name->localityName, val, valLen);
+            }
+            else if (keyLen == 2 && 0 == SOPC_strncmp_ignore_case(key, "ST", 2))
+            {
+                sopc_set_x509_string(&name->stateOrProvinceName, val, valLen);
+            }
         }
     }
 

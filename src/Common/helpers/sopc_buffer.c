@@ -413,16 +413,18 @@ static bool read_file(FILE* fd, char* data, size_t len)
 {
     size_t read = 0;
 
-    while (true)
+    while (read < len)
     {
         size_t res = fread(data + read, sizeof(char), len - read, fd);
 
         if (res == 0)
         {
-            break;
+            read = len;
         }
-
-        read += res;
+        else
+        {
+            read += res;
+        }
     }
 
     return ferror(fd) == 0;
