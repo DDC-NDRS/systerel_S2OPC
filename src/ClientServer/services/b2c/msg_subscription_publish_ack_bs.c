@@ -18,9 +18,10 @@
  */
 
 #include "msg_subscription_publish_ack_bs.h"
-#include "sopc_assert.h"
+#include "sopc_encodeabletype.h"
 #include "sopc_logger.h"
 #include "sopc_mem_alloc.h"
+#include "sopc_types.h"
 #include "util_b2c.h"
 
 static const uint64_t SOPC_YEAR_TO_MILLISECONDS = 31536000000; // 365 * 24 * 60 * 60 * 1000
@@ -153,20 +154,15 @@ void msg_subscription_publish_ack_bs__setall_msg_republish_response(
 {
     *msg_subscription_publish_ack_bs__sc = constants_statuscodes_bs__e_sc_bad_out_of_memory;
     OpcUa_RepublishResponse* resp = (OpcUa_RepublishResponse*) msg_subscription_publish_ack_bs__p_resp_msg;
-    resp->NotificationMessage = *msg_subscription_publish_ack_bs__p_notifMsg; /* Shallow copy */
-    resp->NotificationMessage.NotificationData =
-        SOPC_Malloc(1 * sizeof(SOPC_ExtensionObject)); /* Deep copy for notification data */
-    if (resp->NotificationMessage.NotificationData == NULL)
-    {
-        return;
-    }
-    SOPC_ExtensionObject_Initialize(resp->NotificationMessage.NotificationData);
-    if (SOPC_ExtensionObject_Copy(resp->NotificationMessage.NotificationData,
-                                  msg_subscription_publish_ack_bs__p_notifMsg->NotificationData) != SOPC_STATUS_OK)
+    SOPC_ASSERT(0 == resp->NotificationMessage.NoOfNotificationData);
+    SOPC_ReturnStatus status =
+        SOPC_EncodeableObject_Copy(&OpcUa_NotificationMessage_EncodeableType, &resp->NotificationMessage,
+                                   msg_subscription_publish_ack_bs__p_notifMsg);
+    if (status != SOPC_STATUS_OK)
     {
         SOPC_Logger_TraceError(
             SOPC_LOG_MODULE_CLIENTSERVER,
-            "msg_subscription_publish_ack_bs__setall_msg_republish_response: SOPC_ExtensionObject_Copy failure");
+            "msg_subscription_publish_ack_bs__setall_msg_republish_response: OpcUa_NotificationMessage_Copy failure");
         return;
     }
     *msg_subscription_publish_ack_bs__sc = constants_statuscodes_bs__e_sc_ok;
