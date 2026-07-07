@@ -1017,6 +1017,7 @@ static SOPC_ReturnStatus test_overwrite_bypass_read_boolean(SOPC_ClientConnectio
                                                             const SOPC_NodeId* nodeId,
                                                             bool verifyOverwrittenStatusAndSourceTs)
 {
+    SOPC_UNUSED_ARG(verifyOverwrittenStatusAndSourceTs);
     OpcUa_ReadResponse* pReadResp = NULL;
     OpcUa_ReadRequest* pReadReq = SOPC_ReadRequest_Create(1, OpcUa_TimestampsToReturn_Both);
     SOPC_ASSERT(NULL != pReadReq);
