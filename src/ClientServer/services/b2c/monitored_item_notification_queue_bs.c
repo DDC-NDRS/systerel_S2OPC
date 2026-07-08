@@ -29,6 +29,7 @@
 #include "sopc_logger.h"
 #include "sopc_macros.h"
 #include "sopc_mem_alloc.h"
+#include "sopc_singly_linked_list.h"
 #include "util_b2c.h"
 #include "util_event.h"
 #include "util_variant.h"
@@ -158,6 +159,9 @@ static void SOPC_InternalSetOverflowBitAfterDiscard(SOPC_SLinkedList* notifQueue
 {
     SOPC_InternalNotificationElement* notifElt = NULL;
 
+    SOPC_ASSERT(NULL != notifQueue);
+    SOPC_ASSERT(SOPC_SLinkedList_GetLength(notifQueue) > 0);
+
     /* Set the overflow bit in DataValue status code in value replacing discarded one */
     if (discardOldest)
     {
@@ -165,10 +169,18 @@ static void SOPC_InternalSetOverflowBitAfterDiscard(SOPC_SLinkedList* notifQueue
         notifElt = (SOPC_InternalNotificationElement*) SOPC_SLinkedList_GetHead(notifQueue);
     }
     else
-    { // New last notification DataValue status code should have bit set
+    {
+        /* New last notification DataValue status code should have bit set */
         notifElt = (SOPC_InternalNotificationElement*) SOPC_SLinkedList_GetLast(notifQueue);
     }
     SOPC_ASSERT(NULL != notifElt);
+
+    /* This operation is only valid for DataChange notifications. */
+    SOPC_ASSERT(NULL != notifElt->value);
+    if (NULL == notifElt->value)
+    {
+        return;
+    }
 
     /* The next notification of the one discarded should have overflow bit set */
     notifElt->value->Value.Status |= SOPC_DataValueOverflowStatusMask;
@@ -672,12 +684,9 @@ void monitored_item_notification_queue_bs__is_event_monitored_item_notification_
         is_eventMI(monitored_item_notification_queue_bs__p_monitoredItem);
 }
 
-void monitored_item_notification_queue_bs__resize_monitored_item_notification_queue(
-    const constants__t_monitoredItemPointer_i monitored_item_notification_queue_bs__p_monitoredItem)
+static void resize_data_notif_queue(SOPC_InternalMonitoredItem* monitoredItemPointer)
 {
-    SOPC_InternalMonitoredItem* monitoredItemPointer =
-        (SOPC_InternalMonitoredItem*) monitored_item_notification_queue_bs__p_monitoredItem;
-    SOPC_ASSERT(monitoredItemPointer->queueSize >= 0);
+    SOPC_ASSERT(monitoredItemPointer != NULL);
     SOPC_SLinkedList* notifQueue = monitoredItemPointer->notifQueue;
 
     /* Discard notifications if more available than new capacity */
@@ -696,4 +705,176 @@ void monitored_item_notification_queue_bs__resize_monitored_item_notification_qu
     /* Change notification queue capacity */
     bool capacitySet = SOPC_SLinkedList_SetCapacity(notifQueue, (size_t) monitoredItemPointer->queueSize);
     SOPC_ASSERT(capacitySet);
+}
+
+static bool is_discard_necessary_and_overflow_event_in_notif_queue(
+    SOPC_InternalMonitoredItem* monitoredItemPointer,
+    SOPC_InternalNotificationElement** pOverflowNotifInQueue)
+{
+    SOPC_ASSERT(NULL != pOverflowNotifInQueue && NULL == *pOverflowNotifInQueue);
+    /* Count real notifications and check if an overflow event notif is in the queue if it was already triggered  */
+    uint32_t nbRealNotifs = 0;
+    if (monitoredItemPointer->queueOverflowEventTriggered)
+    {
+        SOPC_SLinkedListIterator it = SOPC_SLinkedList_GetIterator(monitoredItemPointer->notifQueue);
+        while (SOPC_SLinkedList_HasNext(&it))
+        {
+            SOPC_InternalNotificationElement* notifElt = (SOPC_InternalNotificationElement*) SOPC_SLinkedList_Next(&it);
+            if (notifElt->isQueueOverflowEvent)
+            {
+                *pOverflowNotifInQueue = notifElt;
+            }
+            else
+            {
+                nbRealNotifs++;
+            }
+        }
+    }
+    else
+    {
+        // Only real notification present in queue
+        nbRealNotifs = SOPC_SLinkedList_GetLength(monitoredItemPointer->notifQueue);
+    }
+    /* Capacity is 1 element more than the queue size to store the EventQueueOverflowEventType event in addition. */
+    if (nbRealNotifs <= (uint32_t) monitoredItemPointer->queueSize)
+    {
+        return false; // no discard needed
+    }
+    else
+    {
+        return true; // discard needed
+    }
+}
+
+static void resize_event_notif_queue(SOPC_InternalMonitoredItem* monitoredItemPointer)
+{
+    SOPC_ASSERT(NULL != monitoredItemPointer);
+    SOPC_SLinkedList* notifQueue = monitoredItemPointer->notifQueue;
+    SOPC_InternalNotificationElement* discardedOverflowNotif = NULL;
+
+    if (is_discard_necessary_and_overflow_event_in_notif_queue(monitoredItemPointer, &discardedOverflowNotif))
+    {
+        if (NULL != discardedOverflowNotif)
+        {
+            // We remove it temporarily to discard only real notifications from the queue with expected size
+            uintptr_t removed = SOPC_SLinkedList_RemoveFromValuePtr(monitoredItemPointer->notifQueue,
+                                                                    (uintptr_t) discardedOverflowNotif);
+            SOPC_ASSERT(removed != 0);
+        }
+    }
+    else
+    {
+        /* No notification to discard: only change the capacity (queue size + 1 overflow event),
+         * keep content and order unchanged. */
+        bool capacitySet = SOPC_SLinkedList_SetCapacity(notifQueue, (size_t) monitoredItemPointer->queueSize + 1);
+        SOPC_ASSERT(capacitySet);
+        return;
+    }
+
+    /* Discard notifications if more available than new capacity */
+    bool discardedNotifs = false;
+    SOPC_InternalNotificationElement* discardedNewest = NULL;
+    while (SOPC_SLinkedList_GetLength(notifQueue) > (uint32_t) monitoredItemPointer->queueSize)
+    {
+        discardedNotifs = true;
+        // Keep the first discarded when discardNewest as it is the one to be kept as the latest and restored
+        if (!monitoredItemPointer->discardOldest && NULL == discardedNewest)
+        {
+            discardedNewest = SOPC_InternalGetDiscardedNotification(notifQueue, monitoredItemPointer->discardOldest);
+        }
+        else
+        {
+            SOPC_InternalDiscardOneNotification(notifQueue, monitoredItemPointer->discardOldest);
+        }
+    }
+    /* When some are discarded, finalize queue content with Overflow event or/and in case of discardNewest policy */
+    if (discardedNotifs)
+    {
+        bool res = true;
+        if (!monitoredItemPointer->queueOverflowEventTriggered)
+        {
+            // Create the first overflow event and set queueOverflowEventTriggered = TRUE
+            res = SOPC_InternalCreateQueueOverflowNotif(monitoredItemPointer, &discardedOverflowNotif);
+        }
+        if (!monitoredItemPointer->discardOldest)
+        {
+            SOPC_ASSERT(NULL != discardedNewest);
+            // Dequeue one more newest notification in queue to be replaced by newest kept as the latest
+            SOPC_InternalDiscardOneNotification(notifQueue, monitoredItemPointer->discardOldest);
+        }
+
+        /* IMPORTANT NOTE: we enqueue OverflowEvent as the oldest/newest in any case as a simplification for the
+         * following reasons:
+         * 1. Other treatment that might be necessary (when discardOldest=False) are highly complex and
+         *    error-prone to keep its exact position in cases it is in the "middle" of the queue
+         * 2. As stated in the mantis issue #11235 only one event is triggered once per MI which make interest
+         *    of event position knowledge very limited. Depending on answer to this issue
+         *    this choice might be evaluated again.
+         */
+        if (NULL != discardedOverflowNotif)
+        {
+            SOPC_InternalNotificationElement* checkAdded = NULL;
+            if (monitoredItemPointer->discardOldest)
+            {
+                SOPC_ASSERT(NULL == discardedNewest);
+                // Enqueue the overflow notification (previously discarded or newly created) at the beginning
+                checkAdded = (SOPC_InternalNotificationElement*) SOPC_SLinkedList_Prepend(
+                    notifQueue, 0, (uintptr_t) discardedOverflowNotif);
+            }
+            else
+            {
+                SOPC_ASSERT(NULL != discardedNewest);
+                // Enqueue the overflow notification (previously discarded or newly created) at the end
+                checkAdded = (SOPC_InternalNotificationElement*) SOPC_SLinkedList_Append(
+                    notifQueue, 0, (uintptr_t) discardedOverflowNotif);
+            }
+            res = (checkAdded == discardedOverflowNotif);
+        } // else: overflow event already triggered and delivered: nothing to do
+        if (!res)
+        {
+            SOPC_Logger_TraceError(SOPC_LOG_MODULE_CLIENTSERVER,
+                                   "Services: resize_event_notif_queue OOM for MI id="
+                                   "%" PRIu32,
+                                   ((SOPC_InternalMonitoredItem*) monitoredItemPointer)->monitoredItemId);
+        }
+
+        // Re-enqueue the latest notification at the end we preserved
+        if (!monitoredItemPointer->discardOldest)
+        {
+            SOPC_ASSERT(NULL != discardedNewest);
+            // Enqueue the latest notification kept to be restored
+            SOPC_InternalNotificationElement* checkAdded =
+                (SOPC_InternalNotificationElement*) SOPC_SLinkedList_Append(notifQueue, 0, (uintptr_t) discardedNewest);
+            if (checkAdded != discardedNewest)
+            {
+                SOPC_Logger_TraceError(SOPC_LOG_MODULE_CLIENTSERVER,
+                                       "Services: resize_event_notif_queue (2) OOM for MI id="
+                                       "%" PRIu32,
+                                       ((SOPC_InternalMonitoredItem*) monitoredItemPointer)->monitoredItemId);
+            }
+        }
+    }
+
+    /* Change notification queue capacity: 1 element added to maximum in order to be allowed to store an
+     * EventQueueOverflowEventType event */
+    bool capacitySet = SOPC_SLinkedList_SetCapacity(notifQueue, (size_t) monitoredItemPointer->queueSize + 1);
+    SOPC_ASSERT(capacitySet);
+}
+
+void monitored_item_notification_queue_bs__resize_monitored_item_notification_queue(
+    const constants__t_monitoredItemPointer_i monitored_item_notification_queue_bs__p_monitoredItem)
+{
+    SOPC_InternalMonitoredItem* monitoredItemPointer =
+        (SOPC_InternalMonitoredItem*) monitored_item_notification_queue_bs__p_monitoredItem;
+    SOPC_ASSERT(monitoredItemPointer->queueSize >= 0);
+    bool isEventMI = is_eventMI(monitoredItemPointer);
+
+    if (isEventMI)
+    {
+        resize_event_notif_queue(monitoredItemPointer);
+    }
+    else
+    {
+        resize_data_notif_queue(monitoredItemPointer);
+    }
 }
