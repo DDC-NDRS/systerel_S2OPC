@@ -47,23 +47,31 @@ void monitored_item_event_filter_where_clause_bs__set_where_element_result(
     SOPC_ASSERT(monitored_item_event_filter_where_clause_bs__p_whereEltIdx > 0);
     const t_entier4 eltArrayIdx = monitored_item_event_filter_where_clause_bs__p_whereEltIdx - 1;
 
-    monitored_item_event_filter_where_clause_bs__p_filterResult->WhereClauseResult.ElementResults[eltArrayIdx]
-        .StatusCode = monitored_item_event_filter_where_clause_bs__p_rawOperatorSc;
+    OpcUa_ContentFilterElementResult* eltResult =
+        &monitored_item_event_filter_where_clause_bs__p_filterResult->WhereClauseResult.ElementResults[eltArrayIdx];
+
+    eltResult->StatusCode = monitored_item_event_filter_where_clause_bs__p_rawOperatorSc;
+
     if (!SOPC_IsGoodStatus(monitored_item_event_filter_where_clause_bs__p_rawOperandSc))
     {
-        monitored_item_event_filter_where_clause_bs__p_filterResult->WhereClauseResult.ElementResults[eltArrayIdx]
-            .OperandStatusCodes[0] = monitored_item_event_filter_where_clause_bs__p_rawOperandSc;
+        if (eltResult->NoOfOperandStatusCodes > 0 && NULL != eltResult->OperandStatusCodes)
+        {
+            eltResult->OperandStatusCodes[0] = monitored_item_event_filter_where_clause_bs__p_rawOperandSc;
+        }
+        else
+        {
+            /* No operand slots exist for this element. Keep the list empty. */
+            SOPC_Free(eltResult->OperandStatusCodes);
+            eltResult->OperandStatusCodes = NULL;
+            eltResult->NoOfOperandStatusCodes = 0;
+        }
     }
     else
     {
         // from part 4 table 119 (v1.05): operandStatusCodes list is empty if no operand error occurred
         // => make the list empty
-        SOPC_Free(
-            monitored_item_event_filter_where_clause_bs__p_filterResult->WhereClauseResult.ElementResults[eltArrayIdx]
-                .OperandStatusCodes);
-        monitored_item_event_filter_where_clause_bs__p_filterResult->WhereClauseResult.ElementResults[eltArrayIdx]
-            .OperandStatusCodes = NULL;
-        monitored_item_event_filter_where_clause_bs__p_filterResult->WhereClauseResult.ElementResults[eltArrayIdx]
-            .NoOfOperandStatusCodes = 0;
+        SOPC_Free(eltResult->OperandStatusCodes);
+        eltResult->OperandStatusCodes = NULL;
+        eltResult->NoOfOperandStatusCodes = 0;
     }
 }

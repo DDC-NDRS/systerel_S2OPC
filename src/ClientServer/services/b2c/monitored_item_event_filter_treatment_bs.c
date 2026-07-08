@@ -396,7 +396,9 @@ void monitored_item_event_filter_treatment_bs__check_where_elt_and_fill_ctx(
 
     if (eltArrayIdx > 0)
     {
-        // Unsupported expression using operators
+        /* Unsupported multi-element where-clause expression, error on operator */
+        *monitored_item_event_filter_treatment_bs__operatorRawSc = OpcUa_BadMonitoredItemFilterUnsupported;
+        *monitored_item_event_filter_treatment_bs__operandRawSc = SOPC_GoodGenericStatus;
         return;
     }
 
@@ -582,13 +584,16 @@ void monitored_item_event_filter_treatment_bs__init_event_filter_ctx_and_result(
                     OpcUa_ContentFilterElementResult* eltResult =
                         &eventFilterResult->WhereClauseResult.ElementResults[i];
                     OpcUa_ContentFilterElementResult_Initialize(eltResult);
-                    eltResult->OperandStatusCodes =
-                        SOPC_Calloc((size_t) eventFilter->WhereClause.Elements[i].NoOfFilterOperands,
-                                    sizeof(*eltResult->OperandStatusCodes));
-                    if (NULL != eltResult->OperandStatusCodes)
+                    const int32_t nbOperands = eventFilter->WhereClause.Elements[i].NoOfFilterOperands;
+                    if (nbOperands > 0)
                     {
-                        eltResult->NoOfOperandStatusCodes = eventFilter->WhereClause.Elements[i].NoOfFilterOperands;
-                    }
+                        eltResult->OperandStatusCodes =
+                            SOPC_Calloc((size_t) nbOperands, sizeof(*eltResult->OperandStatusCodes));
+                        if (NULL != eltResult->OperandStatusCodes)
+                        {
+                            eltResult->NoOfOperandStatusCodes = nbOperands;
+                        }
+                    } // else: keep init values to 0
                 }
             }
         }
