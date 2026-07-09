@@ -259,41 +259,43 @@ SOPC_ReturnStatus SOPC_TX_UDP_Socket_Error_Queue(SOPC_Socket sock)
         {
             status = SOPC_STATUS_NOK;
             SOPC_CONSOLE_PRINTF("Invalid control message\n");
-            break;
         }
 
-        if (controlMessage->cmsg_level == SOL_IP && controlMessage->cmsg_type == IP_RECVERR)
+        if (SOPC_STATUS_OK == status)
         {
-            sockErr = (void*) CMSG_DATA(controlMessage);
-
-            /* Only TXTIME error is handled for TSN activity.
-            if the noticed error is not TXTIME error, then next message header is
-            traverses and loop breaks with reporting unknown error.
-            */
-            if (sockErr->ee_origin == SO_EE_ORIGIN_TXTIME)
+            if (controlMessage->cmsg_level == SOL_IP && controlMessage->cmsg_type == IP_RECVERR)
             {
-                /* Packets are dropped on enqueue() because of qdisc (or)
-                on dequeue() - if the system misses their deadline.
-                Those are reported as errors.
+                sockErr = (void*) CMSG_DATA(controlMessage);
+
+                /* Only TXTIME error is handled for TSN activity.
+                if the noticed error is not TXTIME error, then next message header is
+                traverses and loop breaks with reporting unknown error.
                 */
-                timestamp = ((uint64_t) sockErr->ee_data << 32) + sockErr->ee_info;
-                switch (sockErr->ee_code)
+                if (sockErr->ee_origin == SO_EE_ORIGIN_TXTIME)
                 {
-                case SO_EE_CODE_TXTIME_INVALID_PARAM:
-                case SO_EE_CODE_TXTIME_MISSED:
-                    SOPC_CONSOLE_PRINTF("Packet with timestamp %" PRIu64 " dropped\n", timestamp);
-                    status = SOPC_STATUS_NOK;
-                    break;
-                default:
-                    status = SOPC_STATUS_NOK;
-                    break;
+                    /* Packets are dropped on enqueue() because of qdisc (or)
+                    on dequeue() - if the system misses their deadline.
+                    Those are reported as errors.
+                    */
+                    timestamp = ((uint64_t) sockErr->ee_data << 32) + sockErr->ee_info;
+                    switch (sockErr->ee_code)
+                    {
+                    case SO_EE_CODE_TXTIME_INVALID_PARAM:
+                    case SO_EE_CODE_TXTIME_MISSED:
+                        SOPC_CONSOLE_PRINTF("Packet with timestamp %" PRIu64 " dropped\n", timestamp);
+                        status = SOPC_STATUS_NOK;
+                        break;
+                    default:
+                        status = SOPC_STATUS_NOK;
+                        break;
+                    }
                 }
             }
-        }
 
-        controlMessage = CMSG_NXTHDR(&message, controlMessage);
-        status = SOPC_STATUS_NOK;
-        SOPC_CONSOLE_PRINTF("Unknown error\n");
+            controlMessage = CMSG_NXTHDR(&message, controlMessage);
+            status = SOPC_STATUS_NOK;
+            SOPC_CONSOLE_PRINTF("Unknown error\n");
+        }
     }
 
     return status;
