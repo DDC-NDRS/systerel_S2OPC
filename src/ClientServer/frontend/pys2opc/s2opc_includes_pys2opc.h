@@ -27,6 +27,7 @@
 #include "libs2opc_client_config_custom.h"
 #include "libs2opc_common_config.h"
 #include "libs2opc_request_builder.h"
+#include "libs2opc_response_helper.h"
 #include "libs2opc_server.h"
 #include "sopc_builtintypes.h"
 #include "sopc_encodeabletype.h"
@@ -52,5 +53,10 @@ typedef struct SOPC_ClientHelper_Subscription
 {
     bool placeholder;
 } SOPC_ClientHelper_Subscription;
+
+typedef struct SOPC_ServiceResponse_ReqContext
+{
+    bool placeholder;
+} SOPC_ServiceResponse_ReqContext;
 
 #endif /* S2OPC_INCLUDES_pys2opc_H_ */

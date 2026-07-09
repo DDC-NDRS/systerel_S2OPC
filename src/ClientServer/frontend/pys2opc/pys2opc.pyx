@@ -551,6 +551,8 @@ cdef class _Request:
     # Object variable #
     cdef void* _request
     """ The C request """
+    cdef SOPC_ServiceResponse_ReqContext* _validationCtx
+    """ Snapshot for post-send response validation """
     cdef uintptr_t _requestContext
     """ User request context """
     cdef int _timestampSent
@@ -560,6 +562,10 @@ cdef class _Request:
     def __cinit__(self):
         self._timestampSent = 0  # The sender of the request sets the timestamp
         self._eventResponseReceived = threading.Event()
+        self._validationCtx = NULL
+
+    def __dealloc__(self):
+        SOPC_ServiceResponse_DeleteRequestContext(&self._validationCtx)
 
     @staticmethod
     cdef _Request c_new_request(void* request):
@@ -710,21 +716,37 @@ cdef class Response:
     # Object variable #
     cdef void* _response
     cdef uintptr_t _responseContext
+    cdef SOPC_ServiceResponse_ReqContext* _validationCtx
 
     def __cinit__(self):
-        pass
+        self._validationCtx = NULL
 
     def __dealloc__(self):
         cdef SOPC_EncodeableType** encType = <SOPC_EncodeableType**> self._response
+        SOPC_ServiceResponse_DeleteRequestContext(&self._validationCtx)
         if self._response is not NULL:
             SOPC_EncodeableObject_Delete(encType[0], <void**> &self._response)
 
     @staticmethod
-    cdef Response c_new_response(void* response, uintptr_t responseContext):
+    cdef Response c_new_response(void* response, uintptr_t responseContext, SOPC_ServiceResponse_ReqContext* validationCtx):
         cdef Response Resp = Response.__new__(Response)
         Resp._response = response
         Resp._responseContext = responseContext
+        Resp._validationCtx = validationCtx
         return Resp
+
+    cdef void _check_service_result_count(self) except *:
+        cdef SOPC_ReturnStatus status
+
+        if self._validationCtx is NULL or self._response is NULL:
+            return
+
+        status = SOPC_ServiceResponse_ValidateResultCount(&self._validationCtx, self._response)
+        if status == SOPC_ReturnStatus.SOPC_STATUS_NOK:
+            raise ServiceFailure('Service response result count mismatch', StatusCode.BadUnexpectedError)
+        # ignore INVALID STATE as it is not fatal for global service treatment
+        if status != SOPC_ReturnStatus.SOPC_STATUS_OK and status != SOPC_ReturnStatus.SOPC_STATUS_INVALID_STATE:
+            raise ServiceFailure('Service response validation failed', StatusCode.BadUnexpectedError)
 
     def _parse_generic_response(self) -> (Response | None):
         """
@@ -750,6 +772,7 @@ cdef class Response:
         """
         cdef OpcUa_ReadResponse* readResponse = <OpcUa_ReadResponse*> self._response
         if SOPC_IsGoodStatus(readResponse.ResponseHeader.ServiceResult):
+            self._check_service_result_count()
             results = [_C_DataValue.from_sopc_datavalue(&(readResponse.Results[i])) for i in range(readResponse.NoOfResults)]
             return ReadResponse(results=results)
         else:
@@ -764,6 +787,7 @@ cdef class Response:
         cdef OpcUa_WriteResponse* writeResponse = <OpcUa_WriteResponse*> self._response
         if writeResponse != NULL:
             if SOPC_IsGoodStatus(writeResponse.ResponseHeader.ServiceResult):
+                self._check_service_result_count()
                 results = [writeResponse.Results[i] for i in range(writeResponse.NoOfResults)]
                 return WriteResponse(results=results)
         else:
@@ -778,6 +802,7 @@ cdef class Response:
         cdef OpcUa_BrowseResponse* browseResponse = <OpcUa_BrowseResponse*> self._response
         cdef OpcUa_BrowseResult* result = NULL
         if SOPC_IsGoodStatus(browseResponse.ResponseHeader.ServiceResult):
+            self._check_service_result_count()
             results = [_C_BrowseResult.from_sopc_browseResult(&(browseResponse.Results[i])) for i in range(browseResponse.NoOfResults)]
             return BrowseResponse(results=results)
         else:
@@ -790,15 +815,20 @@ cdef class Response:
                  None in case of service failure
         """
         cdef OpcUa_CallResponse* pCallResponse = <OpcUa_CallResponse*> self._response
+        cdef OpcUa_CallMethodResult* methodResult = NULL
         inputArgResults: list[StatusCode] = []
         outputResults: list[Variant] = []
         if SOPC_IsGoodStatus(pCallResponse.ResponseHeader.ServiceResult):
-            callResult = pCallResponse.Results[0].StatusCode
-            for i in range(pCallResponse.Results[0].NoOfInputArgumentResults):
-                inputArgResult: StatusCode = pCallResponse.Results[0].InputArgumentResults[i]
+            self._check_service_result_count()
+            if 0 >= pCallResponse.NoOfResults:
+                raise ServiceFailure('CallResponse has no method result', StatusCode.BadUnexpectedError)
+            methodResult = &pCallResponse.Results[0]
+            callResult = methodResult.StatusCode
+            for i in range(methodResult.NoOfInputArgumentResults):
+                inputArgResult: StatusCode = methodResult.InputArgumentResults[i]
                 inputArgResults.append(inputArgResult)
-            for i in range(pCallResponse.Results[0].NoOfOutputArguments):
-                outputArg: Variant = _C_Variant.from_sopc_variant(&(pCallResponse.Results[0].OutputArguments[i]))
+            for i in range(methodResult.NoOfOutputArguments):
+                outputArg: Variant = _C_Variant.from_sopc_variant(&(methodResult.OutputArguments[i]))
                 outputResults.append(outputArg)
             return CallResponse(callResult, inputArgResults, outputResults)
         else:
@@ -961,6 +991,7 @@ cdef class _AsyncRequestHandler:
         """
         request._timestampSent = time.time()
         self._dRequestContext = request
+        request._validationCtx = SOPC_ServiceResponse_CreateRequestContext(request._request)
         with nogil:
             if isLocalService:
                 status = SOPC_ServerHelper_LocalServiceAsync(request._request, request._requestContext)
@@ -969,6 +1000,7 @@ cdef class _AsyncRequestHandler:
             else:
                 assert False, '_send_generic_request: !isLocalService => connection != NULL'
         if status != SOPC_ReturnStatus.SOPC_STATUS_OK:
+            SOPC_ServiceResponse_DeleteRequestContext(&request._validationCtx)
             raise SOPC_Failure('ServiceAsync failed to send request.', status)
         if bWaitResponse:
             return self._wait_for_response(request, timeout)
@@ -1054,7 +1086,8 @@ cdef class _AsyncRequestHandler:
             if status != SOPC_ReturnStatus.SOPC_STATUS_OK:
                 raise SOPC_Failure('_on_response: SOPC_EncodeableObject_Copy failed', status)
             # push response and userContext in its class (Response)
-            self._dResponseContext = Response.c_new_response(response_cpy, userContext)
+            self._dResponseContext = Response.c_new_response(response_cpy, userContext, request._validationCtx)
+            request._validationCtx = NULL
         else:
             self._dServiceException = ServiceFailure('ServiceFailure : Response type does not match the type of the sent request', StatusCode.BadUnexpectedError)
 
