@@ -80,4 +80,6 @@ Suite* tests_make_suite_address_space_access(void);
 
 Suite* tests_make_suite_pki_create_from_store(void);
 
+Suite* tests_make_suite_response_helper(void);
+
 #endif // CHECK_HELPERS_H

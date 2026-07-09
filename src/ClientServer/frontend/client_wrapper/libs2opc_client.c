@@ -22,6 +22,7 @@
 #include "libs2opc_client.h"
 #include "libs2opc_client_internal.h"
 #include "libs2opc_common_config.h"
+#include "libs2opc_response_helper.h"
 
 #include "sopc_assert.h"
 #include "sopc_encodeabletype.h"
@@ -80,9 +81,10 @@ typedef struct
     SOPC_Condition condition;
     bool finished; /* set when treatment is done */
 
-    bool isDiscoveryModeService; /* Set if the endpoint service API was used */
-    void* responseResultCtx;     /* Context dedicated to the request type */
-    SOPC_StatusCode status;      /* Service response status */
+    bool isDiscoveryModeService;                    /* Set if the endpoint service API was used */
+    void* responseResultCtx;                        /* Context dedicated to the request type */
+    SOPC_StatusCode status;                         /* Service response status */
+    SOPC_ServiceResponse_ReqContext* validationCtx; /* Snapshot for post-send response validation */
 
 } SOPC_ClientHelper_ReqCtx;
 
@@ -205,6 +207,7 @@ static void SOPC_ClientHelperInternal_GenReqCtx_ClearAndFree(SOPC_ClientHelper_R
     SOPC_ASSERT(NULL != genReqCtx);
     SOPC_Condition_Clear(&genReqCtx->condition);
     SOPC_Mutex_Clear(&genReqCtx->mutex);
+    SOPC_ServiceResponse_DeleteRequestContext(&genReqCtx->validationCtx);
     /* Avoid "warning: potential null pointer dereference [-Werror=null-dereference]"
      * genReqCtx is not NULL, this is checked by SOPC_ASSERT at the start of this function*/
     SOPC_GCC_DIAGNOSTIC_PUSH
@@ -1324,6 +1327,12 @@ static SOPC_ReturnStatus SOPC_ClientHelperInternal_Service(bool isSynchronous,
         SOPC_ReturnStatus statusMutex = SOPC_Mutex_Lock(&reqCtx->mutex);
         SOPC_ASSERT(SOPC_STATUS_OK == statusMutex);
 
+        if (SOPC_STATUS_OK == status)
+        {
+            reqCtx->validationCtx = SOPC_ServiceResponse_CreateRequestContext(request);
+            /* NULL: unsupported service type or OOM — validation skipped. */
+        }
+
         /* send the request */
 
         if (SOPC_STATUS_OK == status)
@@ -1341,6 +1350,22 @@ static SOPC_ReturnStatus SOPC_ClientHelperInternal_Service(bool isSynchronous,
             if (SOPC_STATUS_OK == status)
             {
                 status = reqCtx->status;
+            }
+            if (SOPC_STATUS_OK == status && NULL != reqCtx->validationCtx && NULL != response)
+            {
+                status = SOPC_ServiceResponse_ValidateResultCount(&reqCtx->validationCtx, *response);
+                if (SOPC_STATUS_NOK == status)
+                {
+                    // Result count is unexpected => delete the response
+                    SOPC_EncodeableType* pEncType = *(SOPC_EncodeableType**) response;
+                    SOPC_EncodeableObject_Delete(pEncType, response);
+                }
+                else
+                {
+                    // Verification cannot be done or does not comply with a request maximum only (e.g. Browse)
+                    // => keep the response
+                    status = SOPC_STATUS_OK;
+                }
             }
         }
 

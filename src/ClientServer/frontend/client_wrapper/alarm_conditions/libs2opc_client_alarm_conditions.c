@@ -28,6 +28,7 @@
 #include "libs2opc_client_alarm_conditions.h"
 #include "libs2opc_common_internal.h"
 #include "libs2opc_request_builder.h"
+#include "libs2opc_response_helper.h"
 
 #include "sopc_assert.h"
 #include "sopc_builtintypes.h"
@@ -63,6 +64,7 @@ struct _SOPC_MonitoredAlarmsGroup
     // The select clauses in the MI
     char** alarm_selectClauses;
     size_t alarm_selectClauses_len;
+    size_t alarm_nbSelectClauses;
 };
 
 static SOPC_SLinkedList* monitored_alarm_groups = NULL;
@@ -182,12 +184,15 @@ static OpcUa_CreateMonitoredItemsResponse* create_monitored_item_event(
         maGroup->alarm_selectClauses = SOPC_Malloc(nb_select_clauses_alarm * sizeof(char*));
         SOPC_ASSERT(NULL != maGroup->alarm_selectClauses);
         maGroup->alarm_selectClauses_len = 0;
+        maGroup->alarm_nbSelectClauses = nb_select_clauses_alarm;
         SOPC_Event_ForEachVar(alarmEvent, &maGroup_set_single_selectClause_from_event, (uintptr_t) maGroup);
         for (size_t i = 1; i < nb_select_clauses_alarm && SOPC_STATUS_OK == status; i++)
         {
             status = SOPC_EventFilter_SetSelectClauseFromStringPath(
                 eventFilter, i, NULL, '~', maGroup->alarm_selectClauses[i - 1], SOPC_AttributeId_Value, NULL);
         }
+        /* +1 for ConditionId */
+        SOPC_ASSERT(SOPC_STATUS_OK != status || maGroup->alarm_selectClauses_len + 1 == nb_select_clauses_alarm);
     }
 
     if (SOPC_STATUS_OK == status)
@@ -228,51 +233,32 @@ static OpcUa_CreateMonitoredItemsResponse* create_monitored_item_event(
     return createMonItResp;
 }
 
-static SOPC_ReturnStatus check_mi_response(OpcUa_CreateMonitoredItemsResponse* createMonItResp, char** selectClausesReq)
+static SOPC_ReturnStatus check_mi_filter_result(const OpcUa_MonitoredItemCreateResult* createResult,
+                                                char** selectClausesReq,
+                                                size_t expectedSelectClauseCount)
 {
-    SOPC_ReturnStatus status = SOPC_STATUS_NOK;
-    if (SOPC_IsGoodStatus(createMonItResp->ResponseHeader.ServiceResult))
+    SOPC_ReturnStatus status = SOPC_STATUS_OK;
+
+    // Check filterResult if it exists
+    if (SOPC_ExtObjBodyEncoding_Object != createResult->FilterResult.Encoding)
     {
-        status = SOPC_STATUS_OK;
-        if (createMonItResp->NoOfResults == 1)
-        {
-            if (!SOPC_IsGoodStatus(createMonItResp->Results[0].StatusCode))
-            {
-                SOPC_Logger_TraceError(SOPC_LOG_MODULE_CLIENTSERVER,
-                                       "A&C CLIENT: CreateMonitoredItemsResponse[0] result not good: 0x%08" PRIX32 "\n",
-                                       createMonItResp->Results[0].StatusCode);
-                status = SOPC_STATUS_NOK;
-            }
-        }
-        else
-        {
-            SOPC_Logger_TraceError(SOPC_LOG_MODULE_CLIENTSERVER,
-                                   "A&C CLIENT: Unexpected number of MI in "
-                                   "CreateMonitoredItemsResponse %" PRIi32 " != 1\n",
-                                   createMonItResp->NoOfResults);
-            status = SOPC_STATUS_NOK;
-        }
+        return status;
+    }
+
+    // For the moment:
+    // - Where clause is fixed by API
+    // - Select clauses fixed by API but will not be true for future version (parameter optAlarmFields
+    //   given by client)
+    OpcUa_EventFilterResult* filterResult = (OpcUa_EventFilterResult*) createResult->FilterResult.Body.Object.Value;
+
+    // Check the only Where clause
+    if (!SOPC_ServiceResponse_CheckResultCountMatches(filterResult->WhereClauseResult.NoOfElementResults, 1,
+                                                      "A&C CLIENT: filterResult WhereClauseResult"))
+    {
+        status = SOPC_STATUS_NOK;
     }
     else
     {
-        SOPC_Logger_TraceError(SOPC_LOG_MODULE_CLIENTSERVER,
-                               "A&C CLIENT: CreateMonitoredItemsResponse "
-                               "global result not good: 0x%08" PRIX32 "\n",
-                               createMonItResp->ResponseHeader.ServiceResult);
-    }
-
-    // Check filterResult if it exists
-    if (SOPC_ExtObjBodyEncoding_None != createMonItResp->Results[0].FilterResult.Encoding)
-    {
-        // For the moment:
-        // - Where clause is fixed by API
-        // - Select clauses fixed by API but will not be true for future version (parameter optAlarmFields
-        //   given by client)
-        OpcUa_EventFilterResult* filterResult =
-            (OpcUa_EventFilterResult*) createMonItResp->Results[0].FilterResult.Body.Object.Value;
-
-        // Check the only Where clause
-        SOPC_ASSERT(1 == filterResult->WhereClauseResult.NoOfElementResults);
         OpcUa_ContentFilterElementResult* whereEltRes = &filterResult->WhereClauseResult.ElementResults[0];
         if (!SOPC_IsGoodStatus(whereEltRes->StatusCode))
         {
@@ -281,8 +267,18 @@ static SOPC_ReturnStatus check_mi_response(OpcUa_CreateMonitoredItemsResponse* c
                                    whereEltRes->StatusCode);
             status = SOPC_STATUS_NOK;
         }
+    }
 
-        // Check the Select clauses
+    // Check the Select clauses
+    if (SOPC_STATUS_OK == status && !SOPC_ServiceResponse_CheckResultCountMatches(
+                                        filterResult->NoOfSelectClauseResults, (int32_t) expectedSelectClauseCount,
+                                        "A&C CLIENT: CreateMonitoredItemsResponse filterResult "
+                                        "SelectClauseResults"))
+    {
+        status = SOPC_STATUS_NOK;
+    }
+    else if (SOPC_STATUS_OK == status)
+    {
         for (int32_t i = 0; i < filterResult->NoOfSelectClauseResults; i++)
         {
             if (!SOPC_IsGoodStatus(filterResult->SelectClauseResults[i]))
@@ -295,6 +291,42 @@ static SOPC_ReturnStatus check_mi_response(OpcUa_CreateMonitoredItemsResponse* c
                 status = SOPC_STATUS_NOK;
             }
         }
+    }
+
+    return status;
+}
+
+static SOPC_ReturnStatus check_mi_response(OpcUa_CreateMonitoredItemsResponse* createMonItResp,
+                                           char** selectClausesReq,
+                                           size_t expectedSelectClauseCount)
+{
+    SOPC_ReturnStatus status = SOPC_STATUS_NOK;
+    if (SOPC_IsGoodStatus(createMonItResp->ResponseHeader.ServiceResult))
+    {
+        status = SOPC_STATUS_OK;
+        if (!SOPC_ServiceResponse_CheckResultCountMatches(createMonItResp->NoOfResults, 1,
+                                                          "A&C CLIENT: CreateMonitoredItemsResponse"))
+        {
+            status = SOPC_STATUS_NOK;
+        }
+        else if (!SOPC_IsGoodStatus(createMonItResp->Results[0].StatusCode))
+        {
+            SOPC_Logger_TraceError(SOPC_LOG_MODULE_CLIENTSERVER,
+                                   "A&C CLIENT: CreateMonitoredItemsResponse[0] result not good: 0x%08" PRIX32 "\n",
+                                   createMonItResp->Results[0].StatusCode);
+            status = SOPC_STATUS_NOK;
+        }
+        else
+        {
+            status = check_mi_filter_result(&createMonItResp->Results[0], selectClausesReq, expectedSelectClauseCount);
+        }
+    }
+    else
+    {
+        SOPC_Logger_TraceError(SOPC_LOG_MODULE_CLIENTSERVER,
+                               "A&C CLIENT: CreateMonitoredItemsResponse "
+                               "global result not good: 0x%08" PRIX32 "\n",
+                               createMonItResp->ResponseHeader.ServiceResult);
     }
 
     return status;
@@ -358,6 +390,13 @@ static void SOPC_MonitoredAlarm_TriggerSubscriptionNotification(const SOPC_Clien
         SOPC_Event* alarmConditionTypeEvent = SOPC_Event_GetInstanceAlarmConditionType();
         SOPC_ReturnStatus stat = (NULL != alarmConditionTypeEvent) ? SOPC_STATUS_OK : SOPC_STATUS_OUT_OF_MEMORY;
 
+        if (SOPC_STATUS_OK == stat && !SOPC_ServiceResponse_CheckResultCountMatches(
+                                          event->NoOfEventFields, (int32_t) MAgroup->alarm_nbSelectClauses,
+                                          "A&C CLIENT: EventNotificationList EventFields"))
+        {
+            stat = SOPC_STATUS_NOK;
+        }
+
         // Fill event fields
         for (int32_t iField = 0; SOPC_STATUS_OK == stat && iField < event->NoOfEventFields; iField++)
         {
@@ -393,7 +432,8 @@ static void SOPC_MonitoredAlarm_TriggerSubscriptionNotification(const SOPC_Clien
             }
             else
             {
-                const char* clauseStr = MAgroup->alarm_selectClauses[iField - 1];
+                const char* clauseStr =
+                    MAgroup->alarm_selectClauses[iField - 1]; /* -1 for ConditionId treated in previous branch */
                 stat = SOPC_Event_SetVariableFromStrPath(alarmConditionTypeEvent, clauseStr, var);
             }
         }
@@ -602,7 +642,12 @@ static SOPC_ReturnStatus delete_monitored_items(const SOPC_ClientHelper_Subscrip
     {
         if (SOPC_IsGoodStatus(delMonItResp.ResponseHeader.ServiceResult))
         {
-            if (!SOPC_IsGoodStatus(delMonItResp.Results[0]))
+            if (!SOPC_ServiceResponse_CheckResultCountMatches(delMonItResp.NoOfResults, 1,
+                                                              "A&C CLIENT: DeleteMonitoredItemsResponse"))
+            {
+                status = SOPC_STATUS_NOK;
+            }
+            else if (!SOPC_IsGoodStatus(delMonItResp.Results[0]))
             {
                 status = SOPC_STATUS_NOK;
             }
@@ -794,7 +839,7 @@ SOPC_MonitoredAlarmsGroup* SOPC_MonitoredAlarm_CreateAlarmsGroup(SOPC_ClientConn
         if (NULL != miRespServer)
         {
             // Check response
-            status = check_mi_response(miRespServer, ma_group->alarm_selectClauses);
+            status = check_mi_response(miRespServer, ma_group->alarm_selectClauses, ma_group->alarm_nbSelectClauses);
             if (SOPC_STATUS_OK == status)
             {
                 ma_group->monitoredItemId = miRespServer->Results[0].MonitoredItemId;
@@ -889,6 +934,7 @@ static bool check_parameter_alarm(const SOPC_MonitoredAlarm* alarmCond)
 }
 
 static SOPC_StatusCode check_call_response_generic(const OpcUa_CallResponse* callResponse,
+                                                   int32_t expectedNoOfResults,
                                                    const char* optEventIdParamStr,
                                                    const char* method_name)
 {
@@ -896,27 +942,27 @@ static SOPC_StatusCode check_call_response_generic(const OpcUa_CallResponse* cal
     SOPC_StatusCode returnSc = callResponse->ResponseHeader.ServiceResult;
     if (SOPC_IsGoodStatus(returnSc))
     {
-        OpcUa_CallMethodResult* result = &callResponse->Results[0];
-        returnSc = result->StatusCode;
-        if (1 != callResponse->NoOfResults)
+        if (!SOPC_ServiceResponse_CheckResultCountMatches(callResponse->NoOfResults, expectedNoOfResults, method_name))
         {
-            SOPC_Logger_TraceError(SOPC_LOG_MODULE_CLIENTSERVER,
-                                   "A&C CLIENT: %s method call wrong number of response items %s%s", method_name,
-                                   optEventIdParamStr ? "on event with eventId " : "",
-                                   optEventIdParamStr ? optEventIdParamStr : "");
-        }
-        else if (!SOPC_IsGoodStatus(result->StatusCode))
-        {
-            SOPC_Logger_TraceError(SOPC_LOG_MODULE_CLIENTSERVER,
-                                   "A&C CLIENT: %s method call bad result 0x%08" PRIX32 " %s%s", method_name, returnSc,
-                                   optEventIdParamStr ? "on event with eventId " : "",
-                                   optEventIdParamStr ? optEventIdParamStr : "");
+            returnSc = OpcUa_BadUnexpectedError;
         }
         else
         {
-            SOPC_Logger_TraceDebug(SOPC_LOG_MODULE_CLIENTSERVER, "A&C CLIENT: %s method call success result %s%s",
-                                   method_name, optEventIdParamStr ? "on event with eventId " : "",
-                                   optEventIdParamStr ? optEventIdParamStr : "");
+            OpcUa_CallMethodResult* result = &callResponse->Results[0];
+            returnSc = result->StatusCode;
+            if (!SOPC_IsGoodStatus(result->StatusCode))
+            {
+                SOPC_Logger_TraceError(SOPC_LOG_MODULE_CLIENTSERVER,
+                                       "A&C CLIENT: %s method call bad result 0x%08" PRIX32 " %s%s", method_name,
+                                       returnSc, optEventIdParamStr ? "on event with eventId " : "",
+                                       optEventIdParamStr ? optEventIdParamStr : "");
+            }
+            else
+            {
+                SOPC_Logger_TraceDebug(SOPC_LOG_MODULE_CLIENTSERVER, "A&C CLIENT: %s method call success result %s%s",
+                                       method_name, optEventIdParamStr ? "on event with eventId " : "",
+                                       optEventIdParamStr ? optEventIdParamStr : "");
+            }
         }
     }
     else
@@ -967,7 +1013,7 @@ SOPC_StatusCode SOPC_MonitoredAlarmCall_Enable(SOPC_MonitoredAlarm* alarmCond, b
 
     if (SOPC_STATUS_OK == status)
     {
-        returnSc = check_call_response_generic(callResponse, NULL, enable ? "Enable" : "Disable");
+        returnSc = check_call_response_generic(callResponse, 1, NULL, enable ? "Enable" : "Disable");
         SOPC_EncodeableObject_Delete(callResponse->encodeableType, (void**) &callResponse);
     }
     else
@@ -1074,7 +1120,7 @@ static SOPC_StatusCode call_request_with_params_eventId_and_comment(SOPC_Monitor
 
     if (SOPC_STATUS_OK == status)
     {
-        returnSc = check_call_response_generic(callResponse, eventIdStr, methodName);
+        returnSc = check_call_response_generic(callResponse, 1, eventIdStr, methodName);
         SOPC_EncodeableObject_Delete(callResponse->encodeableType, (void**) &callResponse);
     }
     else
@@ -1164,7 +1210,7 @@ SOPC_StatusCode SOPC_MonitoredAlarmCall_Refresh(const SOPC_MonitoredAlarmsGroup*
 
     if (SOPC_STATUS_OK == status)
     {
-        returnSc = check_call_response_generic(callResponse, NULL, "ConditionRefresh2");
+        returnSc = check_call_response_generic(callResponse, 1, NULL, "ConditionRefresh2");
         if (OpcUa_BadMethodInvalid == returnSc)
         {
             // Try ConditionRefresh if OPC UA method returned Bad_MethodInvalid,.
@@ -1221,7 +1267,7 @@ SOPC_StatusCode SOPC_MonitoredAlarmCall_Refresh(const SOPC_MonitoredAlarmsGroup*
 
         if (SOPC_STATUS_OK == status)
         {
-            returnSc = check_call_response_generic(callResponse, NULL, "ConditionRefresh");
+            returnSc = check_call_response_generic(callResponse, 1, NULL, "ConditionRefresh");
             SOPC_EncodeableObject_Delete(callResponse->encodeableType, (void**) &callResponse);
         }
         else
@@ -1270,7 +1316,7 @@ SOPC_StatusCode SOPC_MonitoredAlarmCall_EnableFromId(const SOPC_MonitoredAlarmsG
 
     if (SOPC_STATUS_OK == status)
     {
-        returnSc = check_call_response_generic(callResponse, NULL, enable ? "Enable" : "Disable");
+        returnSc = check_call_response_generic(callResponse, 1, NULL, enable ? "Enable" : "Disable");
         SOPC_EncodeableObject_Delete(callResponse->encodeableType, (void**) &callResponse);
     }
     else
