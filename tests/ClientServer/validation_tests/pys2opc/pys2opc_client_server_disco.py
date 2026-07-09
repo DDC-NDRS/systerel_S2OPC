@@ -77,7 +77,7 @@ if __name__ == '__main__':
 
         server_thread = Thread(target=start_server_forever)
         server_thread.start()
-        if not wait_server.wait_server(wait_server.DEFAULT_URL, wait_server.TIMEOUT):
+        if not wait_server.wait_server(wait_server.DEFAULT_URL):
             print('ERROR: Timeout for starting server', flush=True)
             # Close server_thread with server shutdown.
             PyS2OPC_Server.stop_serve()

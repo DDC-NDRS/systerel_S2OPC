@@ -18,34 +18,85 @@
 # specific language governing permissions and limitations
 # under the License.
 
+"""Start a background OPC UA server, run a test command, then stop the server.
+
+Used by CTest to run sample/client validation against toolkit_demo_server on
+localhost:4841. Server readiness is checked with wait_server (TCP connect only).
+
+Harness markers (stdout, for run_with_pwd.py synchronization and CI logs):
+  S2OPC_HARNESS: server_start   : before server subprocess is spawned
+  S2OPC_HARNESS: server_ready   : TCP port accepts connections
+  S2OPC_HARNESS: server_timeout : readiness wait expired
+  S2OPC_HARNESS: server_exited  : server process exited during startup
+
+Configuration:
+  --wait-server-timeout / S2OPC_WAIT_SERVER_TIMEOUT : server boot budget (default 60 s)
+  --wait-timeout                                    : optional client command timeout
+  --server-env                                      : extra KEY=VALUE pairs merged into os.environ
+
+Server and client share the same environment and stdin (PTY when driven by pexpect).
+"""
+
 import argparse
+import os
 import shlex
 import subprocess
 import sys
 
 import wait_server
 
-description = '''Runs a program with a test S2OPC server running in the
-background.
+description = '''Run a test command while a background S2OPC server listens on port 4841.
 
-The background server should listen on port 4841 to be considered as running by
-this script.'''
+See module docstring for harness markers, timeouts and environment handling.'''
+
+SERVER_SHUTDOWN_TIMEOUT = 10.0
+
+# Stable stdout markers consumed by run_with_pwd.py (--timeout/--nb-passwords in CMake)
+MARKER_SERVER_START = 'S2OPC_HARNESS: server_start'
+MARKER_SERVER_READY = 'S2OPC_HARNESS: server_ready'
+MARKER_SERVER_TIMEOUT = 'S2OPC_HARNESS: server_timeout'
+MARKER_SERVER_EXITED = 'S2OPC_HARNESS: server_exited'
+
 
 def log(msg):
     print(msg)
     sys.stdout.flush()
 
+
 def parse_env(string_env):
     pairs = string_env.split()
     env = {}
-    for pair in pairs :
-        if "=" in pair :
-            key, value = pair.split('=',1)
+    for pair in pairs:
+        if "=" in pair:
+            key, value = pair.split('=', 1)
             env[key] = value
-        else :
-            print("Malformed pair {} expect \"Variable=Value\" format", pair)
+        else:
+            print('Malformed pair {} expect "Variable=Value" format'.format(pair))
             return None
     return env
+
+
+def merge_env(extra_env):
+    """Return os.environ updated with optional --server-env overrides."""
+    env = os.environ.copy()
+    if extra_env is not None:
+        env.update(extra_env)
+    return env
+
+
+def stop_server(server_process):
+    """Terminate the server gracefully, then kill if shutdown exceeds SERVER_SHUTDOWN_TIMEOUT."""
+    if server_process.poll() is not None:
+        return server_process.returncode
+
+    server_process.terminate()
+    try:
+        return server_process.wait(timeout=SERVER_SHUTDOWN_TIMEOUT)
+    except subprocess.TimeoutExpired:
+        # 2 times to avoid OPCUA shutdown phase
+        server_process.kill()
+        server_process.kill()
+        return server_process.wait()
 
 
 if __name__ == '__main__':
@@ -57,6 +108,9 @@ if __name__ == '__main__':
                         help='Wait for the server to exit instead of killing it when the client is done')
     parser.add_argument('--wait-timeout',
                         help='Timeout duration expressed as a float in seconds. Return code of the function is 0 in this case.')
+    parser.add_argument('--wait-server-timeout', type=float, default=wait_server.DEFAULT_OVERALL_TIMEOUT,
+                        help='Max seconds to wait for server TCP endpoint on port 4841 (default: %(default)s, '
+                             'override with S2OPC_WAIT_SERVER_TIMEOUT)')
     parser.add_argument('cmd', metavar='CMD', help='The command to run')
     parser.add_argument('args', metavar='ARGS', nargs=argparse.REMAINDER,
                         help='Parameters to pass to the command')
@@ -67,32 +121,45 @@ if __name__ == '__main__':
         sys.stderr.write('Missing server command.\n')
         sys.exit(1)
 
-    env=None
-    if None != args.server_env:
-        env = parse_env(args.server_env)
-    log('Starting server')
-    server_process = subprocess.Popen(shlex.split(args.server_cmd), cwd=args.server_wd, env=env)
+    extra_env = None
+    if args.server_env is not None:
+        extra_env = parse_env(args.server_env)
+        if extra_env is None:
+            sys.exit(1)
 
-    if not wait_server.wait_server(wait_server.DEFAULT_URL, wait_server.TIMEOUT):
-        log('Timeout for starting server')
-        # 2 times to avoid OPCUA shutdown phase
-        server_process.kill()
-        server_process.kill()
-        server_process.wait()
+    server_env = merge_env(extra_env)
+
+    log(MARKER_SERVER_START)
+    log('Starting server')
+    server_process = subprocess.Popen(shlex.split(args.server_cmd),
+                                      cwd=args.server_wd,
+                                      env=server_env)
+
+    if not wait_server.wait_server(wait_server.DEFAULT_URL,
+                                   args.wait_server_timeout,
+                                   server_process):
+        exit_code = server_process.poll()
+        if exit_code is not None:
+            log('{} (exit code {})'.format(MARKER_SERVER_EXITED, exit_code))
+        else:
+            log(MARKER_SERVER_TIMEOUT)
+            log('Timeout for starting server')
+            stop_server(server_process)
         sys.exit(1)
 
+    log(MARKER_SERVER_READY)
     cmd = [args.cmd] + args.args
 
     log('Starting test %s' % ' '.join(cmd))
 
     try:
         if not args.wait_timeout:
-            subprocess.check_call(cmd)
+            subprocess.check_call(cmd, env=server_env)
         else:
             log('Launch command with timeout of %f seconds \n' % float(args.wait_timeout))
-            subprocess.check_call(cmd, timeout=float(args.wait_timeout))
+            subprocess.check_call(cmd, timeout=float(args.wait_timeout), env=server_env)
         test_ret = 0
-    except subprocess.TimeoutExpired as e:
+    except subprocess.TimeoutExpired:
         # Nominal exit
         log('Test time out')
         test_ret = 0
@@ -104,7 +171,9 @@ if __name__ == '__main__':
 
     if not args.wait_server:
         log('Test finished, killing server')
-        server_process.terminate()
+        stop_server(server_process)
+        if wait_server.is_port_open(wait_server.DEFAULT_URL):
+            log('Warning: port 4841 still open after server shutdown')
 
     log('Waiting for server to exit')
     server_ret = server_process.wait()

@@ -52,6 +52,10 @@ file(GLOB S2OPC_TEST_CLIENTSERVER_HELPER_SOURCES CONFIGURE_DEPENDS "${S2OPC_ROOT
 
 enable_testing()
 
+# Timeouts for pexpect / with-opc-server validation harness (seconds)
+set(S2OPC_RUN_WITH_PWD_TIMEOUT 60)
+set(S2OPC_WITH_OPC_SERVER_READY_TIMEOUT 60)
+
 # Function to add a unit test to the set of tests: define a test generating a TAP file from a binary name
 function(s2opc_unit_test target_name)
   set(test_name "unit::${target_name}")
@@ -683,6 +687,7 @@ function(s2opc_validation_test target_name bin_name)
   COMMAND
   "${Python3_EXECUTABLE}" "${S2OPC_ROOT_PATH}/tests/scripts/tap-wrap.py"
   "${Python3_EXECUTABLE}" "${S2OPC_ROOT_PATH}/tests/ClientServer/scripts/with-opc-server.py"
+  "--wait-server-timeout" "${S2OPC_WITH_OPC_SERVER_READY_TIMEOUT}"
   "--server-wd" $<TARGET_FILE_DIR:${TOOLKIT_TEST_SERVER}>
   "--server-cmd" "$<TARGET_FILE:${TOOLKIT_TEST_SERVER}> ${ARGV2}"
   $<TARGET_FILE:${bin_name}> ${TOOLKIT_TEST_SERVER} ${ARGV3})
@@ -694,8 +699,10 @@ function(s2opc_validation_test_demo_alarms target_name)
   WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
   COMMAND
   "${Python3_EXECUTABLE}" "${S2OPC_ROOT_PATH}/tests/scripts/tap-wrap.py"
-  "${Python3_EXECUTABLE}" "${S2OPC_ROOT_PATH}/samples/ClientServer/scripts/run_with_pwd.py" "--nb-passwords" 1
+  "${Python3_EXECUTABLE}" "${S2OPC_ROOT_PATH}/samples/ClientServer/scripts/run_with_pwd.py"
+  "--timeout" "${S2OPC_RUN_WITH_PWD_TIMEOUT}" "--nb-passwords" 1
   "${Python3_EXECUTABLE}" "${S2OPC_ROOT_PATH}/tests/ClientServer/scripts/with-opc-server.py"
+  "--wait-server-timeout" "${S2OPC_WITH_OPC_SERVER_READY_TIMEOUT}"
   "--server-wd" $<TARGET_FILE_DIR:toolkit_demo_server_alarms>
   "--server-cmd" $<TARGET_FILE:toolkit_demo_server_alarms>
   $<TARGET_FILE:toolkit_test_client_alarms> toolkit_demo_server_alarms ${ARGN})
@@ -723,6 +730,7 @@ if (NOT WIN32 AND expat_FOUND)
           WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
           COMMAND
           "${Python3_EXECUTABLE}" "${S2OPC_ROOT_PATH}/tests/ClientServer/scripts/with-opc-server.py"
+          "--wait-server-timeout" "${S2OPC_WITH_OPC_SERVER_READY_TIMEOUT}"
           "--server-wd" $<TARGET_FILE_DIR:toolkit_test_server_file_transfer>
           "--server-cmd" $<TARGET_FILE:toolkit_test_server_file_transfer>
           "./check_file_transfer")
@@ -734,7 +742,9 @@ if (NOT WIN32 AND expat_FOUND)
           WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
           COMMAND
           "${Python3_EXECUTABLE}" "${S2OPC_ROOT_PATH}/samples/ClientServer/scripts/run_with_pwd.py"
+          "--timeout" "${S2OPC_RUN_WITH_PWD_TIMEOUT}"
           "${Python3_EXECUTABLE}" "${S2OPC_ROOT_PATH}/tests/ClientServer/scripts/with-opc-server.py"
+          "--wait-server-timeout" "${S2OPC_WITH_OPC_SERVER_READY_TIMEOUT}"
           "--server-wd" $<TARGET_FILE_DIR:toolkit_demo_server_file_transfer>
           "--server-cmd" $<TARGET_FILE:toolkit_demo_server_file_transfer>
           "./toolkit_test_file_transfer")
@@ -749,9 +759,11 @@ function(s2opc_custom_server_validation_test server_target name)
     WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
     COMMAND
     "${Python3_EXECUTABLE}" "${S2OPC_ROOT_PATH}/tests/ClientServer/scripts/with-opc-server.py"
+    "--wait-server-timeout" "${S2OPC_WITH_OPC_SERVER_READY_TIMEOUT}"
     "--server-wd" $<TARGET_FILE_DIR:${server_target}>
     "--server-cmd" "$<TARGET_FILE:${server_target}> ${no_ext_name}"
     "${Python3_EXECUTABLE}" ${CMAKE_CURRENT_SOURCE_DIR}/interop_tools/${name})
+  set_tests_properties(${test_name} PROPERTIES ENVIRONMENT "CK_TAP_LOG_FILE_NAME=${name}.tap")
 endfunction()
 
 function(s2opc_server_validation_test name)
@@ -765,6 +777,7 @@ function(s2opc_client_validation_test name)
     WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
     COMMAND
     "${Python3_EXECUTABLE}" "${S2OPC_ROOT_PATH}/tests/ClientServer/scripts/with-opc-server.py"
+    "--wait-server-timeout" "${S2OPC_WITH_OPC_SERVER_READY_TIMEOUT}"
     "--server-wd" "${CMAKE_CURRENT_SOURCE_DIR}/interop_tools"
     "--server-cmd" "${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/interop_tools/server.py 25000"
     "./${name}")
@@ -778,6 +791,7 @@ function(s2opc_client_self_validation_test name)
     WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
     COMMAND
     "${Python3_EXECUTABLE}" "${S2OPC_ROOT_PATH}/tests/ClientServer/scripts/with-opc-server.py"
+    "--wait-server-timeout" "${S2OPC_WITH_OPC_SERVER_READY_TIMEOUT}"
     "--server-wd" $<TARGET_FILE_DIR:${TOOLKIT_TEST_SERVER}>
     "--server-cmd" $<TARGET_FILE:${TOOLKIT_TEST_SERVER}>
     "./${name}")
@@ -799,6 +813,7 @@ function(s2opc_sc_level_test name server_key_size)
     COMMAND
     "${Python3_EXECUTABLE}" "${S2OPC_ROOT_PATH}/tests/scripts/tap-wrap.py"
     "${Python3_EXECUTABLE}" "${S2OPC_ROOT_PATH}/tests/ClientServer/scripts/with-opc-server.py"
+    "--wait-server-timeout" "${S2OPC_WITH_OPC_SERVER_READY_TIMEOUT}"
     "--server-wd" $<TARGET_FILE_DIR:test_secure_channels_server>
     "--server-cmd" "$<TARGET_FILE:test_secure_channels_server> ${server_key_size}"
     "--wait-server"
@@ -850,6 +865,7 @@ ${ENV_PATH_SEP}${S2OPC_ROOT_PATH}/samples/ClientServer/pys2opc/client"
         WORKING_DIRECTORY "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}"
         COMMAND
         "${Python3_EXECUTABLE}" "${S2OPC_ROOT_PATH}/tests/ClientServer/scripts/with-opc-server.py"
+        "--wait-server-timeout" "${S2OPC_WITH_OPC_SERVER_READY_TIMEOUT}"
         "--server-wd" $<TARGET_FILE_DIR:${TOOLKIT_TEST_SERVER}>
         "--server-cmd" "$<TARGET_FILE:${TOOLKIT_TEST_SERVER}> ${no_ext_name}"
         "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/validation_tests/pys2opc/${name}"
@@ -882,7 +898,9 @@ ${ENV_PATH_SEP}${S2OPC_ROOT_PATH}/samples/ClientServer/pys2opc/client"
     WORKING_DIRECTORY "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}"
     COMMAND
     "${Python3_EXECUTABLE}" "${S2OPC_ROOT_PATH}/samples/ClientServer/scripts/run_with_pwd.py"
+    "--timeout" "${S2OPC_RUN_WITH_PWD_TIMEOUT}"
     "${Python3_EXECUTABLE}" "${S2OPC_ROOT_PATH}/tests/ClientServer/scripts/with-opc-server.py"
+    "--wait-server-timeout" "${S2OPC_WITH_OPC_SERVER_READY_TIMEOUT}"
     "--server-wd" $<TARGET_FILE_DIR:${TOOLKIT_DEMO_SERVER}>
     "--server-cmd" $<TARGET_FILE:${TOOLKIT_DEMO_SERVER}>
     "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/validation_tests/pys2opc/pys2opc_test_role_permissions.py"
@@ -952,8 +970,10 @@ if(UNIX AND expat_FOUND AND NOT S2OPC_NANO_PROFILE)
     WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
     COMMAND
     "${Python3_EXECUTABLE}" "${S2OPC_ROOT_PATH}/tests/scripts/tap-wrap.py"
-    "${Python3_EXECUTABLE}" "${S2OPC_ROOT_PATH}/samples/ClientServer/scripts/run_with_pwd.py" "--nb-passwords" ${nb_password}
+    "${Python3_EXECUTABLE}" "${S2OPC_ROOT_PATH}/samples/ClientServer/scripts/run_with_pwd.py"
+    "--timeout" "${S2OPC_RUN_WITH_PWD_TIMEOUT}" "--nb-passwords" ${nb_password}
     "${Python3_EXECUTABLE}" "${S2OPC_ROOT_PATH}/tests/ClientServer/scripts/with-opc-server.py"
+    "--wait-server-timeout" "${S2OPC_WITH_OPC_SERVER_READY_TIMEOUT}"
     "--server-wd" $<TARGET_FILE_DIR:toolkit_demo_push_server>
     "--server-cmd" $<TARGET_FILE:toolkit_demo_push_server>
     "${Python3_EXECUTABLE}" "${S2OPC_ROOT_PATH}/tests/ClientServer/validation_tests/client/push_client/scenarios/${python_script_scenario}" ${input_csr})
