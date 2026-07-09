@@ -156,6 +156,12 @@ static void LockedStaMac_ProcessMsg_CreateSubscriptionResponse(SOPC_StaMac_Machi
                                                                uint32_t arg,
                                                                void* pParam,
                                                                uintptr_t appCtx);
+static void LockedStaMac_FinalizeCreateMonItResponseError(SOPC_StaMac_Machine* pSM,
+                                                          OpcUa_CreateMonitoredItemsResponse* pMonItResp,
+                                                          SOPC_CreateMonitoredItems_Ctx* MIappCtx);
+static void LockedStaMac_FinalizeDeleteMonItResponseError(SOPC_StaMac_Machine* pSM,
+                                                          OpcUa_DeleteMonitoredItemsResponse* pMonItResp,
+                                                          SOPC_DeleteMonitoredItems_Ctx* MIappCtx);
 static void LockedStaMac_ProcessMsg_CreateMonitoredItemsResponse(SOPC_StaMac_Machine* pSM,
                                                                  uint32_t arg,
                                                                  void* pParam,
@@ -171,7 +177,8 @@ static void LockedStaMac_ProcessMsg_DeleteSubscriptionResponse(SOPC_StaMac_Machi
 static void LockedStaMac_ProcessMsg_ServiceFault(SOPC_StaMac_Machine* pSM,
                                                  uint32_t arg,
                                                  void* pParam,
-                                                 SOPC_StaMac_RequestType reqType);
+                                                 SOPC_StaMac_RequestType reqType,
+                                                 uintptr_t appCtx);
 static void LockedStaMac_ProcessEvent_SendRequestFailed(SOPC_StaMac_Machine* pSM,
                                                         uint32_t arg,
                                                         void* pParam,
@@ -1626,7 +1633,7 @@ bool SOPC_StaMac_EventDispatcher(SOPC_StaMac_Machine* pSM,
                     else if (&OpcUa_ServiceFault_EncodeableType == pEncType)
                     {
                         /* give appCtx, and not internal app context, to know more about the service fault */
-                        LockedStaMac_ProcessMsg_ServiceFault(pSM, arg, pParam, requestType);
+                        LockedStaMac_ProcessMsg_ServiceFault(pSM, arg, pParam, requestType, appCtx);
                     }
                     else
                     {
@@ -2237,6 +2244,42 @@ static void LockedStaMac_ProcessMsg_DeleteSubscriptionResponse(SOPC_StaMac_Machi
     pSM->state = stActivated;
 }
 
+static void LockedStaMac_FinalizeCreateMonItResponseError(SOPC_StaMac_Machine* pSM,
+                                                          OpcUa_CreateMonitoredItemsResponse* pMonItResp,
+                                                          SOPC_CreateMonitoredItems_Ctx* MIappCtx)
+{
+    if (NULL != MIappCtx)
+    {
+        OpcUa_CreateMonitoredItemsResponse* resp = MIappCtx->Results;
+        if (NULL != resp && NULL != pMonItResp)
+        {
+            // Note: set the response in context to be consistent with the ServiceFault case
+            *resp = *pMonItResp;
+            SOPC_EncodeableObject_Initialize(&OpcUa_CreateMonitoredItemsResponse_EncodeableType, pMonItResp);
+        }
+        SOPC_EncodeableObject_Delete(&OpcUa_CreateMonitoredItemsRequest_EncodeableType, (void**) &MIappCtx->req);
+    }
+    pSM->state = stError;
+}
+
+static void LockedStaMac_FinalizeDeleteMonItResponseError(SOPC_StaMac_Machine* pSM,
+                                                          OpcUa_DeleteMonitoredItemsResponse* pMonItResp,
+                                                          SOPC_DeleteMonitoredItems_Ctx* MIappCtx)
+{
+    if (NULL != MIappCtx)
+    {
+        OpcUa_DeleteMonitoredItemsResponse* resp = MIappCtx->Results;
+        if (NULL != resp && NULL != pMonItResp)
+        {
+            // Note: set the response in context to be consistent with the ServiceFault case
+            *resp = *pMonItResp;
+            SOPC_EncodeableObject_Initialize(&OpcUa_DeleteMonitoredItemsResponse_EncodeableType, pMonItResp);
+        }
+        SOPC_EncodeableObject_Delete(&OpcUa_DeleteMonitoredItemsRequest_EncodeableType, (void**) &MIappCtx->req);
+    }
+    pSM->state = stError;
+}
+
 static void LockedStaMac_ProcessMsg_CreateMonitoredItemsResponse(SOPC_StaMac_Machine* pSM,
                                                                  uint32_t arg,
                                                                  void* pParam,
@@ -2252,48 +2295,55 @@ static void LockedStaMac_ProcessMsg_CreateMonitoredItemsResponse(SOPC_StaMac_Mac
     SOPC_ASSERT(NULL != pMonItResp);
     OpcUa_CreateMonitoredItemsRequest* pMonItReq = MIappCtx->req;
 
-    // Retrieve subCtx
-    subscriptionCtx* subCtx = NULL;
-    if (NULL != pMonItReq)
+    if (NULL == pMonItReq || 0 >= pMonItReq->NoOfItemsToCreate ||
+        pMonItResp->NoOfResults != pMonItReq->NoOfItemsToCreate)
     {
-        subCtx = (subscriptionCtx*) SOPC_SLinkedList_FindFromId(pSM->pListSubscriptions, pMonItReq->SubscriptionId);
-        if (NULL != subCtx)
-        {
-            for (i = 0; i < pMonItResp->NoOfResults; ++i)
-            {
-                if (SOPC_IsGoodStatus(pMonItResp->Results[i].StatusCode))
-                {
-                    bool result = SOPC_Dict_Insert(
-                        subCtx->miIdToCliHandleDict, (uintptr_t) pMonItResp->Results[i].MonitoredItemId,
-                        (uintptr_t) pMonItReq->ItemsToCreate[i].RequestedParameters.ClientHandle);
-                    if (!result)
-                    {
-                        pMonItResp->Results[i].StatusCode = OpcUa_BadInternalError;
-                        SOPC_Logger_TraceError(SOPC_LOG_MODULE_CLIENTSERVER,
-                                               "Internal error creating monitored item with index '%" PRIi32 ".", i);
-                    }
-                }
-            }
-            if (pMonItResp->NoOfResults > 0)
-            {
-                bool result = SOPC_SLinkedList_Append(subCtx->pListMonIt, pMonItResp->Results[0].MonitoredItemId,
-                                                      MIappCtx->outCtxId);
-                if (!result)
-                {
-                    SOPC_Logger_TraceError(SOPC_LOG_MODULE_CLIENTSERVER,
-                                           "Internal error creating monitored item result context");
-                }
-            }
-        }
-        else
-        {
-            SOPC_Logger_TraceError(SOPC_LOG_MODULE_CLIENTSERVER,
-                                   "Subscription with SubscriptionId %" PRIu32 "could not be found in configuration.",
-                                   pMonItReq->SubscriptionId);
-        }
+        SOPC_Logger_TraceError(SOPC_LOG_MODULE_CLIENTSERVER,
+                               "Number of results %" PRIi32 " does not match number of items to create %" PRIi32,
+                               pMonItResp->NoOfResults, (NULL != pMonItReq) ? pMonItReq->NoOfItemsToCreate : 0);
+        LockedStaMac_FinalizeCreateMonItResponseError(pSM, pMonItResp, MIappCtx);
+        return;
     }
 
-    OpcUa_CreateMonitoredItemsResponse* resp = ((SOPC_CreateMonitoredItems_Ctx*) appCtx)->Results;
+    // Retrieve subCtx
+    subscriptionCtx* subCtx =
+        (subscriptionCtx*) SOPC_SLinkedList_FindFromId(pSM->pListSubscriptions, pMonItReq->SubscriptionId);
+    if (NULL != subCtx)
+    {
+        for (i = 0; i < pMonItResp->NoOfResults; ++i)
+        {
+            if (SOPC_IsGoodStatus(pMonItResp->Results[i].StatusCode))
+            {
+                bool result =
+                    SOPC_Dict_Insert(subCtx->miIdToCliHandleDict, (uintptr_t) pMonItResp->Results[i].MonitoredItemId,
+                                     (uintptr_t) pMonItReq->ItemsToCreate[i].RequestedParameters.ClientHandle);
+                if (!result)
+                {
+                    pMonItResp->Results[i].StatusCode = OpcUa_BadInternalError;
+                    SOPC_Logger_TraceError(SOPC_LOG_MODULE_CLIENTSERVER,
+                                           "Internal error creating monitored item with index '%" PRIi32 ".", i);
+                }
+            }
+        }
+        if (pMonItResp->NoOfResults > 0)
+        {
+            bool result =
+                SOPC_SLinkedList_Append(subCtx->pListMonIt, pMonItResp->Results[0].MonitoredItemId, MIappCtx->outCtxId);
+            if (!result)
+            {
+                SOPC_Logger_TraceError(SOPC_LOG_MODULE_CLIENTSERVER,
+                                       "Internal error creating monitored item result context");
+            }
+        }
+    }
+    else
+    {
+        SOPC_Logger_TraceError(SOPC_LOG_MODULE_CLIENTSERVER,
+                               "Subscription with SubscriptionId %" PRIu32 "could not be found in configuration.",
+                               pMonItReq->SubscriptionId);
+    }
+
+    OpcUa_CreateMonitoredItemsResponse* resp = MIappCtx->Results;
     if (NULL != resp)
     {
         // Transfer response data into app context
@@ -2318,6 +2368,16 @@ static void LockedStaMac_ProcessMsg_DeleteMonitoredItemsResponse(SOPC_StaMac_Mac
     SOPC_DeleteMonitoredItems_Ctx* MIappCtx = (SOPC_DeleteMonitoredItems_Ctx*) appCtx;
     SOPC_ASSERT(NULL != pMonItResp);
     OpcUa_DeleteMonitoredItemsRequest* pMonItReq = MIappCtx->req;
+
+    if (NULL == pMonItReq || 0 >= pMonItReq->NoOfMonitoredItemIds ||
+        pMonItResp->NoOfResults != pMonItReq->NoOfMonitoredItemIds)
+    {
+        SOPC_Logger_TraceError(SOPC_LOG_MODULE_CLIENTSERVER,
+                               "Number of results %" PRIi32 " does not match number of monitored item ids %" PRIi32,
+                               pMonItResp->NoOfResults, (NULL != pMonItReq) ? pMonItReq->NoOfMonitoredItemIds : 0);
+        LockedStaMac_FinalizeDeleteMonItResponseError(pSM, pMonItResp, MIappCtx);
+        return;
+    }
 
     // Retrieve subCtx
     subscriptionCtx* subCtx =
@@ -2363,7 +2423,7 @@ static void LockedStaMac_ProcessMsg_DeleteMonitoredItemsResponse(SOPC_StaMac_Mac
                                pMonItReq->SubscriptionId);
     }
 
-    OpcUa_DeleteMonitoredItemsResponse* resp = ((SOPC_DeleteMonitoredItems_Ctx*) appCtx)->Results;
+    OpcUa_DeleteMonitoredItemsResponse* resp = MIappCtx->Results;
     if (NULL != resp)
     {
         // Transfer response data into app context
@@ -2377,7 +2437,8 @@ static void LockedStaMac_ProcessMsg_DeleteMonitoredItemsResponse(SOPC_StaMac_Mac
 static void LockedStaMac_ProcessMsg_ServiceFault(SOPC_StaMac_Machine* pSM,
                                                  uint32_t arg,
                                                  void* pParam,
-                                                 SOPC_StaMac_RequestType reqType)
+                                                 SOPC_StaMac_RequestType reqType,
+                                                 uintptr_t appCtx)
 {
     SOPC_UNUSED_ARG(arg);
     OpcUa_ServiceFault* servFault = (OpcUa_ServiceFault*) pParam;
@@ -2405,6 +2466,16 @@ static void LockedStaMac_ProcessMsg_ServiceFault(SOPC_StaMac_Machine* pSM,
         }
         break;
     default:
+        if (stCreatingMonIt == pSM->state && 0 != appCtx)
+        {
+            SOPC_CreateMonitoredItems_Ctx* MIappCtx = (SOPC_CreateMonitoredItems_Ctx*) appCtx;
+            SOPC_EncodeableObject_Delete(&OpcUa_CreateMonitoredItemsRequest_EncodeableType, (void**) &MIappCtx->req);
+        }
+        else if (stDeletingMonIt == pSM->state && 0 != appCtx)
+        {
+            SOPC_DeleteMonitoredItems_Ctx* MIappCtx = (SOPC_DeleteMonitoredItems_Ctx*) appCtx;
+            SOPC_EncodeableObject_Delete(&OpcUa_DeleteMonitoredItemsRequest_EncodeableType, (void**) &MIappCtx->req);
+        }
         /* else go into error mode */
         pSM->state = stError;
         break;
