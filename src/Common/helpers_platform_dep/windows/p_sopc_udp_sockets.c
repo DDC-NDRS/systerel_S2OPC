@@ -34,8 +34,12 @@
 #include <winsock2.h>
 #include <ws2tcpip.h>
 
+#ifdef _MSC_VER
+// These MSVC-specific linker directives are ignored (and warned about) by MinGW/GCC,
+// where the libraries are linked through CMake instead.
 #pragma comment(lib, "iphlpapi.lib")
 #pragma comment(lib, "Ws2_32.lib")
+#endif
 
 #ifdef __MINGW32__
 #define IP_UNICAST_IF IPV6_UNICAST_IF
@@ -243,7 +247,7 @@ static SOPC_ReturnStatus SOPC_UDP_Socket_CreateNew(const SOPC_Socket_AddressInfo
     if (SOPC_STATUS_OK == status && setNonBlocking)
     {
         u_long iMode = 1; // iMode = 0 => blocking is enabled. iMode != 0 => non-blocking mode is enabled.
-        setOptStatus = ioctlsocket(socketImpl->sock, FIONBIO, &iMode);
+        setOptStatus = ioctlsocket(socketImpl->sock, (long) FIONBIO, &iMode);
         if (setOptStatus != NO_ERROR)
         {
             SOPC_Logger_TraceError(SOPC_LOG_MODULE_COMMON, "UDP sock: ioctlsocket failed with error: %i", setOptStatus);
@@ -337,7 +341,7 @@ SOPC_ReturnStatus SOPC_UDP_Socket_CreateToReceive(SOPC_Socket_AddressInfo* liste
             SOPC_Logger_TraceDebug(
                 SOPC_LOG_MODULE_COMMON,
                 "UDP sock: setsockopt(%d, IPPROTO_IP, IP_ADD_MEMBERSHIP, (%s(idx:%u) / %d.%d.%d.%d:%d))",
-                (int) (*sock)->sock, interfaceName, ntohl(mreq.imr_interface.s_addr),
+                (int) (*sock)->sock, interfaceName, (unsigned int) ntohl(mreq.imr_interface.s_addr),
                 listenAddr->sin_addr.S_un.S_un_b.s_b1, listenAddr->sin_addr.S_un.S_un_b.s_b2,
                 listenAddr->sin_addr.S_un.S_un_b.s_b3, listenAddr->sin_addr.S_un.S_un_b.s_b4,
                 htons(listenAddr->sin_port));

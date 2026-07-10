@@ -641,7 +641,6 @@ static inline void SOPC_SocketSet_UpdateSetsAfterPoll(const SOPC_SocketSet* poll
     // Populate result with sockets that have events
     for (ULONG i = 0; i < pollfds->count; i++)
     {
-        const SHORT evt = pollfds->fds[i].events;
         const SHORT revt = pollfds->fds[i].revents;
         const SOCKET sock = pollfds->fds[i].fd;
 
@@ -705,7 +704,7 @@ int32_t SOPC_Socket_WaitSocketEvents(SOPC_SocketSet* readSet,
     }
     else
     {
-        if (mergedFds->count > INT32_MAX || mergedFds->count < 0)
+        if (mergedFds->count > INT32_MAX)
         {
             result = -1;
         }
