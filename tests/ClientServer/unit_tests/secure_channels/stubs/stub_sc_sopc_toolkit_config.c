@@ -65,6 +65,33 @@ tConfig = {.initDone = false,
            .serverScLastConfigIdx = 0,
            .epConfigIdxMax = 0};
 
+void SOPC_ToolkitInternal_ClearThreadConfiguration(void) {}
+
+void SOPC_ToolkitInternal_SetThreadProperties(SOPC_Toolkit_ThreadComponent threadComponent,
+                                              int priority,
+                                              int cpuAffinity)
+{
+    SOPC_UNUSED_ARG(threadComponent);
+    SOPC_UNUSED_ARG(priority);
+    SOPC_UNUSED_ARG(cpuAffinity);
+}
+
+void SOPC_ToolkitInternal_GetThreadProperties(SOPC_Toolkit_ThreadComponent threadComponent,
+                                              int* priority,
+                                              int* cpuAffinity)
+{
+    SOPC_UNUSED_ARG(threadComponent);
+
+    if (NULL != priority)
+    {
+        *priority = 0;
+    }
+    if (NULL != cpuAffinity)
+    {
+        *cpuAffinity = -1;
+    }
+}
+
 SOPC_ReturnStatus SOPC_Toolkit_Initialize(SOPC_ComEvent_Fct* pAppFct)
 {
     SOPC_ReturnStatus status = SOPC_STATUS_OK;

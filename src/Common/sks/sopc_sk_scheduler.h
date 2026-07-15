@@ -107,6 +107,20 @@ SOPC_ReturnStatus SOPC_SKscheduler_Start(SOPC_SKscheduler* sko);
 SOPC_ReturnStatus SOPC_SKscheduler_Stop(SOPC_SKscheduler* sko);
 
 /**
+ * \brief Sets priority and CPU affinity for the SK scheduler looper thread.
+ *
+ * \param priority    thread priority (0 means default priority, see ::SOPC_Thread_CreatePrioritized).
+ *                    A negative value clears any previously configured properties.
+ * \param cpuAffinity CPU affinity of the created task (-1 means unset, see ::SOPC_Thread_CreatePrioritized).
+ *
+ * \note Shall be called before the scheduler is started for the first time.
+ *       When using ::SOPC_CommonHelper_SetThreadConfiguration for the SK scheduler component,
+ *       this function is called automatically during ::SOPC_CommonHelper_Initialize.
+ *       The configuration is reset when ::SOPC_SKscheduler_StopAndClear is called.
+ */
+void SOPC_SKscheduler_SetThreadProperties(int priority, int cpuAffinity);
+
+/**
  *  \brief          Stops a Security Keys Scheduler and deallocate associated builders and providers,
  *                  the managers are not cleared.
  *                  This object should not be used after a call to this function

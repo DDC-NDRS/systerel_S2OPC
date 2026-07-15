@@ -156,15 +156,30 @@ SOPC_ReturnStatus SOPC_EventHandler_PostAsNext(SOPC_EventHandler* handler,
     return post(handler, event, eltId, params, auxParam, true);
 }
 
-SOPC_Looper* SOPC_Looper_Create(const char* threadName)
+SOPC_Looper* SOPC_Looper_CreatePrioritized(const char* threadName, int threadPriority, int cpuAffinity)
 {
     SOPC_Looper* looper = SOPC_Calloc(1, sizeof(SOPC_Looper));
     SOPC_AsyncQueue* queue = NULL;
     SOPC_Array* handlers =
         SOPC_Array_Create(sizeof(SOPC_EventHandler*), 0, (SOPC_Array_Free_Func*) event_handler_delete);
+    SOPC_ReturnStatus status = SOPC_STATUS_NOK;
 
-    if (looper == NULL || handlers == NULL || SOPC_AsyncQueue_Init(&queue, threadName) != SOPC_STATUS_OK ||
-        SOPC_Thread_Create(&looper->thread, looper_loop, queue, threadName) != SOPC_STATUS_OK)
+    if (NULL == looper || NULL == handlers)
+    {
+        status = SOPC_STATUS_NOK;
+    }
+    else
+    {
+        status = SOPC_AsyncQueue_Init(&queue, threadName);
+    }
+
+    if (SOPC_STATUS_OK == status)
+    {
+        status =
+            SOPC_Thread_CreatePrioritized(&looper->thread, looper_loop, queue, threadPriority, cpuAffinity, threadName);
+    }
+
+    if (SOPC_STATUS_OK != status)
     {
         SOPC_AsyncQueue_Free(&queue);
         SOPC_Array_Delete(handlers);
@@ -176,6 +191,11 @@ SOPC_Looper* SOPC_Looper_Create(const char* threadName)
     looper->handlers = handlers;
 
     return looper;
+}
+
+SOPC_Looper* SOPC_Looper_Create(const char* threadName)
+{
+    return SOPC_Looper_CreatePrioritized(threadName, 0, -1);
 }
 
 void SOPC_Looper_Delete(SOPC_Looper* looper)

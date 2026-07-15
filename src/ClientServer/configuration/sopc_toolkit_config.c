@@ -85,9 +85,62 @@ tConfig = {.initDone = false,
 #define SOPC_NB_LAYERS_USING_SERVER_CONFIG 2
 #define SOPC_CHANGE_CONFIG_LOCK_STATE_TIMEOUT_MS 1000
 
+typedef struct
+{
+    bool enabled;
+    int priority;
+    int cpuAffinity;
+} SOPC_Toolkit_ThreadPropertiesStorage;
+
+static SOPC_Toolkit_ThreadPropertiesStorage toolkitThreadProperties[SOPC_TOOLKIT_THREAD_COMPONENT_COUNT] = {{0}};
+
+void SOPC_ToolkitInternal_ClearThreadConfiguration(void)
+{
+    memset(toolkitThreadProperties, 0, sizeof(toolkitThreadProperties));
+}
+
+void SOPC_ToolkitInternal_SetThreadProperties(SOPC_Toolkit_ThreadComponent threadComponent,
+                                              int priority,
+                                              int cpuAffinity)
+{
+    if (threadComponent < 0 || threadComponent >= SOPC_TOOLKIT_THREAD_COMPONENT_COUNT)
+    {
+        return;
+    }
+
+    toolkitThreadProperties[threadComponent].enabled = true;
+    toolkitThreadProperties[threadComponent].priority = priority;
+    toolkitThreadProperties[threadComponent].cpuAffinity = cpuAffinity;
+}
+
+void SOPC_ToolkitInternal_GetThreadProperties(SOPC_Toolkit_ThreadComponent threadComponent,
+                                              int* priority,
+                                              int* cpuAffinity)
+{
+    if (NULL != priority)
+    {
+        *priority = 0;
+    }
+    if (NULL != cpuAffinity)
+    {
+        *cpuAffinity = -1;
+    }
+
+    if (NULL == priority || NULL == cpuAffinity || threadComponent < 0 ||
+        threadComponent >= SOPC_TOOLKIT_THREAD_COMPONENT_COUNT || !toolkitThreadProperties[threadComponent].enabled)
+    {
+        return;
+    }
+
+    *priority = toolkitThreadProperties[threadComponent].priority;
+    *cpuAffinity = toolkitThreadProperties[threadComponent].cpuAffinity;
+}
+
 SOPC_ReturnStatus SOPC_Toolkit_Initialize(SOPC_ComEvent_Fct* pAppFct)
 {
     SOPC_ReturnStatus status = SOPC_STATUS_OK;
+    int timerPriority = 0;
+    int timerCpuAffinity = -1;
 
     if (NULL == pAppFct)
     {
@@ -135,7 +188,9 @@ SOPC_ReturnStatus SOPC_Toolkit_Initialize(SOPC_ComEvent_Fct* pAppFct)
                     memset(tConfig.serverScConfigs, 0, sizeof(tConfig.serverScConfigs));
                     memset(tConfig.epConfigs, 0, sizeof(tConfig.epConfigs));
                     SOPC_App_Initialize();
-                    SOPC_EventTimer_Initialize();
+                    SOPC_ToolkitInternal_GetThreadProperties(SOPC_TOOLKIT_THREAD_EVENT_TIMER, &timerPriority,
+                                                             &timerCpuAffinity);
+                    SOPC_EventTimer_InitializeWithThreadProperties(timerPriority, timerCpuAffinity);
                     SOPC_Sockets_Initialize();
                     SOPC_SecureChannels_Initialize(SOPC_Sockets_SetEventHandler);
                     SOPC_Services_Initialize(SOPC_SecureChannels_SetEventHandler);
@@ -372,6 +427,7 @@ void SOPC_Toolkit_Clear(void)
         SOPC_Condition_Clear(&tConfig.serverConfigCond);
         SOPC_Mutex_Clear(&tConfig.mut);
     }
+    SOPC_ToolkitInternal_ClearThreadConfiguration();
     SOPC_Common_Clear();
 }
 

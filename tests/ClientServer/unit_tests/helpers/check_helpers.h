@@ -62,6 +62,8 @@ Suite* tests_make_suite_array(void);
 
 Suite* tests_make_suite_event_handler(void);
 
+Suite* tests_make_suite_common_helper_thread_config(void);
+
 Suite* tests_make_suite_numeric_range(void);
 
 Suite* tests_make_suite_users(void);

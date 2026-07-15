@@ -81,6 +81,21 @@ static void expect_event(SOPC_EventHandler* handler,
     SOPC_Free(ev);
 }
 
+START_TEST(test_event_handler_create_prioritized)
+{
+    SOPC_Looper* looper = SOPC_Looper_CreatePrioritized("test_prio", 0, -1);
+    ck_assert_ptr_nonnull(looper);
+
+    SOPC_EventHandler* handler = SOPC_EventHandler_Create(looper, test_callback);
+    ck_assert_ptr_nonnull(handler);
+
+    SOPC_EventHandler_Post(handler, 3, 3, 0x03, 3);
+    expect_event(handler, 3, 3, 0x03, 3);
+
+    SOPC_Looper_Delete(looper);
+}
+END_TEST
+
 START_TEST(test_event_handler_empty_looper)
 {
     SOPC_Looper* looper = SOPC_Looper_Create("test_events");
@@ -149,6 +164,7 @@ Suite* tests_make_suite_event_handler(void)
     c = tcase_create("Event handler");
     tcase_add_checked_fixture(c, test_setup, test_teardown);
     tcase_add_test(c, test_event_handler_empty_looper);
+    tcase_add_test(c, test_event_handler_create_prioritized);
     tcase_add_test(c, test_event_handler_post);
     tcase_add_test(c, test_event_handler_post_as_next);
     suite_add_tcase(s, c);

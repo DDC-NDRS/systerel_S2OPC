@@ -175,4 +175,41 @@ SOPC_ReturnStatus SOPC_ToolkitServer_SecurityCheck(void);
  */
 SOPC_AddressSpaceNotif_Fct* SOPC_ToolkitServer_GetAddSpaceNotifCb(void);
 
+/**
+ * \brief Internal thread components whose properties are propagated from the Client/Server wrapper.
+ *        Ordinal values match ::SOPC_CommonHelper_ThreadComponentEnum for these components.
+ */
+typedef enum SOPC_Toolkit_ThreadComponent
+{
+    SOPC_TOOLKIT_THREAD_EVENT_TIMER = 0,
+    SOPC_TOOLKIT_THREAD_SOCKETS,
+    SOPC_TOOLKIT_THREAD_SECURE_CHANNELS,
+    SOPC_TOOLKIT_THREAD_SERVICES,
+    SOPC_TOOLKIT_THREAD_APPLICATION_CALLBACKS,
+    SOPC_TOOLKIT_THREAD_COMPONENT_COUNT
+} SOPC_Toolkit_ThreadComponent;
+
+/**
+ * \brief Clears the internal toolkit thread configuration mirror.
+ */
+void SOPC_ToolkitInternal_ClearThreadConfiguration(void);
+
+/**
+ * \brief Stores thread properties for a toolkit internal thread component.
+ */
+void SOPC_ToolkitInternal_SetThreadProperties(SOPC_Toolkit_ThreadComponent threadComponent,
+                                              int priority,
+                                              int cpuAffinity);
+
+/**
+ * \brief Resolves thread properties for a toolkit internal thread component.
+ *
+ * \param threadComponent the thread component
+ * \param priority        output priority (0 if not configured or invalid parameters)
+ * \param cpuAffinity     output CPU affinity (-1 if not configured or invalid parameters)
+ */
+void SOPC_ToolkitInternal_GetThreadProperties(SOPC_Toolkit_ThreadComponent threadComponent,
+                                              int* priority,
+                                              int* cpuAffinity);
+
 #endif /* SOPC_TOOLKIT_CONFIG_INTERNAL_H_ */

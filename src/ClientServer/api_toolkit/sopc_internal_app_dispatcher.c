@@ -212,7 +212,11 @@ static void onAddressSpaceNotification(SOPC_EventHandler* handler,
 
 void SOPC_App_Initialize(void)
 {
-    sopc_appLooper = SOPC_Looper_Create("Application");
+    int priority = 0;
+    int cpuAffinity = -1;
+
+    SOPC_ToolkitInternal_GetThreadProperties(SOPC_TOOLKIT_THREAD_APPLICATION_CALLBACKS, &priority, &cpuAffinity);
+    sopc_appLooper = SOPC_Looper_CreatePrioritized("Application", priority, cpuAffinity);
     SOPC_ASSERT(sopc_appLooper != NULL);
 
     appComEventHandler = SOPC_EventHandler_Create(sopc_appLooper, onComEvent);

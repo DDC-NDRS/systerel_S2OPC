@@ -26,6 +26,7 @@
 
 #include "libs2opc_client.h"
 #include "libs2opc_client_alarm_conditions.h"
+#include "libs2opc_common_internal.h"
 #include "libs2opc_request_builder.h"
 
 #include "sopc_assert.h"
@@ -567,7 +568,8 @@ SOPC_ReturnStatus SOPC_MonitoredAlarmMgr_Initialize(SOPC_MonitoredAlarm_Event_Fc
     // 2) Create user callback thread and looper
     const char* userCallback_thread = "USER_CALLBACK_THREAD";
     SOPC_ASSERT(NULL == userCallback_looper);
-    userCallback_looper = SOPC_Looper_Create(userCallback_thread);
+    userCallback_looper =
+        SOPC_Helper_CreateLooperForComponent(userCallback_thread, SOPC_THREAD_COMPONENT_CLIENT_MONITORED_ALARM_CB);
     if (NULL != userCallback_looper)
     {
         userCallback_eventHandler = SOPC_EventHandler_Create(userCallback_looper, OnInputEvent);

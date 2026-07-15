@@ -20,6 +20,7 @@
 #include "libs2opc_common_config.h"
 
 #include <stdio.h>
+#include <string.h>
 
 #include "libs2opc_common_internal.h"
 #include "sopc_assert.h"
@@ -28,10 +29,21 @@
 #include "sopc_logger.h"
 #include "sopc_mem_alloc.h"
 #include "sopc_mutexes.h"
+#include "sopc_sk_scheduler.h"
 #include "sopc_toolkit_config.h"
+#include "sopc_toolkit_config_internal.h"
 
 /* Internal configuration structure and functions */
 static void SOPC_Helper_ComEventCb(SOPC_App_Com_Event event, uint32_t IdOrStatus, void* param, uintptr_t helperContext);
+
+/**
+ * \brief Structure to define the thread configuration for the S2OPC library threads.
+ */
+typedef struct SOPC_Helper_ThreadsConfig
+{
+    bool threadCustomConfigEnabled[SOPC_THREAD_COMPONENT_MAX];
+    SOPC_CustomThreadProperties threadComponentConfig[SOPC_THREAD_COMPONENT_MAX];
+} SOPC_Helper_ThreadsConfig;
 
 // The global helper config variable (singleton), it shall not be accessed outside of wrapper code
 typedef struct SOPC_Helper_Config
@@ -51,11 +63,97 @@ typedef struct SOPC_Helper_Config
     // The server communication events handler
     SOPC_ComEvent_Fct* serverComEventCb;
 
+    // The thread configuration
+    SOPC_Helper_ThreadsConfig threadsConfig;
+
 } SOPC_Helper_Config;
 
-static SOPC_Helper_Config sopc_helper_config = {
-    .initialized = (int32_t) false,
-};
+static SOPC_Helper_Config sopc_helper_config = {.initialized = (int32_t) false};
+
+static void SOPC_Internal_PropagateThreadConfiguration(void)
+{
+    for (SOPC_Toolkit_ThreadComponent component = SOPC_TOOLKIT_THREAD_EVENT_TIMER;
+         component < SOPC_TOOLKIT_THREAD_COMPONENT_COUNT; component++)
+    {
+        if (sopc_helper_config.threadsConfig.threadCustomConfigEnabled[component])
+        {
+            const SOPC_CustomThreadProperties* props =
+                &sopc_helper_config.threadsConfig.threadComponentConfig[component];
+            SOPC_ToolkitInternal_SetThreadProperties(component, props->priority, props->cpuAffinity);
+        }
+    }
+
+    if (sopc_helper_config.threadsConfig.threadCustomConfigEnabled[SOPC_THREAD_COMPONENT_SK_SCHEDULER])
+    {
+        const SOPC_CustomThreadProperties* props =
+            &sopc_helper_config.threadsConfig.threadComponentConfig[SOPC_THREAD_COMPONENT_SK_SCHEDULER];
+        SOPC_SKscheduler_SetThreadProperties(props->priority, props->cpuAffinity);
+    }
+}
+
+void SOPC_Helper_GetThreadProperties(SOPC_CommonHelper_ThreadComponentEnum threadComponent,
+                                     int* priority,
+                                     int* cpuAffinity)
+{
+    if (NULL != priority)
+    {
+        *priority = 0;
+    }
+    if (NULL != cpuAffinity)
+    {
+        *cpuAffinity = -1;
+    }
+
+    if (NULL == priority || NULL == cpuAffinity || threadComponent < 0 || threadComponent >= SOPC_THREAD_COMPONENT_MAX)
+    {
+        return;
+    }
+
+    if (sopc_helper_config.threadsConfig.threadCustomConfigEnabled[threadComponent])
+    {
+        *priority = sopc_helper_config.threadsConfig.threadComponentConfig[threadComponent].priority;
+        *cpuAffinity = sopc_helper_config.threadsConfig.threadComponentConfig[threadComponent].cpuAffinity;
+    }
+}
+
+SOPC_Looper* SOPC_Helper_CreateLooperForComponent(const char* threadName,
+                                                  SOPC_CommonHelper_ThreadComponentEnum threadComponent)
+{
+    int priority = 0;
+    int cpuAffinity = -1;
+
+    SOPC_Helper_GetThreadProperties(threadComponent, &priority, &cpuAffinity);
+    return SOPC_Looper_CreatePrioritized(threadName, priority, cpuAffinity);
+}
+
+SOPC_ReturnStatus SOPC_CommonHelper_SetThreadConfiguration(SOPC_CommonHelper_ThreadComponentEnum threadComponent,
+                                                           const SOPC_CustomThreadProperties* threadConfig)
+{
+    if (SOPC_Atomic_Int_Get(&sopc_helper_config.initialized))
+    {
+        return SOPC_STATUS_INVALID_STATE;
+    }
+
+    if (threadComponent < 0 || threadComponent >= SOPC_THREAD_COMPONENT_MAX)
+    {
+        return SOPC_STATUS_INVALID_PARAMETERS;
+    }
+
+    if (NULL == threadConfig)
+    {
+        return SOPC_STATUS_INVALID_PARAMETERS;
+    }
+
+    if (sopc_helper_config.threadsConfig.threadCustomConfigEnabled[threadComponent])
+    {
+        return SOPC_STATUS_INVALID_STATE;
+    }
+
+    sopc_helper_config.threadsConfig.threadComponentConfig[threadComponent] = *threadConfig;
+    sopc_helper_config.threadsConfig.threadCustomConfigEnabled[threadComponent] = true;
+
+    return SOPC_STATUS_OK;
+}
 
 SOPC_S2OPC_Config* SOPC_CommonHelper_GetConfiguration(void)
 {
@@ -142,6 +240,7 @@ SOPC_ReturnStatus SOPC_CommonHelper_Initialize(const SOPC_Log_Configuration* opt
     }
     if (SOPC_STATUS_OK == status)
     {
+        SOPC_Internal_PropagateThreadConfiguration();
         status = SOPC_Toolkit_Initialize(SOPC_Helper_ComEventCb);
     }
 
@@ -167,6 +266,9 @@ void SOPC_CommonHelper_Clear(void)
         return;
     }
     SOPC_Atomic_Int_Set(&sopc_helper_config.initialized, (int32_t) false);
+    memset(&sopc_helper_config.threadsConfig, 0, sizeof(SOPC_Helper_ThreadsConfig));
+    SOPC_ToolkitInternal_ClearThreadConfiguration();
+    SOPC_SKscheduler_SetThreadProperties(-1, -1);
 
     SOPC_Mutex_Lock(&sopc_helper_config.callbacksMutex);
     sopc_helper_config.clientComEventCb = NULL;

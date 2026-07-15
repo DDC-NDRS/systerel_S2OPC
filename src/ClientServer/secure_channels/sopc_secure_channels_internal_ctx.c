@@ -24,6 +24,7 @@
 #include "sopc_macros.h"
 #include "sopc_secure_channels_internal_ctx.h"
 #include "sopc_sockets_api.h"
+#include "sopc_toolkit_config_internal.h"
 
 // First half of listeners for server endpoints and second half for client reverse endpoints
 SOPC_SecureListener secureListenersArray[SOPC_MAX_ENDPOINT_DESCRIPTION_CONFIGURATIONS * 2 + 1];
@@ -39,12 +40,16 @@ SOPC_EventHandler* secureChannelsEventHandler = NULL;
 
 void SOPC_SecureChannelsInternalContext_Initialize(SOPC_SetListenerFunc* setSocketsListener)
 {
+    int priority = 0;
+    int cpuAffinity = -1;
+
     memset(secureListenersArray, 0,
            sizeof(SOPC_SecureListener) * (SOPC_MAX_ENDPOINT_DESCRIPTION_CONFIGURATIONS * 2 + 1));
     memset(secureConnectionsArray, 0, sizeof(SOPC_SecureConnection) * (SOPC_MAX_SECURE_CONNECTIONS_PLUS_BUFFERED + 1));
     lastSecureConnectionArrayIdx = 0;
 
-    secureChannelsLooper = SOPC_Looper_Create("Secure_Channels");
+    SOPC_ToolkitInternal_GetThreadProperties(SOPC_TOOLKIT_THREAD_SECURE_CHANNELS, &priority, &cpuAffinity);
+    secureChannelsLooper = SOPC_Looper_CreatePrioritized("Secure_Channels", priority, cpuAffinity);
     SOPC_ASSERT(secureChannelsLooper != NULL);
 
     secureChannelsInputEventHandler = SOPC_EventHandler_Create(secureChannelsLooper, SOPC_SecureChannels_OnInputEvent);

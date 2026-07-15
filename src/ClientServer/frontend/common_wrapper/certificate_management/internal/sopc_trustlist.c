@@ -25,6 +25,7 @@
 
 #include <string.h>
 
+#include "libs2opc_common_internal.h"
 #include "sopc_key_manager.h"
 #include "sopc_logger.h"
 #include "sopc_macros.h"
@@ -445,7 +446,8 @@ SOPC_ReturnStatus SOPC_TrustList_Configure(SOPC_TrustList_Config* pCfg, SOPC_Met
     /* Configure the event for the activity timeout */
     if (SOPC_STATUS_OK == status)
     {
-        pTrustList->eventMgr.pLooper = SOPC_Looper_Create(pTrustList->cStrObjectId);
+        pTrustList->eventMgr.pLooper =
+            SOPC_Helper_CreateLooperForComponent(pTrustList->cStrObjectId, SOPC_THREAD_COMPONENT_CERT_MANAGER);
         if (NULL == pTrustList->eventMgr.pLooper)
         {
             status = SOPC_STATUS_OUT_OF_MEMORY;

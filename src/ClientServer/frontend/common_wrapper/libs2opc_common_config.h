@@ -48,6 +48,78 @@ typedef enum
 } SOPC_SecurityPolicy_URI;
 
 /**
+ * \brief Structure to define the thread properties for the S2OPC library threads.
+ */
+typedef struct SOPC_CustomThreadProperties
+{
+    int priority;    /**< Priority of the thread (range depends on implementation) :
+                      *                        The value 0 means "no specific priority" and lets the
+                      *                        operating system choose the default priority for the thread.
+                      *                        Windows(Win32/Win64): The following priority values are accepted :
+                      *                              -15 -> Idle priority
+                      *                              -2  -> Lowest priority
+                      *                              -1  -> Below normal
+                      *                               0  -> No priority
+                      *                               1  -> Above normal
+                      *                               2  -> Highest priority
+                      *                               15 -> Time-critical priority
+                      *                               Any other value is not supported and will be rejected.
+                      *                               Note : On Windows, if setting the priority fails, the thread
+                      *                               is still created and runs with the default priority.
+                      *                        Linux: 1 .. 99,
+                      *                        FreeRTOS: 1 .. configMAX_PRIORITIES
+                      *                        ZEPHYR: 1  .. CONFIG_NUM_COOP_PRIORITIES + CONFIG_NUM_PREEMPT_PRIORITIES.
+                      *                        Note that this is a simple offset of (CONFIG_NUM_COOP_PRIORITIES + 1)
+                      *                        regarding the Zephyr native priorities. This is required to ensure
+                      *                        consistency with S2OPC interface. In prj.conf, the priorities
+                      *                        configured MUST take into account this offset. */
+    int cpuAffinity; /**< CPU affinity of the created task. Give a negative value if you don't want to set this
+                      *   parameter. Available on Windows and Linux OS. */
+} SOPC_CustomThreadProperties;
+
+/**
+ * \brief Enumerated values representing internal thread components allowed for use in
+ * ::SOPC_CommonHelper_ThreadsConfig.
+ */
+typedef enum SOPC_CommonHelper_ThreadComponentEnum
+{
+    SOPC_THREAD_COMPONENT_EVENT_TIMER = 0, /**< Event timer core thread: used to handle the event timers evaluation loop
+                                                                (i.e. all internal timers of the S2OPC library).*/
+    SOPC_THREAD_COMPONENT_SOCKETS,         /**< Sockets core layer thread */
+    SOPC_THREAD_COMPONENT_SECURE_CHANNELS, /**< Secure channels core layer thread */
+    SOPC_THREAD_COMPONENT_SERVICES,        /**< Services core layer thread */
+    SOPC_THREAD_COMPONENT_APPLICATION_CALLBACKS, /**< Application callbacks thread: used to call any registered callback
+                                                      (except when specified to be called in the services thread
+                                                       directly: method calls, etc.)*/
+    SOPC_THREAD_COMPONENT_SK_SCHEDULER, /**< SK scheduler thread: used to schedule the SKS (Security Key Service) tasks
+                                                                  when implementing an SKS Client/Serverservice for
+                                                                  PubSub. */
+    SOPC_THREAD_COMPONENT_CERT_MANAGER, /**< Certificate manager thread: used to handle the certificate manager
+                                                                         (see Push server sample). */
+    SOPC_THREAD_COMPONENT_SERVER_ALARM_CONDITIONS, /**< Server alarm conditions thread: used to handle the server alarm
+                                                        conditions manager. */
+    SOPC_THREAD_COMPONENT_CLIENT_MONITORED_ALARM_CB, /**< Client monitored alarm callback thread: used to call the user
+                                                          alarm event callback registered on client side. */
+    SOPC_THREAD_COMPONENT_MAX /**< Maximum number of thread components (used to dimension the array). */
+} SOPC_CommonHelper_ThreadComponentEnum;
+
+/**
+ * \brief Sets the thread configuration for the S2OPC Client/Server frontend library, it allows to set the thread
+ * priority and CPU affinity for the S2OPC library threads.
+ * This function shall be called prior to calling ::SOPC_CommonHelper_Initialize function,
+ * otherwise the default priority and CPU affinity will be used.
+ *
+ * \param threadComponent the internal thread component to configure (see ::SOPC_CommonHelper_ThreadComponentEnum).
+ * \param threadConfig the thread properties to set the priority and CPU affinity for the selected component.
+ *
+ * \result SOPC_STATUS_OK in case of success, SOPC_STATUS_INVALID_PARAMETERS if \p threadConfig is NULL or
+ *         \p threadComponent is invalid, SOPC_STATUS_INVALID_STATE in case of call done after initialization or if
+ *         \p threadComponent was already configured.
+ */
+SOPC_ReturnStatus SOPC_CommonHelper_SetThreadConfiguration(SOPC_CommonHelper_ThreadComponentEnum threadComponent,
+                                                           const SOPC_CustomThreadProperties* threadConfig);
+
+/**
  * \brief Initializes the S2OPC Client/Server frontend library (start threads, initialize configuration, etc.)
  *        and define a custom log configuration.
  *        Call to ::SOPC_CommonHelper_Initialize is required before any other operation.

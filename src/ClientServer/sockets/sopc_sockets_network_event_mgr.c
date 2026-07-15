@@ -35,6 +35,7 @@
 #include "sopc_macros.h"
 #include "sopc_mutexes.h"
 #include "sopc_threads.h"
+#include "sopc_toolkit_config_internal.h"
 
 static struct
 {
@@ -306,13 +307,18 @@ static void* SOPC_SocketsNetworkEventMgr_ThreadLoop(void* nullData)
 
 static bool SOPC_SocketsNetworkEventMgr_LoopThreadStart(void)
 {
+    bool result = false;
+    SOPC_ReturnStatus status = SOPC_STATUS_NOK;
+    int priority = 0;
+    int cpuAffinity = -1;
+
     if (SOPC_Atomic_Int_Get(&receptionThread.initDone))
     {
         return false;
     }
 
     /* Initialize the sockets used to interrupt "select" blocking call */
-    bool result = SOPC_Internal_InitSocketsToInterruptSelect();
+    result = SOPC_Internal_InitSocketsToInterruptSelect();
 
     if (!result)
     {
@@ -321,8 +327,10 @@ static bool SOPC_SocketsNetworkEventMgr_LoopThreadStart(void)
 
     receptionThread.stopFlag = 0;
 
-    if (SOPC_Thread_Create(&receptionThread.thread, SOPC_SocketsNetworkEventMgr_ThreadLoop, NULL, "Sockets") !=
-        SOPC_STATUS_OK)
+    SOPC_ToolkitInternal_GetThreadProperties(SOPC_TOOLKIT_THREAD_SOCKETS, &priority, &cpuAffinity);
+    status = SOPC_Thread_CreatePrioritized(&receptionThread.thread, SOPC_SocketsNetworkEventMgr_ThreadLoop, NULL,
+                                           priority, cpuAffinity, "Sockets");
+    if (SOPC_STATUS_OK != status)
     {
         return false;
     }

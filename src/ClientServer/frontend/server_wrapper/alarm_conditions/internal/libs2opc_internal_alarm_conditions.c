@@ -19,6 +19,7 @@
 
 #include "libs2opc_internal_alarm_conditions.h"
 
+#include "libs2opc_common_internal.h"
 #include "libs2opc_request_builder.h"
 #include "libs2opc_server_internal.h"
 #include "opcua_identifiers.h"
@@ -390,7 +391,8 @@ SOPC_ReturnStatus SOPC_ServerAlarmConditionMgr_Initialize(SOPC_MethodCallManager
         return status;
     }
     SOPC_ASSERT(NULL == g_alarmCondLooper);
-    g_alarmCondLooper = SOPC_Looper_Create("ServerAlarmConditions");
+    g_alarmCondLooper =
+        SOPC_Helper_CreateLooperForComponent("ServerAlarmConditions", SOPC_THREAD_COMPONENT_SERVER_ALARM_CONDITIONS);
     if (NULL == g_alarmCondLooper)
     {
         status = SOPC_STATUS_OUT_OF_MEMORY;

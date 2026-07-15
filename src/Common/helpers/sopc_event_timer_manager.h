@@ -52,6 +52,14 @@
 void SOPC_EventTimer_Initialize(void);
 
 /**
+ * \brief Initialize the event timer manager with optional thread priority and CPU affinity.
+ *
+ * \param threadPriority  thread priority (0 means default priority, see ::SOPC_Thread_CreatePrioritized)
+ * \param cpuAffinity     CPU affinity (-1 means unset, see ::SOPC_Thread_CreatePrioritized)
+ */
+void SOPC_EventTimer_InitializeWithThreadProperties(int threadPriority, int cpuAffinity);
+
+/**
  * \brief PreClear the event timer manager: thread triggering timers is stopped.
  *        It might be called prior to ::SOPC_EventTimer_Clear to ensure no new timer is triggered until clearing memory.
  *        ::SOPC_EventTimer_Clear shall be called shortly to completely clear event timer data.

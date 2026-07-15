@@ -900,8 +900,11 @@ uint32_t SOPC_Services_Get_QueueSize(void)
 void SOPC_Services_Initialize(SOPC_SetListenerFunc* setSecureChannelsListener)
 {
     SOPC_ReturnStatus status = SOPC_STATUS_NOK;
+    int priority = 0;
+    int cpuAffinity = -1;
 
-    servicesLooper = SOPC_Looper_Create("Services");
+    SOPC_ToolkitInternal_GetThreadProperties(SOPC_TOOLKIT_THREAD_SERVICES, &priority, &cpuAffinity);
+    servicesLooper = SOPC_Looper_CreatePrioritized("Services", priority, cpuAffinity);
     SOPC_ASSERT(servicesLooper != NULL);
 
     servicesEventHandler = SOPC_EventHandler_Create(servicesLooper, onServiceEvent);

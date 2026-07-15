@@ -266,6 +266,13 @@ static void* SOPC_Internal_ThreadLoop(void* arg)
 
 void SOPC_EventTimer_Initialize(void)
 {
+    SOPC_EventTimer_InitializeWithThreadProperties(0, -1);
+}
+
+void SOPC_EventTimer_InitializeWithThreadProperties(int threadPriority, int cpuAffinity)
+{
+    SOPC_ReturnStatus status = SOPC_STATUS_NOK;
+
     if (is_initialized())
     {
         return;
@@ -287,7 +294,9 @@ void SOPC_EventTimer_Initialize(void)
     SOPC_Atomic_Int_Set(&initialized, 1);
     SOPC_Atomic_Int_Set(&stop, 0);
 
-    if (SOPC_Thread_Create(&cyclicEvalThread, SOPC_Internal_ThreadLoop, NULL, "Timers") != SOPC_STATUS_OK)
+    status = SOPC_Thread_CreatePrioritized(&cyclicEvalThread, SOPC_Internal_ThreadLoop, NULL, threadPriority,
+                                           cpuAffinity, "Timers");
+    if (SOPC_STATUS_OK != status)
     {
         SOPC_ASSERT(false);
     }

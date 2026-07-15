@@ -32,7 +32,31 @@
 #include <inttypes.h>
 #include <stdbool.h>
 
+#include "libs2opc_common_config.h"
+#include "sopc_event_handler.h"
 #include "sopc_user_app_itf.h"
+
+/**
+ * \brief Resolves thread properties configured through ::SOPC_CommonHelper_SetThreadConfiguration.
+ *
+ * \param threadComponent the thread component
+ * \param priority        output priority (0 if not configured)
+ * \param cpuAffinity     output CPU affinity (-1 if not configured)
+ */
+void SOPC_Helper_GetThreadProperties(SOPC_CommonHelper_ThreadComponentEnum threadComponent,
+                                     int* priority,
+                                     int* cpuAffinity);
+
+/**
+ * \brief Creates a looper for the given thread component using configured thread properties.
+ *
+ * \param threadName      name of the thread
+ * \param threadComponent the thread component
+ *
+ * \return The created looper, or \c NULL in case of error.
+ */
+SOPC_Looper* SOPC_Helper_CreateLooperForComponent(const char* threadName,
+                                                  SOPC_CommonHelper_ThreadComponentEnum threadComponent);
 
 /**
  * \brief Defines a function to be called for client side communication events.

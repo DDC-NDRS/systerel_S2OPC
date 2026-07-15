@@ -59,6 +59,48 @@ typedef struct SOPC_SKscheduler_DefaultData
 
 } SOPC_SKscheduler_DefaultData;
 
+static struct
+{
+    bool enabled;
+    int priority;
+    int cpuAffinity;
+} skSchedulerThreadProperties = {0};
+
+static void SOPC_SKscheduler_GetConfiguredThreadProperties(int* priority, int* cpuAffinity)
+{
+    if (NULL != priority)
+    {
+        *priority = 0;
+    }
+    if (NULL != cpuAffinity)
+    {
+        *cpuAffinity = -1;
+    }
+
+    if (NULL == priority || NULL == cpuAffinity || !skSchedulerThreadProperties.enabled)
+    {
+        return;
+    }
+
+    *priority = skSchedulerThreadProperties.priority;
+    *cpuAffinity = skSchedulerThreadProperties.cpuAffinity;
+}
+
+void SOPC_SKscheduler_SetThreadProperties(int priority, int cpuAffinity)
+{
+    if (priority < 0)
+    {
+        skSchedulerThreadProperties.enabled = false;
+        skSchedulerThreadProperties.priority = 0;
+        skSchedulerThreadProperties.cpuAffinity = -1;
+        return;
+    }
+
+    skSchedulerThreadProperties.enabled = true;
+    skSchedulerThreadProperties.priority = priority;
+    skSchedulerThreadProperties.cpuAffinity = cpuAffinity;
+}
+
 /*** DEFAULT IMPLEMENTATION FUNCTIONS ***/
 
 static void SOPC_SKscheduler_EventHandler_Callback_Default(SOPC_EventHandler* handler,
@@ -119,6 +161,10 @@ static void SOPC_SKscheduler_EventHandler_Callback_Default(SOPC_EventHandler* ha
 
 static SOPC_ReturnStatus SOPC_SKscheduler_Initialize_Default(SOPC_SKscheduler* sko)
 {
+    SOPC_ReturnStatus status = SOPC_STATUS_OK;
+    int priority = 0;
+    int cpuAffinity = -1;
+
     if (NULL == sko || NULL == sko->data)
     {
         return SOPC_STATUS_INVALID_PARAMETERS;
@@ -131,13 +177,12 @@ static SOPC_ReturnStatus SOPC_SKscheduler_Initialize_Default(SOPC_SKscheduler* s
         return SOPC_STATUS_OK;
     }
 
-    SOPC_ReturnStatus status = SOPC_STATUS_OK;
-
     // Initialize event timer if not done
     SOPC_EventTimer_Initialize();
 
     // Create an Event Handler in a dedicated Thread.
-    data->looper = SOPC_Looper_Create("Security Keys Looper");
+    SOPC_SKscheduler_GetConfiguredThreadProperties(&priority, &cpuAffinity);
+    data->looper = SOPC_Looper_CreatePrioritized("Security Keys Looper", priority, cpuAffinity);
     if (NULL == data->looper)
     {
         status = SOPC_STATUS_NOK;
@@ -286,6 +331,8 @@ static void SOPC_SKscheduler_StopAndClear_Default(SOPC_SKscheduler* sko)
 
     SOPC_Free(sko->data);
     sko->data = NULL;
+
+    SOPC_SKscheduler_SetThreadProperties(-1, -1);
 }
 
 /*** API FUNCTIONS ***/

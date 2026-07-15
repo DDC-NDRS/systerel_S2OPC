@@ -129,9 +129,20 @@ SOPC_ReturnStatus SOPC_EventHandler_PostAsNext(SOPC_EventHandler* handler,
  *
  *  \param threadName name of the thread
  *
- * \return The created looper, or \c NULL in case or error.
+ * \return The created looper, or \c NULL in case of error.
  */
 SOPC_Looper* SOPC_Looper_Create(const char* threadName);
+
+/**
+ * \brief Creates a new looper and attaches it to a new thread with optional priority and CPU affinity.
+ *
+ * \param threadName      name of the thread
+ * \param threadPriority  thread priority (0 means default priority, see ::SOPC_Thread_CreatePrioritized)
+ * \param cpuAffinity     CPU affinity (-1 means unset, see ::SOPC_Thread_CreatePrioritized)
+ *
+ * \return The created looper, or \c NULL in case of error.
+ */
+SOPC_Looper* SOPC_Looper_CreatePrioritized(const char* threadName, int threadPriority, int cpuAffinity);
 
 /**
  * \brief Stops a looper and releases all resources allocated to it.
