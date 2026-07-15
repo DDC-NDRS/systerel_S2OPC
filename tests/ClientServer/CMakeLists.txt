@@ -106,6 +106,7 @@ add_custom_target(make-server-address-space DEPENDS ${TEST_SERVER_ADDRESS_SPACE_
 # Helpers tests
 
 file(GLOB INTERNAL_TESTS_SRCS CONFIGURE_DEPENDS "unit_tests/helpers/check_*.c")
+list(FILTER INTERNAL_TESTS_SRCS EXCLUDE REGEX ".*/check_looper_thread_prio_affinity\\.c$")
 add_executable(check_helpers ${INTERNAL_TESTS_SRCS}
                              unit_tests/helpers/custom_types.c
                              unit_tests/helpers/custom2_types.c
@@ -130,6 +131,16 @@ if(WITH_CONST_ADDSPACE)
   target_compile_definitions(check_helpers PRIVATE "WITH_CONST_ADDSPACE")
 endif()
 s2opc_unit_test(check_helpers)
+
+add_executable(check_looper_thread_prio_affinity unit_tests/helpers/check_looper_thread_prio_affinity.c)
+target_link_libraries(check_looper_thread_prio_affinity PRIVATE Check::check s2opc_clientserver)
+target_compile_options(check_looper_thread_prio_affinity PRIVATE ${S2OPC_COMPILER_FLAGS})
+target_compile_definitions(check_looper_thread_prio_affinity PRIVATE ${S2OPC_DEFINITIONS})
+if(UNIX)
+  # Glibc exposes pthread_getaffinity_np with this feature macro
+  target_compile_definitions(check_looper_thread_prio_affinity PRIVATE _GNU_SOURCE)
+endif()
+s2opc_unit_test(check_looper_thread_prio_affinity)
 
 add_custom_command(
   TARGET check_helpers POST_BUILD

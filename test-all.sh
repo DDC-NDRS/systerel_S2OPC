@@ -56,6 +56,7 @@ push_server_trusted_int.tap
 push_server_untrusted.tap'
 
 CLIENTSERVER_TAP_FILES='check_helpers.tap
+check_looper_thread_prio_affinity.tap
 ask_password.tap
 check_security_policy_config.tap
 check_sc_rcv_buffer.tap
