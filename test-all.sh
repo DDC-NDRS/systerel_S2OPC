@@ -18,7 +18,21 @@
 # under the License.
 
 
-#  Check toolkit tests binaries are present and run them
+#  Check toolkit tests binaries are present and run them.
+#
+#  Each ctest test is capped at S2OPC_CTEST_TIMEOUT seconds (default 500).
+
+S2OPC_CTEST_TIMEOUT="${S2OPC_CTEST_TIMEOUT:-500}"
+
+run_ctest_suite() {
+    local suite_label="$1"
+    shift
+
+    echo "=== Running ctest suite: ${suite_label} (per-test timeout=${S2OPC_CTEST_TIMEOUT}s) ==="
+    ctest --output-on-failure -T test --no-compress-output \
+        --test-output-size-passed 65536 --test-output-size-failed 65536 \
+        --timeout "${S2OPC_CTEST_TIMEOUT}" "$@"
+}
 
 MY_DIR="$(cd "$(dirname "$0")" && pwd)"
 BIN_DIR="${MY_DIR}/bin"
@@ -157,11 +171,11 @@ if [ -z $S2OPC_PUBSUB_ONLY ]; then
        EXPECTED_TAP_FILES=$EXPECTED_TAP_FILES$AUDIT_TAP_FILES
    fi
    if [ "$PYS2OPC_LIB_IS_PRESENT" == "0" ]; then
-       ctest --output-on-failure -T test --no-compress-output --test-output-size-passed 65536 --test-output-size-failed 65536 -E 'pys2opc*'
+       run_ctest_suite ClientServer -E 'pys2opc*'
        CTEST_RET1=$?
    else
        EXPECTED_TAP_FILES=$EXPECTED_TAP_FILES$PYS2OPC_TAP_FILES
-       ctest --output-on-failure -T test --no-compress-output --test-output-size-passed 65536 --test-output-size-failed 65536
+       run_ctest_suite ClientServer
        CTEST_RET1=$?
        mv "${PYS2OPC_TESTS_DIR}"/*.tap "${TAP_DIR}"/
    fi
@@ -181,7 +195,7 @@ if [ -z $S2OPC_PUBSUB_ONLY ]; then
     fi
 
     cd "${CLIENTSERVER_SAMPLE_DIR}"
-    ctest --output-on-failure -T test --no-compress-output --test-output-size-passed 65536 --test-output-size-failed 65536
+    run_ctest_suite ClientServer-samples
     CTEST_RET3=$?
 else
    CTEST_RET1=0
@@ -218,7 +232,7 @@ if [ -z $S2OPC_CLIENTSERVER_ONLY ]; then
           EXPECTED_TAP_FILES=$EXPECTED_TAP_FILES$'\n'$PUBSUB_CLIENTSERVER_DYNAMIC_ONLY_TAP_FILES
        fi
    fi
-   ctest --output-on-failure -T test --no-compress-output --test-output-size-passed 65536 --test-output-size-failed 65536
+   run_ctest_suite PubSub
    CTEST_RET2=$?
    kill $MOSQUITTO_PID
 else
