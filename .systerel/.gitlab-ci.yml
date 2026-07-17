@@ -226,11 +226,11 @@ hil-test:
 
 .build-linux: &build_linux
   stage: build
-  image: docker.aix.systerel.fr/c838/build@sha256:caa54bdfe64ec38b912b913f08b67af7a1d6ce4801646e3cfc668b296c79f99b # digest of build:1.60
+  image: docker.aix.systerel.fr/c838/build@sha256:d48f2685fcb30346acb8f2e64f6f2b0278761290d158052fb9bf31d2b41e9005 # digest of build:2.0
   script:
     - &build_command_line './build.sh || exit 1'
   variables: &build_linux_variables
-    DOCKER_DIGEST: 'sha256:caa54bdfe64ec38b912b913f08b67af7a1d6ce4801646e3cfc668b296c79f99b'
+    DOCKER_DIGEST: 'sha256:d48f2685fcb30346acb8f2e64f6f2b0278761290d158052fb9bf31d2b41e9005'
     BUILD_DIR: build
     CMAKE_C_FLAGS: "-DSOPC_REQUEST_TIMEOUT_MS=40000" # increase timeout for CI tests
   artifacts:
@@ -471,7 +471,7 @@ build-fuzz:
 
 build-musl:
   stage: build-others
-  image: registry.gitlab.com/systerel/s2opc/build-musl@sha256:a17ceffc3dafed43b195e3eba86abb511a3a8bca9efb322fcb56af69d3489035 # build-musl:v2.0
+  image: docker.aix.systerel.fr/c838/build-musl@sha256:c4aebefcbd437cb1259e947ed99beb61848ee6dcd13052c8485278dbb3f7c431 # build-musl:v3.0
   needs: []
   script: 
     - *build_command_line
@@ -577,7 +577,7 @@ test-build-from-install:
 # Test check belongs to the test part, however it does not depend on linux build.
 test-check:
   <<: *test_linux
-  image: docker.aix.systerel.fr/c838/check@sha256:5499ced25393e01e87390b3ec97983e3c29204c6a4066bf479b6ed890439373e # digest of check:1.23
+  image: docker.aix.systerel.fr/c838/check@sha256:c3a99ad388043fa77a33d93bb61be11969511af6ced23929c16527eb6046e444 # digest of check:2.0
   needs: []
   script:
     - ./.check-code.sh
@@ -603,7 +603,7 @@ test-check:
     - './.format.sh'
     - './.verify-no-git-changes.sh'
   variables:
-      DOCKER_DIGEST: 'sha256:8be8c50cd484989c987b6c28ded2e03f30e81ec27bb53e41cecde8cdc3bb86c8'
+      DOCKER_DIGEST: 'sha256:c3a99ad388043fa77a33d93bb61be11969511af6ced23929c16527eb6046e444'
   artifacts:
     name: 'test-check-results-${CI_COMMIT_REF_SLUG}_${CI_COMMIT_SHA}_job${CI_JOB_ID}'
     paths:
@@ -621,7 +621,7 @@ test-check:
 
 .test-unit: &test_unit
   <<: *test_linux
-  image: docker.aix.systerel.fr/c838/test@sha256:08b50767ee50105a015f50483c458f9b4770f46dcf8862c841839f469b24a350 # digest of test:2.18
+  image: docker.aix.systerel.fr/c838/test@sha256:d6ca3821754b8f5f74d7fe426e35e7709e1ce772b5f05c9f2e28efd2f4ee3189 # digest of test:2.19
   script:
     - './.set-bin-root.sh'
     - './test-all.sh'
@@ -686,7 +686,7 @@ test-unit-all-builds:
 
 .test-uactt: &test_uactt
   <<: *test_linux
-  image: com.systerel.fr:5000/c838/uactt-linux@sha256:8c85eccb42cb856c4795ba367a93f28959295fecc36cd1318aaf89ff27b0db59 # uactt-linux:1.10
+  image: com.systerel.fr:5000/c838/uactt-linux@sha256:3f1eb2312da5cd6b8ff031773c6860bc456ada6a6e93d4addbc8277408c56da6 # uactt-linux:1.11
   timeout: 1h                   # set job timeout to 1 hour
   variables:
      RUNNER_SCRIPT_TIMEOUT: 50m # only allow script to run for 50 minutes (10 minutes remains to upload artifacts)
@@ -742,7 +742,7 @@ test-uactt:
 
 test-faulty-packets :
   stage: test-others
-  image: docker.aix.systerel.fr/c838/test@sha256:08b50767ee50105a015f50483c458f9b4770f46dcf8862c841839f469b24a350 # digest of test:2.18
+  image: docker.aix.systerel.fr/c838/test@sha256:d6ca3821754b8f5f74d7fe426e35e7709e1ce772b5f05c9f2e28efd2f4ee3189 # digest of test:2.19
   needs : [build-linux-faulty-packet]
   script:
     - ./tests/ClientServer/scripts/faulty_packet_tester_launcher.sh build_faulty/bin
@@ -875,7 +875,7 @@ test-pikeos:
 
 coverage-analysis:
   stage: analyses
-  image: docker.aix.systerel.fr/c838/test@sha256:08b50767ee50105a015f50483c458f9b4770f46dcf8862c841839f469b24a350 # digest of test:2.18
+  image: docker.aix.systerel.fr/c838/test@sha256:d6ca3821754b8f5f74d7fe426e35e7709e1ce772b5f05c9f2e28efd2f4ee3189 # digest of test:2.19
   script:
     - ./.gen_coverage.sh
   artifacts:
