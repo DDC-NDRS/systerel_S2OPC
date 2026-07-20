@@ -796,10 +796,7 @@ void SOPC_Internal_GetAlarmCondition_Vars_NodeIds_And_Write_Values(SOPC_AlarmCon
     SOPC_Event_ForEachVar(ac->data, &SOPC_InternalTBP_SetEventVarTBP_Cb, (uintptr_t) &fillCtx);
     if (fillCtx.index > 0)
     {
-        if (fillCtx.index < nbVars) // adapt number of filled TBP for variables
-        {
-            tbpReq->NoOfBrowsePaths = (int32_t) fillCtx.index + SOPC_AC_METHOD_COUNT;
-        }
+        SOPC_ASSERT(((int32_t) fillCtx.index + SOPC_AC_METHOD_COUNT) == tbpReq->NoOfBrowsePaths);
         // Fill TBP request for each supported AandC method
         SOPC_InternalTBP_GetAlarmCondition_Method_NodeIds(fillCtx.index, ac, tbpReq);
         tbpCtx->ac = ac;

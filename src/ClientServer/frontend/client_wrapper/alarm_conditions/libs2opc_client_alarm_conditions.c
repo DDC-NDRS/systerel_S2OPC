@@ -32,13 +32,13 @@
 
 #include "sopc_assert.h"
 #include "sopc_builtintypes.h"
+#include "sopc_enums.h"
 #include "sopc_event.h"
-#include "sopc_hash.h"
-#include "sopc_helper_encode.h"
 #include "sopc_logger.h"
 #include "sopc_macros.h"
 #include "sopc_mem_alloc.h"
 #include "sopc_mutexes.h"
+#include "sopc_types.h"
 
 // Internal SOPC_MonitoredAlarm structure
 struct _SOPC_MonitoredAlarm
@@ -64,7 +64,7 @@ struct _SOPC_MonitoredAlarmsGroup
     // The select clauses in the MI
     char** alarm_selectClauses;
     size_t alarm_selectClauses_len;
-    size_t alarm_nbSelectClauses;
+    size_t alarm_nbEventFilterSelectClauses;
 };
 
 static SOPC_SLinkedList* monitored_alarm_groups = NULL;
@@ -145,6 +145,7 @@ static OpcUa_CreateMonitoredItemsResponse* create_monitored_item_event(
     OpcUa_EventFilter* eventFilter = NULL;
     SOPC_Event* alarmEvent = NULL;
     size_t nb_select_clauses_alarm = 0;
+    size_t nb_event_filter_select_clauses_total = 0;
     if (SOPC_STATUS_OK == status)
     {
         alarmEvent = SOPC_Event_GetInstanceAlarmConditionType();
@@ -156,8 +157,9 @@ static OpcUa_CreateMonitoredItemsResponse* create_monitored_item_event(
         {
             nb_select_clauses_alarm = SOPC_Event_GetNbVariables(alarmEvent);
             SOPC_ASSERT(0 < nb_select_clauses_alarm);
+            nb_event_filter_select_clauses_total = nb_select_clauses_alarm + 1; /* +1 for ConditionId select clause */
             size_t nbWhereClauseElts = 1;
-            eventFilter = SOPC_MonitoredItem_CreateEventFilter(nb_select_clauses_alarm, nbWhereClauseElts);
+            eventFilter = SOPC_MonitoredItem_CreateEventFilter(nb_event_filter_select_clauses_total, nbWhereClauseElts);
             if (NULL == eventFilter)
             {
                 status = SOPC_STATUS_NOK;
@@ -184,15 +186,14 @@ static OpcUa_CreateMonitoredItemsResponse* create_monitored_item_event(
         maGroup->alarm_selectClauses = SOPC_Malloc(nb_select_clauses_alarm * sizeof(char*));
         SOPC_ASSERT(NULL != maGroup->alarm_selectClauses);
         maGroup->alarm_selectClauses_len = 0;
-        maGroup->alarm_nbSelectClauses = nb_select_clauses_alarm;
+        maGroup->alarm_nbEventFilterSelectClauses = nb_event_filter_select_clauses_total;
         SOPC_Event_ForEachVar(alarmEvent, &maGroup_set_single_selectClause_from_event, (uintptr_t) maGroup);
-        for (size_t i = 1; i < nb_select_clauses_alarm && SOPC_STATUS_OK == status; i++)
+        SOPC_ASSERT(maGroup->alarm_selectClauses_len == nb_select_clauses_alarm);
+        for (size_t i = 1; i < nb_event_filter_select_clauses_total && SOPC_STATUS_OK == status; i++)
         {
             status = SOPC_EventFilter_SetSelectClauseFromStringPath(
                 eventFilter, i, NULL, '~', maGroup->alarm_selectClauses[i - 1], SOPC_AttributeId_Value, NULL);
         }
-        /* +1 for ConditionId */
-        SOPC_ASSERT(SOPC_STATUS_OK != status || maGroup->alarm_selectClauses_len + 1 == nb_select_clauses_alarm);
     }
 
     if (SOPC_STATUS_OK == status)
@@ -239,10 +240,17 @@ static SOPC_ReturnStatus check_mi_filter_result(const OpcUa_MonitoredItemCreateR
 {
     SOPC_ReturnStatus status = SOPC_STATUS_OK;
 
-    // Check filterResult if it exists
-    if (SOPC_ExtObjBodyEncoding_Object != createResult->FilterResult.Encoding)
+    // Check if filterResult is NULL (all fields are default) => ok
+    if (createResult->FilterResult.Encoding == SOPC_ExtObjBodyEncoding_None)
     {
-        return status;
+        return SOPC_STATUS_OK;
+    }
+
+    // Check filterResult has expected type
+    if (SOPC_ExtObjBodyEncoding_Object != createResult->FilterResult.Encoding ||
+        &OpcUa_EventFilterResult_EncodeableType != createResult->FilterResult.Body.Object.ObjType)
+    {
+        return SOPC_STATUS_INVALID_PARAMETERS;
     }
 
     // For the moment:
@@ -314,6 +322,9 @@ static SOPC_ReturnStatus check_mi_response(OpcUa_CreateMonitoredItemsResponse* c
             SOPC_Logger_TraceError(SOPC_LOG_MODULE_CLIENTSERVER,
                                    "A&C CLIENT: CreateMonitoredItemsResponse[0] result not good: 0x%08" PRIX32 "\n",
                                    createMonItResp->Results[0].StatusCode);
+            // Also display filter result in case it provides more information
+            status = check_mi_filter_result(&createMonItResp->Results[0], selectClausesReq, expectedSelectClauseCount);
+            SOPC_UNUSED_RESULT(status); // executed for log only
             status = SOPC_STATUS_NOK;
         }
         else
@@ -391,7 +402,7 @@ static void SOPC_MonitoredAlarm_TriggerSubscriptionNotification(const SOPC_Clien
         SOPC_ReturnStatus stat = (NULL != alarmConditionTypeEvent) ? SOPC_STATUS_OK : SOPC_STATUS_OUT_OF_MEMORY;
 
         if (SOPC_STATUS_OK == stat && !SOPC_ServiceResponse_CheckResultCountMatches(
-                                          event->NoOfEventFields, (int32_t) MAgroup->alarm_nbSelectClauses,
+                                          event->NoOfEventFields, (int32_t) MAgroup->alarm_nbEventFilterSelectClauses,
                                           "A&C CLIENT: EventNotificationList EventFields"))
         {
             stat = SOPC_STATUS_NOK;
@@ -839,7 +850,8 @@ SOPC_MonitoredAlarmsGroup* SOPC_MonitoredAlarm_CreateAlarmsGroup(SOPC_ClientConn
         if (NULL != miRespServer)
         {
             // Check response
-            status = check_mi_response(miRespServer, ma_group->alarm_selectClauses, ma_group->alarm_nbSelectClauses);
+            status = check_mi_response(miRespServer, ma_group->alarm_selectClauses,
+                                       ma_group->alarm_nbEventFilterSelectClauses);
             if (SOPC_STATUS_OK == status)
             {
                 ma_group->monitoredItemId = miRespServer->Results[0].MonitoredItemId;

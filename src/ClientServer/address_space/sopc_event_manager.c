@@ -51,7 +51,35 @@ typedef struct SOPC_Event_Variable
 struct _SOPC_Event
 {
     SOPC_Dict* qnPathToEventVar;
+    bool hasOwnNodeIdEntry; /* true when dict contains internal "OwnNodeId" key for ConditionId implicit value */
 };
+
+static bool SOPC_Event_IsInternalNodeIdKey(const char* qnPath)
+{
+    return (NULL != qnPath) && (0 == SOPC_strcmp_ignore_case(QN_EMPTY_PATH_NODEID, qnPath));
+}
+
+static bool SOPC_Event_DictInsertVar(SOPC_Event* pEvent, char* qnPathCopy, SOPC_Event_Variable* eventVar)
+{
+    bool inserted = SOPC_Dict_Insert(pEvent->qnPathToEventVar, (uintptr_t) qnPathCopy, (uintptr_t) eventVar);
+
+    if (inserted && SOPC_Event_IsInternalNodeIdKey(qnPathCopy))
+    {
+        pEvent->hasOwnNodeIdEntry = true;
+    }
+
+    return inserted;
+}
+
+static void SOPC_Event_DictRemoveVar(SOPC_Event* pEvent, uintptr_t qnPathKey)
+{
+    if (pEvent->hasOwnNodeIdEntry && SOPC_Event_IsInternalNodeIdKey((const char*) qnPathKey))
+    {
+        pEvent->hasOwnNodeIdEntry = false;
+    }
+
+    SOPC_Dict_Remove(pEvent->qnPathToEventVar, qnPathKey);
+}
 
 /* Reserved index for variants for any event */
 typedef enum SOPC_BaseEventVariantIndexes
@@ -290,11 +318,20 @@ static void SOPC_EventVariable_Initialize(SOPC_Event_Variable* pEventVar)
 
 size_t SOPC_Event_GetNbVariables(SOPC_Event* event)
 {
+    size_t nbVariables = 0;
+
     if (NULL == event || NULL == event->qnPathToEventVar)
     {
         return 0;
     }
-    return SOPC_Dict_Size(event->qnPathToEventVar);
+
+    nbVariables = SOPC_Dict_Size(event->qnPathToEventVar);
+    if (event->hasOwnNodeIdEntry && 0 < nbVariables)
+    {
+        nbVariables -= 1;
+    }
+
+    return nbVariables;
 }
 
 static SOPC_Event_Variable* SOPC_EventVariable_CreateFrom(const SOPC_Variant* data,
@@ -791,7 +828,7 @@ static void SOPC_Dict_ForEachEventVar_Fct(const uintptr_t key, uintptr_t value, 
     SOPC_Dict_ForEachEventVar_LocalData* localData = (SOPC_Dict_ForEachEventVar_LocalData*) user_data;
     SOPC_Event_Variable* eventVar = (SOPC_Event_Variable*) value;
     // Avoid specific case of internal empty path which is the event/node instance NodeId
-    if (0 != SOPC_strcmp_ignore_case(QN_EMPTY_PATH_NODEID, (const char*) key))
+    if (!SOPC_Event_IsInternalNodeIdKey((const char*) key))
     {
         localData->func((const char*) key, &eventVar->data, &eventVar->dataType, eventVar->valueRank,
                         localData->user_data);
@@ -1058,8 +1095,7 @@ static SOPC_Event* SOPC_EventBuilder_CreateCtx(void)
                 }
                 if (!failed)
                 {
-                    failed =
-                        !(SOPC_Dict_Insert(result->qnPathToEventVar, (uintptr_t) qnPathCopy, (uintptr_t) eventVarCopy));
+                    failed = !SOPC_Event_DictInsertVar(result, qnPathCopy, eventVarCopy);
                 }
                 if (failed)
                 {
@@ -1086,6 +1122,7 @@ void SOPC_Event_Clear(SOPC_Event* pEvent)
     }
     SOPC_Dict_Delete(pEvent->qnPathToEventVar);
     pEvent->qnPathToEventVar = NULL;
+    pEvent->hasOwnNodeIdEntry = false;
 }
 
 void SOPC_Event_Delete(SOPC_Event** ppEvent)
@@ -1114,7 +1151,7 @@ static void SOPC_Event_Dict_CopyForEach(const uintptr_t key, uintptr_t value, ui
         }
         if (!failed)
         {
-            failed = !(SOPC_Dict_Insert(eventDest->qnPathToEventVar, (uintptr_t) keyCopy, (uintptr_t) eventVarCopy));
+            failed = !SOPC_Event_DictInsertVar(eventDest, keyCopy, eventVarCopy);
         }
         if (failed)
         {
@@ -1161,6 +1198,10 @@ SOPC_Event* SOPC_Event_CreateCopy(const SOPC_Event* pEvent, bool genNewId)
                 failed = true;
             }
         }
+    }
+    if (!failed)
+    {
+        eventCopy->hasOwnNodeIdEntry = pEvent->hasOwnNodeIdEntry;
     }
     if (failed)
     {
@@ -1257,7 +1298,7 @@ static SOPC_ReturnStatus SOPC_EventBuilder_RecPopulateEventTypeVariables(const c
         {
             // Otherwise remove previous value to set the new default value
             // (it might be a redefinition of variable with more precise data type...)
-            SOPC_Dict_Remove(eventCtx->qnPathToEventVar, (uintptr_t) newQnPath);
+            SOPC_Event_DictRemoveVar(eventCtx, (uintptr_t) newQnPath);
             foundKey = false;
         }
         if (!foundKey)
@@ -1271,7 +1312,7 @@ static SOPC_ReturnStatus SOPC_EventBuilder_RecPopulateEventTypeVariables(const c
             status = (NULL == eventVar ? SOPC_STATUS_OUT_OF_MEMORY : status);
             if (SOPC_STATUS_OK == status)
             {
-                bool bres = SOPC_Dict_Insert(eventCtx->qnPathToEventVar, (uintptr_t) newQnPath, (uintptr_t) eventVar);
+                bool bres = SOPC_Event_DictInsertVar(eventCtx, newQnPath, eventVar);
                 status = (bres ? status : SOPC_STATUS_NOK);
                 deleteNewQnPath = !bres;
             }
@@ -1638,7 +1679,7 @@ static SOPC_ReturnStatus SOPC_EventBuilder_AddFields_Generic(SOPC_Event* eventCt
         }
         if (!failed)
         {
-            failed = !(SOPC_Dict_Insert(eventCtx->qnPathToEventVar, (uintptr_t) qnPathCopy, (uintptr_t) eventVarCopy));
+            failed = !SOPC_Event_DictInsertVar(eventCtx, qnPathCopy, eventVarCopy);
         }
         if (failed)
         {

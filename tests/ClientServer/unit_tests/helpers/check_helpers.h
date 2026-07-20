@@ -82,4 +82,6 @@ Suite* tests_make_suite_pki_create_from_store(void);
 
 Suite* tests_make_suite_response_helper(void);
 
+Suite* tests_make_suite_event_variables(void);
+
 #endif // CHECK_HELPERS_H
