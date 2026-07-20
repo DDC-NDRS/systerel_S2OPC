@@ -249,11 +249,21 @@ ACTUAL_TAP_FILES=$(sort <<< "$ACTUAL_TAP_FILES") # sort TAP files names
 if [ "$ACTUAL_TAP_FILES" != "$EXPECTED_TAP_FILES" ]; then
 	echo "Missing or extra TAP files detected"
 	echo
-	echo "List of expected TAP files:"
-	echo "$EXPECTED_TAP_FILES"
-	echo
-	echo "Actual list of TAP files:"
-	echo "$ACTUAL_TAP_FILES"
+	# comm diff of two sorted TAP file lists (file1 = expected, file2 = actual):
+	#   column 1: only in expected, column 2: only in actual, column 3: in both.
+	# Flags name the columns to suppress (-23 = hide 2 and 3, print column 1).
+	MISSING_TAP_FILES=$(comm -23 <(echo "$EXPECTED_TAP_FILES") <(echo "$ACTUAL_TAP_FILES"))
+	# -13 = hide columns 1 and 3, print column 2: TAP files produced but not expected.
+	UNEXPECTED_TAP_FILES=$(comm -13 <(echo "$EXPECTED_TAP_FILES") <(echo "$ACTUAL_TAP_FILES"))
+	if [ -n "$MISSING_TAP_FILES" ]; then
+		echo "Missing TAP files:"
+		echo "$MISSING_TAP_FILES"
+		echo
+	fi
+	if [ -n "$UNEXPECTED_TAP_FILES" ]; then
+		echo "Unexpected TAP files:"
+		echo "$UNEXPECTED_TAP_FILES"
+	fi
 
 	exit 1
 fi
