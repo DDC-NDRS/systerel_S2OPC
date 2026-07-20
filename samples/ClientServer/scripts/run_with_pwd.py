@@ -34,8 +34,9 @@ Configuration:
   --nb-passwords                     : must match the number of terminal prompts
   --no-wait-harness-start            : skip harness marker wait (standalone use)
 
-Progress and failures: child process output is forwarded to stdout (as in CTest logs);
-harness diagnostics only (step progress, failure reason) go to stderr.
+Progress and failures: on non-zero child exit (or expect failure), the remaining PTY
+transcript is forwarded to stdout (visible with ctest --output-on-failure). Harness
+diagnostics only (step progress, failure reason) go to stderr.
 """
 
 import argparse
@@ -127,8 +128,30 @@ def run_with_password(cmd_argv, nb_pwd, interact, timeout, wait_harness_start):
 
     if interact:
         binProc.interact()
+        # User-driven session: skip the EOF drain path and propagate the child exit code.
+        sys.exit(binProc.wait())
 
+    # Password prompts are answered; read the PTY until the child exits. expect(EOF)
+    # keeps post-password output (server/client printf) in proc.before for failure dumps.
+    try:
+        # Note: use the default timeout here since it is test time execution and not password input
+        binProc.expect(pexpect.EOF, timeout=DEFAULT_TIMEOUT)
+    except pexpect.TIMEOUT:
+        report_failure(binProc, 'timeout waiting for child exit')
+        if binProc.isalive():
+            binProc.close(force=True)
+        sys.exit(124)
+
+    # Reap the child and get the exit code (exitstatus alone is not reliable right after EOF).
     retCode = binProc.wait()
+    if retCode is None:
+        retCode = binProc.signalstatus if binProc.signalstatus is not None else 0
+
+    # Forward the PTY transcript on failure only (visible via ctest --output-on-failure).
+    if retCode != 0:
+        dump_process_output(binProc)
+        log_stderr('run_with_pwd: child exited with status {}'.format(retCode))
+
     sys.exit(retCode)
 
 
