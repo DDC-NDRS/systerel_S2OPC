@@ -465,9 +465,15 @@ SOPC_ReturnStatus SOPC_StaMac_StopSession(SOPC_StaMac_Machine* pSM)
 
 static void SOPC_StaMacInternal_CloseChannel(SOPC_StaMac_Machine* pSM)
 {
+    SOPC_ReturnStatus mutStatus = SOPC_Mutex_Lock(&pSM->mutex);
+    SOPC_ASSERT(SOPC_STATUS_OK == mutStatus);
+    // To be done before AsyncCloseChannel: avoid SE_CLOSED_CHANNEL event to be received prior to this state change
+    pSM->state = stClosingChannel;
+    mutStatus = SOPC_Mutex_Unlock(&pSM->mutex);
+    SOPC_ASSERT(SOPC_STATUS_OK == mutStatus);
+
     SOPC_EndpointConnectionCfg endpointConnectionCfg = SOPC_EndpointConnectionCfg_CreateClassic(pSM->iscConfig);
     SOPC_ToolkitClient_AsyncCloseChannel(endpointConnectionCfg, (uintptr_t) pSM->iCliId);
-    pSM->state = stClosingChannel;
 }
 
 void SOPC_StaMac_CloseChannel(SOPC_StaMac_Machine* pSM)

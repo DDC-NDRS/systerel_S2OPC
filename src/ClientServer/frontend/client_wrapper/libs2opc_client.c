@@ -25,6 +25,7 @@
 
 #include "sopc_assert.h"
 #include "sopc_encodeabletype.h"
+#include "sopc_enums.h"
 #include "sopc_logger.h"
 #include "sopc_macros.h"
 #include "sopc_mem_alloc.h"
@@ -323,6 +324,27 @@ static void SOPC_ClientInternal_EventCbk(uint32_t c_id,
     }
 }
 
+static void SOPC_ClientHelperInternal_NotifySyncConnWaiters(SOPC_ClientConnection* cc)
+{
+    if (NULL == cc)
+    {
+        return;
+    }
+
+    SOPC_ReturnStatus statusMutex = SOPC_Mutex_Lock(&cc->syncConnMutex);
+    SOPC_ASSERT(SOPC_STATUS_OK == statusMutex);
+
+    if (cc->syncConnDisconStarted)
+    {
+        cc->syncConnDisconEventRcvd = true;
+        statusMutex = SOPC_Condition_SignalAll(&cc->syncCond);
+        SOPC_ASSERT(SOPC_STATUS_OK == statusMutex);
+    }
+
+    statusMutex = SOPC_Mutex_Unlock(&cc->syncConnMutex);
+    SOPC_ASSERT(SOPC_STATUS_OK == statusMutex);
+}
+
 static void SOPC_ClientInternal_ConnectionStateCallback(SOPC_App_Com_Event event,
                                                         SOPC_StatusCode status,
                                                         SOPC_ClientConnection* cc)
@@ -492,8 +514,16 @@ void SOPC_ClientInternal_ToolkitEventCallback(SOPC_App_Com_Event event,
                 // Call state machine callback for event treatment
                 if (SOPC_StaMac_EventDispatcher(pSM, NULL, event, IdOrStatus, param, appContext) && NULL != cc)
                 {
-                    /* Post process the event in case of connection management events */
+                    // Post process the event in case of connection management events.
+                    // Note: this may wake Connect/Disconnect which can Clear/free the SM; do not touch pSM after.
                     SOPC_ClientInternal_ConnectionStateCallback(event, SOPC_StaMac_GetConnectionStatus(pSM), cc);
+                }
+                else if (NULL != cc && SOPC_StaMac_IsError(pSM))
+                {
+                    /* EventDispatcher returned false: ConnectionStateCallback did not run for this event.
+                     * Wake synchronous Connect/Disconnect waiters on late or unexpected error transitions.
+                     */
+                    SOPC_ClientHelperInternal_NotifySyncConnWaiters(cc);
                 }
             }
             else
@@ -802,7 +832,10 @@ SOPC_ReturnStatus SOPC_ClientHelper_DiscoveryServiceSync(SOPC_SecureConnection_C
     SOPC_ReturnStatus status =
         SOPC_ClientHelperInternal_DiscoveryService(true, secConnConfig, request, response, 0, NULL);
     SOPC_ReturnStatus discoStatus = SOPC_ClientHelper_DiscoveryAsyncCloseConnection(secConnConfig);
-    SOPC_UNUSED_RESULT(discoStatus);
+    if (SOPC_STATUS_OK == status && SOPC_STATUS_OK != discoStatus)
+    {
+        status = discoStatus;
+    }
     return status;
 }
 
@@ -889,17 +922,27 @@ SOPC_ReturnStatus SOPC_ClientHelper_Connect(SOPC_SecureConnection_Config* secCon
 
         if (SOPC_STATUS_OK == status)
         {
-            // note: we wait for connection event received by SOPC_ClientInternal_ConnectionStateCallback
-            //       and until expected state machine state change occurred
-            while (SOPC_STATUS_OK == status &&
-                   (!res->syncConnDisconEventRcvd ||
-                    (!SOPC_StaMac_IsError(res->stateMachine) && !SOPC_StaMac_IsConnected(res->stateMachine))))
+            bool connectedOrError = false;
+            // note: we wait until connected or on error (or TIMEOUT) after waiting  at least 1 loop to be run
+            // (syncConnDisconEventRcvd condition set)
+            while (SOPC_STATUS_OK == status && !connectedOrError)
             {
-                // Reset received event flag as it was not the one expected (we are still NOT in connected state)
+                // Reset received event flag as it was not the one expected (we are still NOT in connected state or
+                // error)
                 res->syncConnDisconEventRcvd = false;
-                // Note: we rely on the low layer timeouts and do not need a new one
-                status = SOPC_Mutex_UnlockAndWaitCond(&res->syncCond, &res->syncConnMutex);
-                SOPC_ASSERT(SOPC_STATUS_OK == status);
+                // Note: we ensure the timeout occurs in degraded case where the condition is not signaled
+                // (e.g. concurrent calls to SOPC_StaMac_StartSession / SOPC_StaMac_StopSession /
+                //  SOPC_StaMac_StopsWithError)
+                status =
+                    SOPC_Mutex_UnlockAndTimedWaitCond(&res->syncCond, &res->syncConnMutex, 2 * SOPC_REQUEST_TIMEOUT_MS);
+                // Guarantee we wait at least one of those 2 cases: event trigged or timeout
+                if (res->syncConnDisconEventRcvd || SOPC_STATUS_TIMEOUT == status)
+                {
+                    // Check condition for stop, note that if status is TIMEOUT it will stop the loop anyway (!= OK)
+                    connectedOrError =
+                        SOPC_StaMac_IsError(res->stateMachine) || SOPC_StaMac_IsConnected(res->stateMachine);
+                    status = connectedOrError ? SOPC_STATUS_OK : status; // keep timeout only if !connectedOrError
+                }
             }
 
             if (SOPC_StaMac_IsError(res->stateMachine) || !SOPC_StaMac_IsConnected(res->stateMachine))
@@ -1015,16 +1058,27 @@ static SOPC_ReturnStatus SOPC_ClientHelperInternal_Disconnect(SOPC_ClientConnect
             status = SOPC_STATUS_INVALID_STATE;
         }
 
-        // note: we wait for connection event received by SOPC_ClientInternal_ConnectionStateCallback
-        //       and until expected state machine state change occurred
-        while (SOPC_STATUS_OK == status &&
-               (!pSc->syncConnDisconEventRcvd || SOPC_StaMac_IsConnected(pSc->stateMachine)))
+        bool disconnectedOrError = false;
+        // note: we wait until disconnected or on error (or TIMEOUT) after waiting  at least 1 loop to be run
+        // (syncConnDisconEventRcvd condition set)
+        while (SOPC_STATUS_OK == status && !disconnectedOrError)
         {
-            // Reset received event flag as it was not the one expected (we are still in connected state)
+            // Reset received event flag as it was not the one expected
+            // (we are still NOT in disconnected state or error)
             pSc->syncConnDisconEventRcvd = false;
-            // Note: we use the low layer timeouts and do not need a new one
-            status = SOPC_Mutex_UnlockAndWaitCond(&pSc->syncCond, &pSc->syncConnMutex);
-            SOPC_ASSERT(SOPC_STATUS_OK == status);
+            // Note: we ensure the timeout occurs in degraded case where the condition is not signaled
+            // (e.g. concurrent calls to SOPC_StaMac_StartSession / SOPC_StaMac_StopSession /
+            //  SOPC_StaMac_StopsWithError)
+            status =
+                SOPC_Mutex_UnlockAndTimedWaitCond(&pSc->syncCond, &pSc->syncConnMutex, 2 * SOPC_REQUEST_TIMEOUT_MS);
+            // Guarantee we wait at least one of those 2 cases: event trigged or timeout
+            if (pSc->syncConnDisconEventRcvd || SOPC_STATUS_TIMEOUT == status)
+            {
+                // Check condition for stop, note that if status is TIMEOUT it will stop the loop anyway (!= OK)
+                disconnectedOrError =
+                    SOPC_StaMac_IsError(pSc->stateMachine) || !SOPC_StaMac_IsConnected(pSc->stateMachine);
+                status = disconnectedOrError ? SOPC_STATUS_OK : status; // keep timeout only if !disconnectedOrError
+            }
         }
 
         // End connection events inhibition for the user application callback + reset event received flag
