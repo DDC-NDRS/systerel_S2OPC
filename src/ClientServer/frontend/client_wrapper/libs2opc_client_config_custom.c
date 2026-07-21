@@ -33,6 +33,7 @@
 #include <string.h>
 
 #define SOPC_DEFAULT_REQ_LIFETIME_MS 3600000
+#define SOPC_TMP_DISCOVERY_CONFIG_ID "S2OPC_InternalTempDiscovery"
 
 /* This function gets the most secure UserPolicy Id corresponding to a given configuration
  * (security mode, security policy and usertoken type) in the GetEndpointsResponse. */
@@ -656,8 +657,9 @@ SOPC_ReturnStatus SOPC_SecureConnectionConfig_UpdateUserPolicyId(SOPC_SecureConn
     {
         // Use discovery config with no secu so client configuration will not be retrieved from SecureChannel and
         // modification of config after OpenSecureChannel will be taken into account.
-        SOPC_SecureConnection_Config* dicoveryConfig = SOPC_ClientConfigHelper_CreateSecureConnection(
-            "discovery", secConnConfig->scConfig.url, OpcUa_MessageSecurityMode_None, SOPC_SecurityPolicy_None);
+        SOPC_SecureConnection_Config* dicoveryConfig =
+            SOPC_ClientConfigHelper_CreateSecureConnection(SOPC_TMP_DISCOVERY_CONFIG_ID, secConnConfig->scConfig.url,
+                                                           OpcUa_MessageSecurityMode_None, SOPC_SecurityPolicy_None);
         status =
             SOPC_ClientHelper_DiscoveryServiceSync(dicoveryConfig, getEndpointsRequest, (void**) &getEndpointsResponse);
     }
