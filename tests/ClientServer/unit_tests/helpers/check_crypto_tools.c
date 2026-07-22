@@ -535,7 +535,8 @@ Suite* tests_make_suite_crypto_tools(void)
     tcase_add_test(tc_gen_rsa, test_crypto_gen_rsa_export_import_public);
     tcase_add_test(tc_gen_rsa, test_crypto_gen_rsa_export_import_encrypted);
 #ifndef S2OPC_CRYPTO_CYCLONE
-    tcase_set_timeout(tc_gen_rsa, 10);
+    // The genRSA function might need longer timeout with memory introspection tools
+    tcase_set_timeout(tc_gen_rsa, 30);
 #else
     // The genRSA function in Cyclone uses a placeholder, which can increase execution time.
     tcase_set_timeout(tc_gen_rsa, 60);
